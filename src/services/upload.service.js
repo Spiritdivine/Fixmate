@@ -25,24 +25,33 @@ export class UploadService {
     }
 
     if (env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: `artisan/${folder}`,
-            resource_type: resourceType,
-          },
-          (error, result) => {
-            if (error) return reject(ApiError.internal(`Cloudinary upload failed: ${error.message}`));
-            resolve({
-              url: result.secure_url,
-              publicId: result.public_id,
-              bytes: result.bytes,
-              format: result.format,
-            });
-          }
-        );
-        stream.end(buffer);
-      });
+      try {
+        const result = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: `artisan/${folder}`,
+              resource_type: resourceType,
+            },
+            (error, res) => {
+              if (error) return reject(error);
+              resolve(res);
+            }
+          );
+          stream.end(buffer);
+        });
+
+        return {
+          url: result.secure_url,
+          publicId: result.public_id,
+          bytes: result.bytes,
+          format: result.format,
+        };
+      } catch (error) {
+        console.warn(`⚠️ Cloudinary upload returned error (${error.message}). Falling back to simulated storage in development mode.`);
+        if (env.NODE_ENV === 'production') {
+          throw ApiError.internal(`Cloudinary upload failed: ${error.message}`);
+        }
+      }
     }
 
     // Development / Testnet simulation fallback

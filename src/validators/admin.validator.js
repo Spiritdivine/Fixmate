@@ -61,3 +61,18 @@ export const updateSystemSettingSchema = z.object({
     key: z.string().min(2, 'Setting key is required'),
   }),
 });
+
+export const manuallyVerifyUserSchema = z.object({
+  body: z.object({
+    isKycVerified: z.boolean().optional(),
+    isEmailVerified: z.boolean().optional(),
+    isPhoneVerified: z.boolean().optional(),
+    documentType: z.enum(['NIN', 'BVN', 'DRIVERS_LICENSE', 'VOTERS_CARD', 'INTERNATIONAL_PASSPORT']).optional(),
+    documentNumber: z.string().optional(),
+    reason: z.string().min(3, 'Reason or justification note is required'),
+  }),
+  params: z.object({
+    id: z.string().uuid('Valid user UUID required'),
+  }),
+});
+

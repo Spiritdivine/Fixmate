@@ -16,8 +16,12 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   body: z.object({
-    email: z.string().email('Invalid email address'),
+    email: z.string().optional(),
+    identifier: z.string().optional(),
     password: z.string().min(1, 'Password is required'),
+  }).refine((data) => data.email || data.identifier, {
+    message: 'Email or phone identifier is required',
+    path: ['email'],
   }),
 });
 

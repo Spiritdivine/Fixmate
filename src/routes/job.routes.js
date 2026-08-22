@@ -30,15 +30,15 @@ router.patch('/invitations/:id/respond', authenticate, requireRoles('ARTISAN'), 
 router.delete('/invitations/:id', authenticate, requireRoles('CLIENT'), JobController.cancelInvitation);
 
 // Client Specific
-router.get('/my-jobs', authenticate, requireRoles('CLIENT'), JobController.getMyJobs);
-router.post('/', authenticate, requireRoles('CLIENT'), validate(createJobSchema), JobController.create);
+router.get('/my-jobs', authenticate, requireRoles('CLIENT', 'ADMIN'), JobController.getMyJobs);
+router.post('/', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(createJobSchema), JobController.create);
 
 // Job Detail & Lifecycle
 router.get('/:id', validate(jobParamSchema), JobController.getById);
-router.put('/:id', authenticate, requireRoles('CLIENT'), validate(updateJobSchema), JobController.update);
-router.patch('/:id', authenticate, requireRoles('CLIENT'), validate(updateJobSchema), JobController.update);
-router.patch('/:id/status', authenticate, requireRoles('CLIENT'), validate(updateJobStatusSchema), JobController.updateStatus);
-router.delete('/:id', authenticate, requireRoles('CLIENT'), validate(jobParamSchema), JobController.delete);
-router.delete('/:id/attachments/:attachmentId', authenticate, requireRoles('CLIENT'), validate(attachmentParamSchema), JobController.deleteAttachment);
+router.put('/:id', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(updateJobSchema), JobController.update);
+router.patch('/:id', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(updateJobSchema), JobController.update);
+router.patch('/:id/status', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(updateJobStatusSchema), JobController.updateStatus);
+router.delete('/:id', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(jobParamSchema), JobController.delete);
+router.delete('/:id/attachments/:attachmentId', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(attachmentParamSchema), JobController.deleteAttachment);
 
 export default router;

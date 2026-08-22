@@ -13,7 +13,8 @@ export class AuthController {
 
   static async login(req, res, next) {
     try {
-      const { email, password } = req.body;
+      const email = req.body.email || req.body.identifier;
+      const { password } = req.body;
       const deviceInfo = req.headers['user-agent'];
       const ipAddress = req.ip || req.connection?.remoteAddress;
 

@@ -19,7 +19,10 @@
     "demo": "node scripts/demo-walkthrough.js",
     "listen:events": "node scripts/listen-monad-events.js",
     "test:live-monad": "node scripts/test-live-monad.js",
-    "test:postman": "node scripts/generate-master-postman.js && npx -y newman run Artisan_Master_Postman_Collection.json -e Artisan_Postman_Environment.json --bail"
+    "test:postman": "node scripts/generate-master-postman.js && npx -y newman run Artisan_Master_Postman_Collection.json -e Artisan_Postman_Environment.json --bail",
+    "test:all": "node scripts/test-all-endpoints.js",
+    "client:dev": "npm --prefix frontend run dev",
+    "client:build": "npm --prefix frontend run build"
   },
   "keywords": [],
   "author": "",

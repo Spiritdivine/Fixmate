@@ -102,9 +102,11 @@ export class AuthService {
     };
   }
 
-  static async login(email, password, deviceInfo = null, ipAddress = null) {
-    const user = await prisma.user.findUnique({
-      where: { email },
+  static async login(identifier, password, deviceInfo = null, ipAddress = null) {
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: identifier }, { phoneNumber: identifier }],
+      },
       include: {
         artisanProfile: true,
         clientProfile: true,

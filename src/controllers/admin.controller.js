@@ -3,8 +3,184 @@ import { ApiResponse } from '../utils/api-response.js';
 
 export class AdminController {
   /**
+   * Analytics & Overview
+   */
+  static async getAnalyticsOverview(req, res, next) {
+    try {
+      const result = await AdminService.getAnalyticsOverview();
+      res.status(200).json(new ApiResponse(200, result, 'Analytics overview fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Users Management
+   */
+  static async getUsers(req, res, next) {
+    try {
+      const result = await AdminService.getUsers(req.query);
+      res.status(200).json(new ApiResponse(200, result, 'Users fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getUserById(req, res, next) {
+    try {
+      const result = await AdminService.getUserById(req.params.id);
+      res.status(200).json(new ApiResponse(200, result, 'User details fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateUserStatus(req, res, next) {
+    try {
+      const { status, reason } = req.body;
+      const result = await AdminService.updateUserStatus(req.user.id, req.params.id, status, reason);
+      res.status(200).json(new ApiResponse(200, result, 'User status updated successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async manuallyVerifyUser(req, res, next) {
+    try {
+      const result = await AdminService.manuallyVerifyUser(req.user.id, req.params.id, req.body);
+      res.status(200).json(new ApiResponse(200, result, 'User verification status updated successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+
+  /**
+   * KYC Submissions Queue
+   */
+  static async getKycSubmissions(req, res, next) {
+    try {
+      const result = await AdminService.getKycSubmissions(req.query);
+      res.status(200).json(new ApiResponse(200, result, 'KYC submissions fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Disputes Management
+   */
+  static async getDisputes(req, res, next) {
+    try {
+      const result = await AdminService.getDisputes(req.query);
+      res.status(200).json(new ApiResponse(200, result, 'Disputes fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getDisputeById(req, res, next) {
+    try {
+      const result = await AdminService.getDisputeById(req.params.id);
+      res.status(200).json(new ApiResponse(200, result, 'Dispute details fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Contracts Oversight
+   */
+  static async getContracts(req, res, next) {
+    try {
+      const result = await AdminService.getContracts(req.query);
+      res.status(200).json(new ApiResponse(200, result, 'Contracts fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getContractById(req, res, next) {
+    try {
+      const result = await AdminService.getContractById(req.params.id);
+      res.status(200).json(new ApiResponse(200, result, 'Contract details fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Financial Transactions
+   */
+  static async getTransactions(req, res, next) {
+    try {
+      const result = await AdminService.getTransactions(req.query);
+      res.status(200).json(new ApiResponse(200, result, 'Transactions fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Payouts Moderation
+   */
+  static async getPayouts(req, res, next) {
+    try {
+      const result = await AdminService.getPayouts(req.query);
+      res.status(200).json(new ApiResponse(200, result, 'Payout requests fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updatePayoutStatus(req, res, next) {
+    try {
+      const { status, gatewayTransferCode, failureReason } = req.body;
+      const result = await AdminService.updatePayoutStatus(req.user.id, req.params.id, {
+        status,
+        gatewayTransferCode,
+        failureReason,
+      });
+      res.status(200).json(new ApiResponse(200, result, 'Payout status updated successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reviews Moderation
+   */
+  static async getReviews(req, res, next) {
+    try {
+      const result = await AdminService.getReviews(req.query);
+      res.status(200).json(new ApiResponse(200, result, 'Reviews fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async toggleReviewVisibility(req, res, next) {
+    try {
+      const { isPublic } = req.body;
+      const result = await AdminService.toggleReviewVisibility(req.user.id, req.params.id, isPublic);
+      res.status(200).json(new ApiResponse(200, result, 'Review visibility updated successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Categories
    */
+  static async getCategories(req, res, next) {
+    try {
+      const result = await AdminService.getCategoriesWithStats();
+      res.status(200).json(new ApiResponse(200, result, 'Categories fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async createCategory(req, res, next) {
     try {
       const result = await AdminService.createCategory(req.body);
@@ -35,6 +211,15 @@ export class AdminController {
   /**
    * Skills
    */
+  static async getSkills(req, res, next) {
+    try {
+      const result = await AdminService.getSkillsWithStats(req.query);
+      res.status(200).json(new ApiResponse(200, result, 'Skills fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async createSkill(req, res, next) {
     try {
       const result = await AdminService.createSkill(req.body);
@@ -57,19 +242,6 @@ export class AdminController {
     try {
       const result = await AdminService.deleteSkill(req.params.id);
       res.status(200).json(new ApiResponse(200, result, 'Skill deleted successfully'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * User Moderation
-   */
-  static async updateUserStatus(req, res, next) {
-    try {
-      const { status, reason } = req.body;
-      const result = await AdminService.updateUserStatus(req.user.id, req.params.id, status, reason);
-      res.status(200).json(new ApiResponse(200, result, 'User status updated successfully'));
     } catch (error) {
       next(error);
     }
