@@ -35,4 +35,4 @@ COPY scripts ./scripts
 EXPOSE 5050
 
 # Start server
-CMD ["node", "src/server.js"]
+CMD ["npm", "run", "start:prod"]

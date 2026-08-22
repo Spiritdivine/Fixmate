@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "start:prod": "prisma migrate deploy && prisma db seed && node src/server.js",
     "build": "prisma generate && node scripts/compile-contract.js",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:generate": "prisma generate",
