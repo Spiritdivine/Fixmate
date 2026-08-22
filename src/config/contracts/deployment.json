@@ -1,0 +1,12 @@
+{
+  "network": "monad-testnet",
+  "chainId": 10143,
+  "rpcUrl": "https://testnet-rpc.monad.xyz",
+  "contractAddress": "0x088D3083a2873BB4D72B6Fde542736A4dD8D55de",
+  "deployerAddress": "0x9A979F4f6C24cBB96a2c4f7bd1fa2fdAb60173eB",
+  "arbiterAddress": "0x9A979F4f6C24cBB96a2c4f7bd1fa2fdAb60173eB",
+  "feeRecipient": "0x9A979F4f6C24cBB96a2c4f7bd1fa2fdAb60173eB",
+  "transactionHash": "0x05e4a210f95e811d27e70ef24c7da2909928928fff780c27d4a62cc1f9e9a28f",
+  "deployedAt": "2026-08-21T06:58:38.465Z",
+  "simulated": false
+}

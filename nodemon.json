@@ -1,0 +1,6 @@
+{
+  "watch": ["src", ".env", "prisma/schema.prisma"],
+  "ignore": ["scripts/*", "node_modules", "Artisan_*.json"],
+  "ext": "js,mjs,cjs,json,env,prisma",
+  "exec": "node src/server.js"
+}

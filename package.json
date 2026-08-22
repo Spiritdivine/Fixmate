@@ -1,0 +1,49 @@
+{
+  "name": "artisan",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "compile": "node scripts/compile-contract.js",
+    "deploy:escrow": "node scripts/deploy-escrow.js",
+    "test:monad": "node scripts/test-monad-flow.js",
+    "test:step3": "node scripts/test-step3-apis.js",
+    "demo": "node scripts/demo-walkthrough.js",
+    "listen:events": "node scripts/listen-monad-events.js",
+    "test:live-monad": "node scripts/test-live-monad.js",
+    "test:postman": "node scripts/generate-master-postman.js && npx -y newman run Artisan_Master_Postman_Collection.json -e Artisan_Postman_Environment.json --bail"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.17.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.11.0",
+    "multer": "^2.2.0",
+    "socket.io": "^4.8.3",
+    "solc": "^0.8.36",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "prisma": "^6.19.3"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
+}
