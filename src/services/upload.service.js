@@ -2,8 +2,13 @@ import { v2 as cloudinary } from 'cloudinary';
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/api-error.js';
 
+const isCloudinaryConfigured =
+  Boolean(env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) &&
+  !env.CLOUDINARY_API_KEY.includes('your_api_key') &&
+  !env.CLOUDINARY_CLOUD_NAME.includes('your_cloud_name');
+
 // Configure Cloudinary credentials if present
-if (env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) {
+if (isCloudinaryConfigured) {
   cloudinary.config({
     cloud_name: env.CLOUDINARY_CLOUD_NAME,
     api_key: env.CLOUDINARY_API_KEY,
@@ -24,7 +29,7 @@ export class UploadService {
       throw ApiError.badRequest('No file buffer provided for upload');
     }
 
-    if (env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) {
+    if (isCloudinaryConfigured) {
       try {
         const result = await new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
