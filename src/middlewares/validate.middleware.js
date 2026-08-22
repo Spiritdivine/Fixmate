@@ -3,12 +3,13 @@ import { ApiError } from '../utils/api-error.js';
 export const validate = (schema) => (req, res, next) => {
   try {
     const parsed = schema.parse({
-      body: req.body,
-      query: req.query,
-      params: req.params,
+      body: req.body !== undefined ? req.body : {},
+      query: req.query !== undefined ? req.query : {},
+      params: req.params !== undefined ? req.params : {},
     });
     // Attach sanitized data safely for Express 5
-    if (parsed.body) req.body = parsed.body;
+    if (parsed.body !== undefined) req.body = parsed.body;
+
     if (parsed.query && req.query) {
       try {
         Object.assign(req.query, parsed.query);

@@ -4,7 +4,7 @@ import { ApiResponse } from '../utils/api-response.js';
 export class EscrowController {
   static async fundMilestone(req, res, next) {
     try {
-      const result = await EscrowService.fundMilestone(req.user.id, req.params.milestoneId, req.body);
+      const result = await EscrowService.fundMilestone(req.user.id, req.params.milestoneId, req.body || {});
       res.status(200).json(new ApiResponse(200, result, 'Milestone funded and locked in escrow'));
     } catch (error) {
       next(error);
@@ -22,7 +22,8 @@ export class EscrowController {
 
   static async requestRevision(req, res, next) {
     try {
-      const result = await EscrowService.requestMilestoneRevision(req.user.id, req.params.milestoneId, req.body.revisionNotes);
+      const notes = req.body.revisionNotes || req.body.reason;
+      const result = await EscrowService.requestMilestoneRevision(req.user.id, req.params.milestoneId, notes);
       res.status(200).json(new ApiResponse(200, result, 'Deliverable revision requested'));
     } catch (error) {
       next(error);
@@ -31,7 +32,7 @@ export class EscrowController {
 
   static async approveRelease(req, res, next) {
     try {
-      const result = await EscrowService.approveAndReleaseEscrow(req.user.id, req.params.milestoneId, req.body);
+      const result = await EscrowService.approveAndReleaseEscrow(req.user.id, req.params.milestoneId, req.body || {});
       res.status(200).json(new ApiResponse(200, result, 'Milestone approved and escrow payout released'));
     } catch (error) {
       next(error);
@@ -40,7 +41,8 @@ export class EscrowController {
 
   static async refundMilestone(req, res, next) {
     try {
-      const result = await EscrowService.refundMilestoneToClient(req.user.id, req.params.milestoneId, req.body.refundReason);
+      const reason = req.body.refundReason || req.body.reason;
+      const result = await EscrowService.refundMilestoneToClient(req.user.id, req.params.milestoneId, reason);
       res.status(200).json(new ApiResponse(200, result, 'Milestone voluntarily refunded to client'));
     } catch (error) {
       next(error);

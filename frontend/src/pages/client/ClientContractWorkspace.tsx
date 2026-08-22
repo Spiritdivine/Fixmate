@@ -83,7 +83,7 @@ export const ClientContractWorkspace: React.FC = () => {
   // 3. Fund Milestone Mutation
   const fundMilestoneMutation = useMutation({
     mutationFn: async (milestoneId: string) => {
-      await apiClient.post(`/escrow/fund-milestone/${milestoneId}`);
+      await apiClient.post(`/escrow/fund-milestone/${milestoneId}`, {});
     },
     onSuccess: () => {
       setFundingMilestone(null);
@@ -99,7 +99,7 @@ export const ClientContractWorkspace: React.FC = () => {
   // 4. Approve & Release Funds Mutation
   const approveReleaseMutation = useMutation({
     mutationFn: async (milestoneId: string) => {
-      await apiClient.post(`/escrow/approve-release/${milestoneId}`);
+      await apiClient.post(`/escrow/approve-release/${milestoneId}`, {});
     },
     onSuccess: () => {
       confetti({
@@ -119,7 +119,10 @@ export const ClientContractWorkspace: React.FC = () => {
   // 5. Request Revision Mutation
   const requestRevisionMutation = useMutation({
     mutationFn: async ({ milestoneId, reason }: { milestoneId: string; reason: string }) => {
-      await apiClient.patch(`/escrow/request-revision/${milestoneId}`, { reason });
+      await apiClient.patch(`/escrow/request-revision/${milestoneId}`, {
+        revisionNotes: reason,
+        reason,
+      });
     },
     onSuccess: () => {
       setInspectingMilestone(null);
@@ -132,6 +135,7 @@ export const ClientContractWorkspace: React.FC = () => {
       alert(`Revision request failed: ${getErrorMessage(err)}`);
     },
   });
+
 
   // 6. Raise Dispute Mutation
   const raiseDisputeMutation = useMutation({

@@ -5,12 +5,19 @@ let socket: Socket | null = null;
 export function getSocket(): Socket {
   if (!socket) {
     const token = localStorage.getItem('access_token');
-    socket = io('/', {
+    const socketUrl =
+      import.meta.env.VITE_SOCKET_URL ||
+      (import.meta.env.VITE_API_URL
+        ? import.meta.env.VITE_API_URL.replace(/\/api\/v1\/?$/, '')
+        : '/');
+
+    socket = io(socketUrl, {
       auth: { token },
       autoConnect: false,
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      transports: ['websocket', 'polling'],
     });
   }
   return socket;

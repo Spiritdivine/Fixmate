@@ -6,9 +6,25 @@ import { env } from '../config/env.js';
 let ioInstance = null;
 
 export const initSocketServer = (httpServer) => {
+  const allowedOrigins = env.CLIENT_URL
+    ? env.CLIENT_URL.split(',').map((url) => url.trim())
+    : ['*'];
+
   const io = new Server(httpServer, {
     cors: {
-      origin: env.CLIENT_URL || '*',
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (
+          allowedOrigins.includes('*') ||
+          allowedOrigins.includes(origin) ||
+          origin.endsWith('.vercel.app') ||
+          origin.includes('localhost') ||
+          origin.includes('127.0.0.1')
+        ) {
+          return callback(null, origin);
+        }
+        return callback(null, origin);
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },

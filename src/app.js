@@ -12,9 +12,25 @@ const app = express();
 
 // Security & Utility Middlewares
 app.use(helmet());
+const allowedOrigins = env.CLIENT_URL
+  ? env.CLIENT_URL.split(',').map((url) => url.trim())
+  : ['*'];
+
 app.use(
   cors({
-    origin: env.CLIENT_URL || '*',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes('*') ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1')
+      ) {
+        return callback(null, origin);
+      }
+      return callback(null, origin);
+    },
     credentials: true,
   })
 );
