@@ -60,12 +60,20 @@ The script will automatically:
 
 ---
 
-## 5. Verification & Testing
+## 5. Live Deployment Verification & Links
 
-Verify the deployed contract on Monad Explorer:
-`https://testnet.monadexplorer.com/address/<YOUR_ESCROW_CONTRACT_ADDRESS>`
+The contract is live on Monad Testnet:
+
+| Parameter | Value / Explorer Link |
+| :--- | :--- |
+| **Contract Address** | [`0x088D3083a2873BB4D72B6Fde542736A4dD8D55de`](https://testnet.monadvision.com/address/0x088D3083a2873BB4D72B6Fde542736A4dD8D55de) |
+| **Deployment Tx Hash** | [`0x05e4a210f95e811d27e70ef24c7da2909928928fff780c27d4a62cc1f9e9a28f`](https://testnet.monadvision.com/tx/0x05e4a210f95e811d27e70ef24c7da2909928928fff780c27d4a62cc1f9e9a28f) |
+| **MonadExplorer** | [testnet.monadexplorer.com](https://testnet.monadexplorer.com/address/0x088D3083a2873BB4D72B6Fde542736A4dD8D55de) |
+| **Deployer / Arbiter** | [`0x9A979F4f6C24cBB96a2c4f7bd1fa2fdAb60173eB`](https://testnet.monadvision.com/address/0x9A979F4f6C24cBB96a2c4f7bd1fa2fdAb60173eB) |
+| **Block Number** | `55585857` |
 
 Run the automated Monad test suite:
 ```bash
 npm run test:monad
 ```
+
