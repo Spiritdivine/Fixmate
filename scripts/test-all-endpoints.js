@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:5050/api/v1';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:5050/api/v1';
 
 async function request(path, options = {}) {
   const url = `${BASE_URL}${path}`;
