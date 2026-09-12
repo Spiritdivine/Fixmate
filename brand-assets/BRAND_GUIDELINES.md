@@ -56,8 +56,11 @@ All production assets are saved in [brand-assets](file:///Users/mac/Artisan/bran
 
 | File Name | Resolution | Description | File Link |
 | :--- | :--- | :--- | :--- |
-| **`logo.png`** | `856 x 833` | Master combined AF monogram & "Artifix" wordmark on transparent background | [View PNG](file:///Users/mac/Artisan/brand-assets/png/logo.png) |
-| **`artifix-icon-transparent.png`** | `662 x 572` | Standalone AF monogram icon on transparent background | [View PNG](file:///Users/mac/Artisan/brand-assets/png/artifix-icon-transparent.png) |
+| **`logo1.png`** | `902 x 621` | Primary brand lockup (Emerald Chevron + Pine Pillar & Wordmark for Light Mode) | [View PNG](file:///Users/mac/Artisan/brand-assets/png/logo1.png) |
+| **`logo1-dark.png`** | `902 x 621` | High-contrast dark-mode lockup (Vivid Emerald Chevron + Crisp White Pillar & Wordmark) | [View PNG](file:///Users/mac/Artisan/brand-assets/png/logo1-dark.png) |
+| **`artifix-icon-transparent.png`** | `385 x 375` | Standalone AF monogram icon (Light mode emerald & pine) | [View PNG](file:///Users/mac/Artisan/brand-assets/png/artifix-icon-transparent.png) |
+| **`artifix-icon-dark.png`** | `385 x 375` | Standalone AF monogram icon (Dark mode vivid emerald & crisp white) | [View PNG](file:///Users/mac/Artisan/brand-assets/png/artifix-icon-dark.png) |
+| **`logo.png`** | `902 x 621` | Mirror of master brand lockup for backwards compatibility | [View PNG](file:///Users/mac/Artisan/brand-assets/png/logo.png) |
 
 ---
 
@@ -77,6 +80,9 @@ import { ArtifixLogo, ArtifixLogoMark } from '@/components/ui/FixmateLogo';
 ```
 
 Web-accessible public copies are served directly under `/brand/*` and `/` for HTML and React embedding:
-- `/brand/logo.png` (or `/logo.png`)
+- `/brand/logo1.png` (or `/logo1.png`)
+- `/brand/logo1-dark.png` (or `/logo1-dark.png`)
 - `/brand/artifix-icon-transparent.png`
+- `/brand/artifix-icon-dark.png`
+- `/brand/logo.png` (legacy compatibility)
 - `/favicon.png` / `/favicon.ico`

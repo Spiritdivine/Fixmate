@@ -18,17 +18,51 @@ const sizeMap = {
 export const ArtifixLogoMark: React.FC<{ size?: number | 'sm' | 'md' | 'lg' | 'xl'; className?: string; theme?: 'auto' | 'dark' | 'light' }> = ({
   size = 'md',
   className = '',
+  theme = 'auto',
 }) => {
   const pixelSize = typeof size === 'number' ? size : sizeMap[size];
 
+  if (theme === 'dark') {
+    return (
+      <img
+        src="/brand/artifix-icon-dark.png"
+        alt="Artifix"
+        width={pixelSize}
+        height={pixelSize}
+        className={`shrink-0 object-contain transition-transform duration-200 ${className}`}
+      />
+    );
+  }
+
+  if (theme === 'light') {
+    return (
+      <img
+        src="/brand/artifix-icon-transparent.png"
+        alt="Artifix"
+        width={pixelSize}
+        height={pixelSize}
+        className={`shrink-0 object-contain transition-transform duration-200 ${className}`}
+      />
+    );
+  }
+
   return (
-    <img
-      src="/brand/artifix-icon-transparent.png"
-      alt="Artifix"
-      width={pixelSize}
-      height={pixelSize}
-      className={`shrink-0 object-contain transition-transform duration-200 ${className}`}
-    />
+    <>
+      <img
+        src="/brand/artifix-icon-transparent.png"
+        alt="Artifix"
+        width={pixelSize}
+        height={pixelSize}
+        className={`shrink-0 object-contain dark:hidden transition-transform duration-200 ${className}`}
+      />
+      <img
+        src="/brand/artifix-icon-dark.png"
+        alt="Artifix"
+        width={pixelSize}
+        height={pixelSize}
+        className={`shrink-0 object-contain hidden dark:block transition-transform duration-200 ${className}`}
+      />
+    </>
   );
 };
 
@@ -37,12 +71,13 @@ export const ArtifixLogo: React.FC<ArtifixLogoProps> = ({
   className = '',
   showWordmark = true,
   wordmarkClassName = '',
+  theme = 'auto',
 }) => {
   const pixelSize = typeof size === 'number' ? size : sizeMap[size];
 
   return (
     <div className={`inline-flex items-center gap-2.5 select-none ${className}`}>
-      <ArtifixLogoMark size={size} />
+      <ArtifixLogoMark size={size} theme={theme} />
 
       {/* Wordmark */}
       {showWordmark && (

@@ -12,7 +12,8 @@ import {
   X,
   User,
   Mail,
-  Lock
+  Wrench,
+  Loader2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { LANDING_IMAGES } from '../assets/landing-assets';
@@ -51,14 +52,31 @@ export const LandingPage: React.FC = () => {
   const [selectedPayment, setSelectedPayment] = useState<'paystack' | 'monad'>('paystack');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [submittedLead, setSubmittedLead] = useState<{ name: string; email: string; role: 'client' | 'artisan' } | null>(null);
+  const [craftOrSkill, setCraftOrSkill] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedLead, setSubmittedLead] = useState<{
+    name: string;
+    email: string;
+    role: 'client' | 'artisan';
+    craftOrSkill?: string;
+  } | null>(null);
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   React.useEffect(() => {
     // Default to the warm editorial light canvas as seen in the referenced design
     document.documentElement.classList.remove('dark');
+  }, []);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 16);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const toggleTheme = () => {
@@ -82,10 +100,51 @@ export const LandingPage: React.FC = () => {
     setTimeout(() => input?.focus(), 300);
   };
 
-  const handleWaitlistSubmit = (e: React.FormEvent) => {
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !email.includes('@') || !fullName.trim()) return;
+    if (selectedRole === 'artisan' && !craftOrSkill.trim()) return;
 
+    setIsSubmitting(true);
+
+    const lead = {
+      name: fullName.trim(),
+      email: email.trim().toLowerCase(),
+      role: selectedRole,
+      craftOrSkill: selectedRole === 'artisan' ? craftOrSkill.trim() : undefined,
+    };
+
+    // Forward to Google Sheets Web App if configured
+    const sheetUrl = import.meta.env.VITE_WAITLIST_SHEET_URL;
+    if (sheetUrl) {
+      try {
+        await fetch(sheetUrl, {
+          method: 'POST',
+          mode: 'no-cors', // Standard for Google Apps Script redirects
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8',
+          },
+          body: JSON.stringify(lead),
+        });
+      } catch (err) {
+        console.warn('Google Sheets sync warning:', err);
+      }
+    }
+
+    // Save lead to local storage for demo/persistence
+    try {
+      const existingRaw = localStorage.getItem('artifix_waitlist_leads');
+      const leads = existingRaw ? JSON.parse(existingRaw) : [];
+      leads.push({ ...lead, timestamp: new Date().toISOString() });
+      localStorage.setItem('artifix_waitlist_leads', JSON.stringify(leads));
+    } catch {
+      // Ignore local storage write errors
+    }
+
+    // Small delay to feel authentic
+    await new Promise((r) => setTimeout(r, 600));
+
+    // Blast celebratory confetti
     confetti({
       particleCount: 80,
       spread: 70,
@@ -93,68 +152,92 @@ export const LandingPage: React.FC = () => {
       colors: ['#BD5324', '#0284C7', '#10B981', '#F59E0B'],
     });
 
-    const lead = { name: fullName.trim(), email: email.trim(), role: selectedRole };
     setSubmittedLead(lead);
+    setIsSubmitting(false);
     setWaitlistSubmitted(true);
-    try {
-      localStorage.setItem('artifix_waitlist_lead', JSON.stringify(lead));
-    } catch {
-      // ignore storage issues if private mode
-    }
   };
 
   return (
-    <div className={`min-h-screen font-sans selection:bg-amber-200 selection:text-stone-900 artifix-canvas overflow-x-hidden ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen font-sans selection:bg-amber-200 selection:text-stone-900 artifix-canvas overflow-x-clip ${isDarkMode ? 'dark' : ''}`}>
       
       {/* ============================================================ */}
-      {/* 1. TOP NAVIGATION                                            */}
+      {/* 1. TOP NAVIGATION (Sticky & Sleek)                           */}
       {/* ============================================================ */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-[#F5EFEB]/90 dark:bg-[#0E1310]/90 border-b border-stone-300/60 dark:border-stone-800 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <header
+        className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+          isScrolled
+            ? 'bg-[#F5EFEB]/95 dark:bg-[#0E1310]/95 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.07)] dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] border-b border-stone-300/80 dark:border-stone-800'
+            : 'bg-[#F5EFEB]/85 dark:bg-[#0E1310]/85 backdrop-blur-sm border-b border-stone-300/40 dark:border-stone-800/50'
+        }`}
+      >
+        <div
+          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-all duration-300 ${
+            isScrolled ? 'h-16 sm:h-[68px]' : 'h-20'
+          }`}
+        >
           
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group shrink-0">
+          <Link to="/" className="flex items-center group shrink-0 focus:outline-none" aria-label="Artifix Home">
             <img
-              src="/brand/artifix-icon-transparent.png"
+              src="/brand/logo1.png"
               alt="Artifix"
-              className="w-10 h-10 object-contain transition-transform group-hover:scale-105"
+              className="h-10 sm:h-11 md:h-12 w-auto object-contain dark:hidden transition-transform duration-200 group-hover:scale-105"
             />
-            <span className="text-2xl font-black tracking-tight text-stone-900 dark:text-stone-100">
-              Artifix
-            </span>
+            <img
+              src="/brand/logo1-dark.png"
+              alt="Artifix"
+              className="h-10 sm:h-11 md:h-12 w-auto object-contain hidden dark:block transition-transform duration-200 group-hover:scale-105"
+            />
           </Link>
 
           {/* Center Navigation Links (Desktop) */}
-          <nav className="hidden lg:flex items-center gap-8 text-[13px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-300">
-            <a href="#how-it-works" className="hover:text-stone-950 dark:hover:text-white transition-colors">
+          <nav className="hidden lg:flex items-center gap-7 text-[12px] font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300">
+            <a
+              href="#how-it-works"
+              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
+            >
               How It Works
             </a>
-            <a href="#for-clients" className="hover:text-stone-950 dark:hover:text-white transition-colors">
+            <a
+              href="#for-clients"
+              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
+            >
               For Clients
             </a>
-            <a href="#for-artisans" className="hover:text-stone-950 dark:hover:text-white transition-colors">
+            <a
+              href="#for-artisans"
+              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
+            >
               For Artisans
             </a>
-            <a href="#trades" className="hover:text-stone-950 dark:hover:text-white transition-colors">
+            <a
+              href="#trades"
+              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
+            >
               Trades
             </a>
-            <a href="#trust" className="hover:text-stone-950 dark:hover:text-white transition-colors">
+            <a
+              href="#trust"
+              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
+            >
               Trust
             </a>
-            <a href="#faq" className="hover:text-stone-950 dark:hover:text-white transition-colors">
+            <a
+              href="#faq"
+              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
+            >
               FAQ
             </a>
           </nav>
 
           {/* Right Action Items */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
             <button
               type="button"
               onClick={() => scrollToWaitlist()}
-              className="px-4 sm:px-5 py-2.5 rounded-full bg-[#BD5324] hover:bg-[#A64319] text-white text-xs sm:text-sm font-bold tracking-tight shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0"
+              className="hidden sm:inline-flex px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-[#BD5324] hover:bg-[#A64319] text-white text-xs sm:text-sm font-semibold tracking-tight shadow-sm hover:shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
             >
-              <span className="inline sm:hidden">Join Waitlist</span>
-              <span className="hidden sm:inline">Join Priority Waitlist</span>
+              <span>Join Waitlist</span>
             </button>
 
             {/* Light/Dark Toggle */}
@@ -162,7 +245,7 @@ export const LandingPage: React.FC = () => {
               type="button"
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              className="w-10 h-10 rounded-full border border-stone-300 dark:border-stone-700 flex items-center justify-center text-stone-700 dark:text-stone-300 hover:bg-stone-200/50 dark:hover:bg-stone-800 transition-colors shrink-0"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-stone-300/80 dark:border-stone-700/80 bg-stone-100/50 dark:bg-stone-900/50 flex items-center justify-center text-stone-700 dark:text-stone-300 hover:bg-stone-200/60 dark:hover:bg-stone-800 transition-colors shrink-0 cursor-pointer"
             >
               {isDarkMode ? <SunHugeIcon size={18} className="text-[#BD5324]" /> : <MoonHugeIcon size={18} className="text-[#BD5324]" />}
             </button>
@@ -172,7 +255,7 @@ export const LandingPage: React.FC = () => {
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
-              className="lg:hidden w-10 h-10 rounded-full border border-stone-300 dark:border-stone-700 flex items-center justify-center text-stone-700 dark:text-stone-300 hover:bg-stone-200/50 dark:hover:bg-stone-800 transition-colors shrink-0"
+              className="lg:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-stone-300/80 dark:border-stone-700/80 bg-stone-100/50 dark:bg-stone-900/50 flex items-center justify-center text-stone-700 dark:text-stone-300 hover:bg-stone-200/60 dark:hover:bg-stone-800 transition-colors shrink-0 cursor-pointer"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -210,14 +293,14 @@ export const LandingPage: React.FC = () => {
                 onClick={() => setMobileMenuOpen(false)}
                 className="py-2 border-b border-stone-200 dark:border-stone-800/60 hover:text-[#BD5324] transition-colors"
               >
-                Certified Trades
+                Trades
               </a>
               <a
                 href="#trust"
                 onClick={() => setMobileMenuOpen(false)}
                 className="py-2 border-b border-stone-200 dark:border-stone-800/60 hover:text-[#BD5324] transition-colors"
               >
-                The Trust Layer
+                Trust &amp; Escrow
               </a>
               <a
                 href="#faq"
@@ -233,7 +316,7 @@ export const LandingPage: React.FC = () => {
                 onClick={() => scrollToWaitlist()}
                 className="w-full py-3 rounded-full bg-[#BD5324] text-white text-xs font-bold uppercase tracking-wider shadow-md text-center"
               >
-                Join Priority Waitlist
+                Join Waitlist
               </button>
             </div>
           </div>
@@ -513,18 +596,16 @@ export const LandingPage: React.FC = () => {
             </div>
 
             {/* Massive Headline with Highlight Pill */}
-            <h1 className="text-3xl sm:text-5xl lg:text-[58px] font-black tracking-tight text-stone-900 dark:text-stone-100 leading-[1.15] sm:leading-[1.12] max-w-2xl mb-6">
-              Hire the right hands. <br />
-              Protect the work. <br />
-              <span className="text-highlight-pill mr-2.5">
-                Release the money
+            <h1 className="font-display text-3xl sm:text-5xl lg:text-[58px] font-black tracking-tight text-stone-900 dark:text-stone-100 leading-[1.15] sm:leading-[1.12] max-w-2xl mb-6">
+              Verified artisans. <br />
+              <span className="text-highlight-pill">
+                Protected payments.
               </span>
-              <span>when it&apos;s done.</span>
             </h1>
 
             {/* Subtitle Paragraph */}
             <p className="text-sm sm:text-base md:text-lg text-stone-600 dark:text-stone-300 max-w-xl mb-7 sm:mb-8 leading-relaxed font-normal px-1">
-              Artifix connects clients with verified artisans through milestone-based escrow, proof-of-work and transparent settlement.
+              Hire vetted trades with milestone escrow. Funds stay protected until each stage is inspected and approved.
             </p>
 
             {/* Segmented Dual Role Toggle Switch */}
@@ -539,7 +620,7 @@ export const LandingPage: React.FC = () => {
                 }`}
               >
                 <ClientProfileHugeIcon size={14} className={selectedRole === 'client' ? 'text-white' : 'text-[#BD5324]'} />
-                <span>I Need a Pro</span>
+                <span>Hire an Artisan</span>
               </button>
 
               <button
@@ -552,7 +633,7 @@ export const LandingPage: React.FC = () => {
                 }`}
               >
                 <ArtisanCraftsmanHugeIcon size={14} className={selectedRole === 'artisan' ? 'text-white' : 'text-[#BD5324]'} />
-                <span>I&apos;m a Skilled Artisan</span>
+                <span>Join as an Artisan</span>
               </button>
             </div>
 
@@ -574,7 +655,7 @@ export const LandingPage: React.FC = () => {
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Your full name (e.g. Tunde Balogun)"
+                        placeholder="Full name"
                         required
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-300/80 dark:border-stone-700 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#BD5324] focus:border-transparent transition-all"
                       />
@@ -590,24 +671,52 @@ export const LandingPage: React.FC = () => {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Your email address (e.g. tunde@gmail.com)"
+                        placeholder="Email address"
                         required
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-300/80 dark:border-stone-700 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#BD5324] focus:border-transparent transition-all"
                       />
                     </div>
+
+                    {/* Craft / Skill Input (Artisan Only) */}
+                    {selectedRole === 'artisan' && (
+                      <div className="relative animate-in fade-in duration-200">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
+                          <Wrench className="w-4 h-4" />
+                        </div>
+                        <input
+                          id="waitlist-craft-input"
+                          type="text"
+                          value={craftOrSkill}
+                          onChange={(e) => setCraftOrSkill(e.target.value)}
+                          placeholder="Trade (e.g. Solar, Plumbing, Electrical)"
+                          required={selectedRole === 'artisan'}
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-300/80 dark:border-stone-700 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#BD5324] focus:border-transparent transition-all"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full py-3 px-6 rounded-xl bg-[#BD5324] hover:bg-[#A64319] text-white text-xs font-bold tracking-wider uppercase shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] group"
+                    disabled={isSubmitting}
+                    className="w-full py-3 px-6 rounded-xl bg-[#BD5324] hover:bg-[#A64319] disabled:opacity-70 disabled:cursor-not-allowed text-white text-xs font-bold tracking-wider uppercase shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] group"
                   >
-                    <span>
-                      {selectedRole === 'client'
-                        ? 'Join Priority Waitlist as Client'
-                        : 'Join Priority Waitlist as Artisan'}
-                    </span>
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Reserving spot...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>
+                          {selectedRole === 'client'
+                            ? 'Join Client Waitlist'
+                            : 'Join Artisan Waitlist'}
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                      </>
+                    )}
                   </button>
                 </form>
               ) : (
@@ -619,28 +728,35 @@ export const LandingPage: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-mono text-[10px] font-bold uppercase tracking-wider mb-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span>Wave 1 Priority Pass</span>
+                        <span>Early Access</span>
                       </div>
                       <h4 className="text-base font-black text-stone-900 dark:text-white">
                         You&apos;re on the list, {submittedLead?.name || 'Partner'}!
                       </h4>
                       <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mt-1">
-                        We&apos;ve reserved your priority spot as a{' '}
+                        We reserved your spot as a{' '}
                         <span className="font-bold text-[#BD5324]">
-                          {submittedLead?.role === 'artisan' ? 'Verified Master Artisan' : 'Founding Client'}
+                          {submittedLead?.role === 'artisan' ? 'Verified Artisan' : 'Client'}
                         </span>
-                        . An early onboarding invite will be sent to{' '}
+                        . We&apos;ll send your onboarding invite to{' '}
                         <span className="font-mono font-medium text-stone-800 dark:text-stone-200">
                           {submittedLead?.email}
                         </span>
                         .
                       </p>
+
+                      {submittedLead?.craftOrSkill && submittedLead.craftOrSkill !== 'N/A' && (
+                        <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-semibold">
+                          <Wrench className="w-3.5 h-3.5 text-[#BD5324]" />
+                          <span>Trade: <strong className="text-stone-900 dark:text-white font-bold">{submittedLead.craftOrSkill}</strong></span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div className="pt-3 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-[11px]">
                     <span className="text-stone-500 dark:text-stone-400">
-                      0% platform fee entitlement locked
+                      Early access registered
                     </span>
                     <button
                       type="button"
@@ -648,6 +764,7 @@ export const LandingPage: React.FC = () => {
                         setWaitlistSubmitted(false);
                         setEmail('');
                         setFullName('');
+                        setCraftOrSkill('');
                       }}
                       className="text-[#BD5324] hover:underline font-semibold"
                     >
@@ -660,33 +777,25 @@ export const LandingPage: React.FC = () => {
 
             {/* Social Proof Row */}
             <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-medium text-stone-700 dark:text-stone-300">
-              {/* Overlapping Avatar Stack */}
               <div className="flex -space-x-2">
                 {LANDING_IMAGES.avatars.map((avatar, idx) => (
                   <img
                     key={idx}
                     src={avatar}
                     alt="Artifix member"
-                    className="w-8 h-8 rounded-full border-2 border-[#F5EFEB] dark:border-[#0E1310] object-cover"
+                    className="w-7 h-7 rounded-full border-2 border-[#F5EFEB] dark:border-[#0E1310] object-cover"
                   />
                 ))}
               </div>
-
-              {/* Stars & Rating */}
-              <div className="flex items-center gap-1 text-amber-500">
-                <Star className="w-3.5 h-3.5 fill-amber-500" />
-                <span className="font-bold text-stone-900 dark:text-white">4.9/5</span>
-              </div>
-
-              <span className="text-stone-500 dark:text-stone-400">
-                from 2,400+ homeowners &amp; contractors
+              <span className="text-stone-600 dark:text-stone-400">
+                Over 350 property owners &amp; trades registered for early access.
               </span>
             </div>
 
-            {/* Reassurance note replacing /register link */}
-            <div className="mt-7 flex items-center justify-center gap-2 text-xs font-medium text-stone-600 dark:text-stone-400">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              <span>Priority access invitations roll out weekly to verified accounts</span>
+            {/* Reassurance note */}
+            <div className="mt-6 flex items-center justify-center gap-2 text-xs font-medium text-stone-500 dark:text-stone-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span>Invites roll out weekly to verified users</span>
             </div>
 
             {/* ============================================================ */}
@@ -921,7 +1030,7 @@ export const LandingPage: React.FC = () => {
                   />
                   {/* Tape Label */}
                   <div className="absolute top-2 right-2 transform rotate-2">
-                    <span className="tape-strip">Modern homes. Better living.</span>
+                    <span className="tape-strip">Residential Projects</span>
                   </div>
                 </div>
               </div>
@@ -936,7 +1045,7 @@ export const LandingPage: React.FC = () => {
                   />
                   {/* Tape Label */}
                   <div className="absolute bottom-2 right-2 transform -rotate-2">
-                    <span className="tape-strip">Real people. Real skills.</span>
+                    <span className="tape-strip">Verified Trades</span>
                   </div>
                 </div>
               </div>
@@ -950,7 +1059,7 @@ export const LandingPage: React.FC = () => {
                 <div className="flex items-center justify-between text-[10px] font-mono text-stone-400 mb-1">
                   <div className="flex items-center gap-1.5 text-emerald-400 font-bold tracking-wider uppercase">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    LIVE MILESTONE ESCROW #AF-9021
+                    MILESTONE ESCROW #AF-9021
                   </div>
                   <ArrowUpRight className="w-3.5 h-3.5 text-stone-400" />
                 </div>
@@ -967,8 +1076,8 @@ export const LandingPage: React.FC = () => {
                     className="w-6 h-6 rounded-full object-cover border border-stone-600"
                   />
                   <div>
-                    <span className="font-semibold text-white">Artisan: Babatunde O.</span>
-                    <span className="text-[10px] text-stone-400 block leading-tight">Master Solar Technician • NIN Verified ✓</span>
+                    <span className="font-semibold text-white">Babatunde O.</span>
+                    <span className="text-[10px] text-stone-400 block leading-tight">Solar Technician • NIN Verified ✓</span>
                   </div>
                 </div>
 
@@ -1106,18 +1215,18 @@ export const LandingPage: React.FC = () => {
               <div className="paper-card rounded-xl p-2.5 shadow-xl transform -rotate-3 hover:rotate-0 transition-transform duration-300 w-32 text-stone-900 dark:text-stone-100">
                 <div className="space-y-1.5 text-center">
                   <div>
-                    <div className="text-sm font-black">127</div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">COMPLETED JOBS</div>
+                    <div className="text-sm font-black">100%</div>
+                    <div className="text-[8px] font-mono text-stone-500 uppercase">ESCROW BACKED</div>
                   </div>
                   <div className="border-t border-stone-200 dark:border-stone-800 pt-1">
-                    <div className="text-sm font-black">98.7%</div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">ON-TIME DELIVERY</div>
+                    <div className="text-sm font-black">NIN</div>
+                    <div className="text-[8px] font-mono text-stone-500 uppercase">ID VERIFIED</div>
                   </div>
                   <div className="border-t border-stone-200 dark:border-stone-800 pt-1">
-                    <div className="text-sm font-black flex items-center justify-center gap-0.5">
-                      4.9 <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                    <div className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      0%
                     </div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">VERIFIED RATING</div>
+                    <div className="text-[8px] font-mono text-stone-500 uppercase">PAYMENT RISK</div>
                   </div>
                 </div>
               </div>
@@ -1133,7 +1242,7 @@ export const LandingPage: React.FC = () => {
                   className="w-full h-28 object-cover filter contrast-[1.05]"
                 />
                 <div className="absolute bottom-2 right-2 transform -rotate-1">
-                  <span className="tape-strip">Skilled hands. Stronger economy.</span>
+                  <span className="tape-strip">Metal Fabrication</span>
                 </div>
               </div>
             </div>
@@ -1147,7 +1256,7 @@ export const LandingPage: React.FC = () => {
                   className="w-full h-24 object-cover filter contrast-[1.05]"
                 />
                 <div className="absolute top-2 left-2">
-                  <span className="tape-strip">Commercial &amp; Residential</span>
+                  <span className="tape-strip">Commercial Builds</span>
                 </div>
               </div>
             </div>
@@ -1180,13 +1289,13 @@ export const LandingPage: React.FC = () => {
           
           <div className="text-center max-w-2xl mx-auto mb-16">
             <div className="text-xs font-mono uppercase tracking-widest text-[#BD5324] font-bold mb-2">
-              The Protocol Flow
+              How It Works
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white mb-4">
-              How Artifix Protects Both Sides
+            <h2 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white mb-4">
+              Milestone escrow from start to finish.
             </h2>
             <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base leading-relaxed">
-              No more upfront contractor abandonment. No more unpaid artisan invoices. Every naira or token is locked securely in milestone smart escrow.
+              Funds stay locked in neutral escrow and release only as each stage is completed and approved.
             </p>
           </div>
 
@@ -1204,14 +1313,14 @@ export const LandingPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-base font-bold text-stone-900 dark:text-white mb-2">
-                  Scope &amp; Agree Milestones
+                  Define Milestones
                 </h3>
                 <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Client and verified artisan break the project down into transparent deliverables with clear due dates and costs.
+                  Agree on deliverables, deadlines, and phased costs before work starts.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 text-[11px] font-mono text-[#BD5324]">
-                ✓ Smart Contract Generated
+                ✓ Scope agreed
               </div>
             </div>
 
@@ -1227,14 +1336,14 @@ export const LandingPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-base font-bold text-stone-900 dark:text-white mb-2">
-                  Fund Escrow Safe
+                  Fund Escrow
                 </h3>
                 <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Client deposits funds via Paystack (NGN cards/transfers) or Monad Testnet ($MON). Artisan is notified that money is guaranteed.
+                  Deposit funds via Paystack (NGN) or Monad ($MON). Payment is held safely in escrow.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 text-[11px] font-mono text-[#BD5324] font-semibold">
-                🔒 100% Locked &amp; Insured
+                🔒 Funds secured
               </div>
             </div>
 
@@ -1250,14 +1359,14 @@ export const LandingPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-base font-bold text-stone-900 dark:text-white mb-2">
-                  Proof of Work Inspection
+                  Verify Work
                 </h3>
                 <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Artisan submits timestamped Before/After photos and site completion notes directly through their Artisan Portal.
+                  The artisan uploads timestamped before-and-after photos for client review.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 text-[11px] font-mono text-[#BD5324]">
-                📸 Visual Audit Trail
+                📸 Photo proof
               </div>
             </div>
 
@@ -1273,14 +1382,14 @@ export const LandingPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-base font-bold text-stone-900 dark:text-white mb-2">
-                  Instant Release
+                  Approve &amp; Settle
                 </h3>
                 <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Client approves the milestone with one tap. Escrow releases funds immediately to the artisan&apos;s bank account or Web3 wallet.
+                  Approve the milestone to release funds immediately to the artisan.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 text-[11px] font-mono text-[#BD5324] font-semibold">
-                ⚡ Zero Settlement Delay
+                ⚡ Instant payout
               </div>
             </div>
 
@@ -1299,14 +1408,14 @@ export const LandingPage: React.FC = () => {
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-14">
             <div>
               <div className="text-xs font-mono uppercase tracking-widest text-[#BD5324] font-bold mb-2">
-                Hands of Excellence
+                Core Trades
               </div>
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white">
-                Vetted Across Core Trades
+              <h2 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white">
+                Vetted specialists for critical work.
               </h2>
             </div>
             <p className="text-stone-600 dark:text-stone-400 text-sm max-w-md mt-3 md:mt-0">
-              Only verified artisans with validated identity, technical evaluations, and background checks carry the Artifix Trade Passport.
+              Every artisan undergoes biometric ID checks, credential screening, and technical evaluation.
             </p>
           </div>
 
@@ -1321,11 +1430,11 @@ export const LandingPage: React.FC = () => {
                 Solar &amp; Power Inverters
               </h3>
               <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                Certified solar installers, battery rack wiremen, inverter sizing engineers, and clean energy technicians.
+                Certified solar installers, battery wiremen, and clean energy technicians.
               </p>
               <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
                 <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>84 Active Certified Pros</span>
+                <span>Verified Category</span>
               </div>
             </div>
 
@@ -1338,11 +1447,11 @@ export const LandingPage: React.FC = () => {
                 Electrical Engineering
               </h3>
               <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                Industrial panel wiring, conduit runs, generator changeovers, surge suppression, and smart home automation.
+                Industrial panel wiring, conduit runs, generator changeovers, and surge suppression.
               </p>
               <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
                 <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>120 Active Certified Pros</span>
+                <span>Verified Category</span>
               </div>
             </div>
 
@@ -1355,11 +1464,11 @@ export const LandingPage: React.FC = () => {
                 Precision Plumbing
               </h3>
               <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                PPR &amp; PVC pressure piping, borehole pump installation, drainage systems, and premium sanitary fittings.
+                PPR &amp; PVC pressure piping, borehole pumps, drainage, and sanitary fittings.
               </p>
               <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
                 <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>95 Active Certified Pros</span>
+                <span>Verified Category</span>
               </div>
             </div>
 
@@ -1372,11 +1481,11 @@ export const LandingPage: React.FC = () => {
                 Carpentry &amp; Cabinetry
               </h3>
               <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                Custom kitchen cabinetry, hardwood roofing rafters, flush doors, and architectural woodwork finishing.
+                Custom kitchen cabinetry, hardwood roofing rafters, flush doors, and architectural woodwork.
               </p>
               <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
                 <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>110 Active Certified Pros</span>
+                <span>Verified Category</span>
               </div>
             </div>
 
@@ -1389,11 +1498,11 @@ export const LandingPage: React.FC = () => {
                 Masonry &amp; Precision Tiling
               </h3>
               <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                Structural blocklaying, porcelain floor tiling, wall cladding, and laser-level leveling for high-end properties.
+                Structural blocklaying, porcelain floor tiling, and laser-accurate leveling.
               </p>
               <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
                 <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>78 Active Certified Pros</span>
+                <span>Verified Category</span>
               </div>
             </div>
 
@@ -1406,11 +1515,11 @@ export const LandingPage: React.FC = () => {
                 Welding &amp; Metal Fabrication
               </h3>
               <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                Structural steel beams, wrought iron security gates, burglary bars, and stainless steel handrails.
+                Structural steel beams, security gates, burglary bars, and stainless steel handrails.
               </p>
               <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
                 <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>65 Active Certified Pros</span>
+                <span>Verified Category</span>
               </div>
             </div>
 
@@ -1428,13 +1537,13 @@ export const LandingPage: React.FC = () => {
           
           <div className="text-center max-w-2xl mx-auto mb-16">
             <div className="text-xs font-mono uppercase tracking-widest text-[#BD5324] font-bold mb-2">
-              Security by Design
+              Security &amp; Escrow
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white mb-4">
-              The Four Pillars of the Trust Layer
+            <h2 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white mb-4">
+              Built to eliminate payment and delivery risk.
             </h2>
             <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base leading-relaxed">
-              We eliminated the guesswork from hiring blue-collar services. Here is how your money and property are shielded from start to finish.
+              No cash advances to strangers. No unpaid labor. Simple, milestone-backed protection.
             </p>
           </div>
 
@@ -1447,10 +1556,10 @@ export const LandingPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                  Government Identity &amp; NIN Verification
+                  Government Identity Verification
                 </h3>
                 <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Every artisan is verified against government databases with biometric National Identity Number (NIN) and phone verification. Anonymous contractors cannot operate on Artifix.
+                  Every artisan verifies their biometric NIN and phone records before accepting jobs. Unverified contractors cannot operate on Artifix.
                 </p>
               </div>
             </div>
@@ -1462,10 +1571,10 @@ export const LandingPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                  Monad Blockchain &amp; Paystack Escrow
+                  Dual Escrow: Paystack &amp; Monad
                 </h3>
                 <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Choose between automated Web3 smart contracts on Monad Testnet (Chain ID 10143) with deterministic release, or fiat settlements via Paystack. Funds are locked in tamper-proof custody.
+                  Settle locally in Naira via Paystack or on-chain with $MON on Monad Testnet. Funds stay in neutral custody until milestones are approved.
                 </p>
               </div>
             </div>
@@ -1477,10 +1586,10 @@ export const LandingPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                  Verifiable Proof of Work Audit
+                  Verifiable Proof of Work
                 </h3>
                 <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Before a milestone can be claimed, the artisan uploads high-resolution Before &amp; After photos with geolocation and milestone checklists for full client inspection.
+                  Milestone payout requests require timestamped before-and-after photos and completion notes for client review.
                 </p>
               </div>
             </div>
@@ -1492,10 +1601,10 @@ export const LandingPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                  Neutral Dispute Tribunal &amp; Arbitration
+                  Evidence-Based Dispute Review
                 </h3>
                 <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
-                  If work does not meet agreed specifications, the client or artisan can open a dispute. Our certified master inspectors review the evidence and issue binding escrow settlements within 48 hours.
+                  If work does not meet agreed specifications, neutral inspectors review project photos and contract terms to resolve escrow within 48 hours.
                 </p>
               </div>
             </div>
@@ -1519,26 +1628,26 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div>
-              <span className="tape-strip mb-4">FOR HOMEOWNERS &amp; BUILDERS</span>
-              <h3 className="text-2xl sm:text-3xl font-black text-stone-900 dark:text-white mb-4">
-                Never lose sleep over contractor work again.
+              <span className="tape-strip mb-4">FOR PROPERTY OWNERS &amp; BUILDERS</span>
+              <h3 className="font-display text-2xl sm:text-3xl font-black text-stone-900 dark:text-white mb-4">
+                Hire skilled trades without financial risk.
               </h3>
               <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed mb-6">
-                Get high-quality renovations, solar installations, electrical and plumbing work done right. Funds remain in escrow until you personally inspect and approve each stage.
+                Never pay in full upfront. Funds stay protected in escrow until you inspect and approve each deliverable.
               </p>
 
               <ul className="space-y-2.5 text-xs sm:text-sm text-stone-700 dark:text-stone-300 font-medium mb-8">
                 <li className="flex items-center gap-2.5">
                   <CertifiedBadgeHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Curated database of verified master craftsmen</span>
+                  <span>Vetted, background-checked craftsmen</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <ShieldCheckHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Multi-milestone escrow breakdown</span>
+                  <span>Milestone-based fund release</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <ProofOfWorkAuditHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Before/After visual audit before approving payout</span>
+                  <span>Photo proof before payout approval</span>
                 </li>
               </ul>
             </div>
@@ -1549,7 +1658,7 @@ export const LandingPage: React.FC = () => {
                 onClick={() => scrollToWaitlist('client')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 font-bold text-xs uppercase tracking-wider hover:bg-stone-800 dark:hover:bg-stone-100 transition-all shadow-md active:scale-95"
               >
-                <span>Join Waitlist as Client</span>
+                <span>Join Client Waitlist</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -1562,26 +1671,26 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div>
-              <span className="tape-strip mb-4">FOR MASTER ARTISANS</span>
-              <h3 className="text-2xl sm:text-3xl font-black text-stone-900 dark:text-white mb-4">
-                Work with confidence. Get paid on time, every time.
+              <span className="tape-strip mb-4">FOR SKILLED ARTISANS</span>
+              <h3 className="font-display text-2xl sm:text-3xl font-black text-stone-900 dark:text-white mb-4">
+                Work with guaranteed payment.
               </h3>
               <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed mb-6">
-                Stop chasing clients for invoices. When funds are locked in Artifix Escrow before you purchase materials or begin work, payment is guaranteed the moment you deliver.
+                Never chase an invoice. Funds are deposited into escrow before you start work.
               </p>
 
               <ul className="space-y-2.5 text-xs sm:text-sm text-stone-700 dark:text-stone-300 font-medium mb-8">
                 <li className="flex items-center gap-2.5">
                   <CertifiedBadgeHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Digital Artisan Trade Passport with verifiable seal</span>
+                  <span>Verifiable Trade Passport and seal</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <ShieldCheckHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Guaranteed milestone funds before project start</span>
+                  <span>Milestone funds locked before work begins</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <InstantSettlementHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Direct payout to your Nigerian bank account or Monad wallet</span>
+                  <span>Direct payout to bank account or wallet</span>
                 </li>
               </ul>
             </div>
@@ -1592,7 +1701,7 @@ export const LandingPage: React.FC = () => {
                 onClick={() => scrollToWaitlist('artisan')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#BD5324] hover:bg-[#A64319] text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95"
               >
-                <span>Join Waitlist as Artisan</span>
+                <span>Join Artisan Waitlist</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -1610,9 +1719,9 @@ export const LandingPage: React.FC = () => {
           
           <div className="text-center mb-14">
             <div className="text-xs font-mono uppercase tracking-widest text-[#BD5324] font-bold mb-2">
-              Clarifications
+              FAQ
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white">
+            <h2 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white">
               Frequently Asked Questions
             </h2>
           </div>
@@ -1620,24 +1729,24 @@ export const LandingPage: React.FC = () => {
           <div className="space-y-4">
             {[
               {
-                q: 'How does the milestone escrow protect my money as a client?',
-                a: 'When you fund a job, your money is held in neutral custody (via Paystack escrow vault or Monad smart contract). The artisan cannot withdraw the funds until you review the submitted Proof of Work photos and approve that specific milestone. If work is substandard, funds remain safe.',
+                q: 'How does escrow protect client funds?',
+                a: 'Your deposit is held in neutral custody via Paystack or Monad smart contract. The artisan cannot withdraw funds until you inspect and approve each milestone.',
               },
               {
-                q: 'How do artisans know they will actually get paid?',
-                a: 'Before you start work on any milestone, Artifix verifies that the client has deposited 100% of the milestone value into escrow. The client cannot unilaterally cancel or withdraw the funds without your agreement or an approved dispute resolution.',
+                q: 'How do artisans know they will get paid?',
+                a: '100% of the milestone payment must be deposited into escrow before work begins. Clients cannot unilaterally withdraw funds once deposited.',
               },
               {
-                q: 'What is the Monad Testnet integration?',
-                a: 'Artifix is deployed on Monad Testnet (Chain ID 10143). Users can choose to settle contracts in $MON crypto tokens with lightning-fast finality and minimal gas fees, or use standard Nigerian Naira (NGN) via Paystack cards and bank transfers.',
+                q: 'Can I pay with Nigerian Naira?',
+                a: 'Yes. You can pay in Naira (NGN) via Paystack using cards or bank transfer, or in crypto with $MON on Monad Testnet.',
               },
               {
-                q: 'How does the Artisan Trade Passport verification work?',
-                a: 'Artisans submit their National Identity Number (NIN), phone number, proof of previous installations, and undergo technical vetting. Once approved, an official cryptographic passport with a QR code and verified seal is generated.',
+                q: 'How are artisans verified?',
+                a: 'Every artisan completes biometric NIN identity verification, phone verification, and trade credential checks before accepting projects.',
               },
               {
-                q: 'What happens if there is a dispute on a project?',
-                a: 'Either party can trigger the Dispute Center. An assigned Artifix inspector reviews the job contract specifications, communication log, and Before/After photographic evidence to enforce a fair release or partial refund within 48 hours.',
+                q: 'What happens if there is a dispute?',
+                a: 'Either party can request arbitration. An Artifix inspector reviews the project agreement and submitted photo proof to resolve the escrow within 48 hours.',
               },
             ].map((faq, idx) => (
               <div
@@ -1676,16 +1785,20 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           
           <div className="md:col-span-1">
-            <Link to="/" className="flex items-center gap-2.5 mb-4 group">
+            <Link to="/" className="flex items-center mb-4 group inline-block focus:outline-none" aria-label="Artifix Home">
               <img
-                src="/brand/artifix-icon-transparent.png"
+                src="/brand/logo1.png"
                 alt="Artifix"
-                className="w-8 h-8 object-contain transition-transform group-hover:scale-105"
+                className="h-9 sm:h-10 w-auto object-contain dark:hidden transition-transform group-hover:scale-105"
               />
-              <span className="text-xl font-black text-stone-900 dark:text-white">Artifix</span>
+              <img
+                src="/brand/logo1-dark.png"
+                alt="Artifix"
+                className="h-9 sm:h-10 w-auto object-contain hidden dark:block transition-transform group-hover:scale-105"
+              />
             </Link>
             <p className="text-xs text-stone-500 leading-relaxed mb-4">
-              The verified artisan trust network. Milestone escrow, proof-of-work, and transparent settlements for modern infrastructure.
+              Verified artisans and milestone escrow. Payments protected from quote to completion.
             </p>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-mono text-[10px]">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1700,7 +1813,7 @@ export const LandingPage: React.FC = () => {
             <ul className="space-y-2">
               <li><a href="#how-it-works" className="hover:text-stone-900 dark:hover:text-white">How It Works</a></li>
               <li><a href="#trades" className="hover:text-stone-900 dark:hover:text-white">Trades Directory</a></li>
-              <li><a href="#trust" className="hover:text-stone-900 dark:hover:text-white">The Trust Layer</a></li>
+              <li><a href="#trust" className="hover:text-stone-900 dark:hover:text-white">Trust &amp; Escrow</a></li>
               <li>
                 <button
                   type="button"
@@ -1716,7 +1829,7 @@ export const LandingPage: React.FC = () => {
                   onClick={() => scrollToWaitlist('artisan')}
                   className="text-left hover:text-stone-900 dark:hover:text-white transition-colors"
                 >
-                  Artisan Priority Waitlist
+                  Artisan Waitlist
                 </button>
               </li>
             </ul>
@@ -1724,7 +1837,7 @@ export const LandingPage: React.FC = () => {
 
           <div>
             <div className="font-mono uppercase tracking-widest text-stone-900 dark:text-white font-bold text-[11px] mb-3">
-              Security &amp; Web3
+              Security
             </div>
             <ul className="space-y-2 font-mono text-[11px]">
               <li><span className="text-stone-500">Chain ID: 10143</span></li>
