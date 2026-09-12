@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Menu, Bell, Moon, Sun, Wallet as WalletIcon, PlusCircle } from 'lucide-react';
+import { Menu, Bell, Moon, Sun, Wallet as WalletIcon, PlusCircle, Search, MessageSquare } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { shortenAddress, formatCurrency } from '../../lib/formatters';
 import { Link } from 'react-router-dom';
+import { Avatar } from '../ui/Avatar';
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -10,88 +11,85 @@ interface HeaderProps {
 
 export const ClientHeader: React.FC<HeaderProps> = ({ onMenuToggle }) => {
   const { user } = useAuthStore();
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
-
-  const toggleTheme = () => {
-    if (document.documentElement.classList.contains('dark')) {
-      document.documentElement.classList.remove('dark');
-      setIsDark(false);
-    } else {
-      document.documentElement.classList.add('dark');
-      setIsDark(true);
-    }
-  };
-
-  const walletBalance = user?.wallet?.availableBalance ? Number(user.wallet.availableBalance) : 0;
+  const [isDark, setIsDark] = useState(false);
+  const toggleTheme = () => setIsDark(!isDark);
+  const walletBalance = user?.wallet?.availableBalance || 0;
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
-      {/* Left: Mobile Menu & Page Title */}
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-[88px] px-8 bg-white dark:bg-slate-900 border-b border-slate-100 ">
+      {/* Left: Search Bar & Mobile Menu */}
+      <div className="flex items-center gap-4 flex-1">
         <button
           onClick={onMenuToggle}
           className="p-2 -ml-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden"
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="hidden sm:flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-            Fixmate
-          </span>
-          <span className="text-slate-300 dark:text-slate-700">/</span>
-          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-            Client Portal
-          </span>
+        
+        <div className="hidden sm:flex items-center max-w-md w-full relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-5" />
+          <input 
+            type="text" 
+            placeholder="Search task" 
+            className="w-full h-12 pl-12 pr-14 bg-slate-50/80 dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-900 border-transparent focus:bg-white dark:focus:bg-slate-950 rounded-full text-sm font-medium outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all placeholder:text-slate-400"
+          />
+          <div className="absolute right-3 flex items-center justify-center bg-white dark:bg-slate-800 shadow-sm rounded px-2 py-1 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+            ⌘ F
+          </div>
         </div>
       </div>
 
-      {/* Right Controls: Post Job CTA, Wallet Balance, Monad Wallet, Theme, Notifications */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Post Job Shortcut Button */}
-        <Link
-          to="/client/jobs/post"
-          className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white shadow-sm shadow-sky-600/20 transition-colors"
-        >
-          <PlusCircle className="w-3.5 h-3.5" />
-          <span>Post a Job</span>
-        </Link>
-
-        {/* Available Wallet Balance Link */}
+      {/* Right Controls */}
+      <div className="flex items-center gap-3">
+        {/* Wallet Balance */}
         <Link
           to="/client/wallet"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
-          title="Wallet Balance (Click to manage)"
+          className="hidden lg:flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>{formatCurrency(walletBalance)}</span>
         </Link>
-
-        {/* Monad Web3 Wallet Badge */}
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-          <WalletIcon className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-          <span>
-            {user?.walletAddress ? shortenAddress(user.walletAddress) : 'Monad EVM'}
-          </span>
-          <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-        </div>
+        
+        {/* Messages (Added to match design) */}
+        <Link
+          to="/client/messages"
+          className="p-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-600 dark:text-slate-400 transition-all group"
+        >
+          <MessageSquare className="w-4 h-4 group-hover:scale-110 transition-transform" />
+        </Link>
 
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          title="Toggle Theme"
+          className="p-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-600 dark:text-slate-400 transition-all group"
         >
-          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {isDark ? <Sun className="w-4 h-4 group-hover:scale-110 transition-transform" /> : <Moon className="w-4 h-4 group-hover:scale-110 transition-transform" />}
         </button>
 
-        {/* Notifications Icon Link */}
+        {/* Notifications */}
         <Link
           to="/client/notifications"
-          className="relative p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          title="Notifications"
+          className="p-3 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-600 dark:text-slate-400 transition-all relative group"
         >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-sky-500" />
+          <Bell className="w-4 h-4 group-hover:scale-110 transition-transform" />
+          <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 border-2 border-white dark:border-slate-900" />
+        </Link>
+
+        {/* Profile */}
+        <Link to="/client/profile" className="flex items-center gap-3 ml-3 pl-3 border-l border-slate-100 ">
+          <div className="hidden md:block text-right">
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              {user?.clientProfile?.firstName ? `${user.clientProfile.firstName} ${user.clientProfile.lastName || ''}`.trim() : user?.email?.split('@')[0] || 'Client'}
+            </p>
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              {user?.email}
+            </p>
+          </div>
+          <Avatar
+            src={user?.avatarUrl}
+            name={user?.email || 'Client'}
+            size="md"
+          />
         </Link>
       </div>
     </header>

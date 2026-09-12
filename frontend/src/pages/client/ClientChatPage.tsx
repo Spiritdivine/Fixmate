@@ -144,11 +144,11 @@ export const ClientChatPage: React.FC = () => {
       </div>
 
       {/* Main 2-Panel Chat Layout */}
-      <Card className="p-0 border-slate-200 dark:border-slate-800 overflow-hidden h-[calc(100vh-210px)] min-h-[500px] flex flex-col md:flex-row">
+      <Card className="p-0 border-slate-200 overflow-hidden h-[calc(100vh-210px)] min-h-[500px] flex flex-col md:flex-row">
         {/* Left Panel: Conversations List */}
-        <div className="w-full md:w-80 border-r border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-slate-900">
+        <div className="w-full md:w-80 border-r border-slate-200 flex flex-col bg-white dark:bg-slate-900">
           {/* Search bar */}
-          <div className="p-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="p-3 border-b border-slate-100 ">
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -156,7 +156,7 @@ export const ClientChatPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search conversations..."
-                className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-sky-500"
+                className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600"
               />
             </div>
           </div>
@@ -183,7 +183,7 @@ export const ClientChatPage: React.FC = () => {
                     onClick={() => setSearchParams({ conversationId: c.id })}
                     className={`w-full p-3.5 flex items-start gap-3 text-left transition-colors ${
                       isSelected
-                        ? 'bg-sky-50/70 dark:bg-sky-950/40 border-l-4 border-sky-600'
+                        ? 'bg-emerald-50/70 dark:bg-sky-950/40 border-l-4 border-sky-600'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
                     }`}
                   >
@@ -217,7 +217,7 @@ export const ClientChatPage: React.FC = () => {
           {activeConversation ? (
             <>
               {/* Chat Header */}
-              <div className="p-3.5 px-6 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between">
+              <div className="p-3.5 px-6 border-b border-slate-200 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar
                     src={otherParticipant?.avatarUrl}
@@ -227,7 +227,7 @@ export const ClientChatPage: React.FC = () => {
                   <div>
                     <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1">
                       <span>{otherName}</span>
-                      <CheckCircle2 className="w-3 h-3 text-sky-500" />
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     </h3>
                     <p className="text-[10px] text-slate-400">
                       {otherParticipant?.email}
@@ -238,7 +238,7 @@ export const ClientChatPage: React.FC = () => {
                 {activeConversation.contract && (
                   <Link
                     to={`/client/contracts/${activeConversation.contract.id}`}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-sky-600 hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline"
                   >
                     <span>View Contract Workspace</span>
                     <ChevronRight className="w-3 h-3" />
@@ -269,10 +269,10 @@ export const ClientChatPage: React.FC = () => {
                         className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                       >
                         <div
-                          className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
+                          className={`max-w-md p-3.5 rounded-[24px] text-xs leading-relaxed ${
                             isMe
                               ? 'bg-sky-600 text-white rounded-br-none shadow-sm'
-                              : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-bl-none border border-slate-200 dark:border-slate-700'
+                              : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-bl-none '
                           }`}
                         >
                           {msg.body}
@@ -288,21 +288,21 @@ export const ClientChatPage: React.FC = () => {
               </div>
 
               {/* Message Composer */}
-              <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2">
+              <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 flex items-center gap-2">
                 <input
                   type="text"
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Type a message... (Press Enter to send)"
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-sky-500"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600"
                 />
 
                 <button
                   type="button"
                   onClick={() => sendMessageMutation.mutate()}
                   disabled={!messageText.trim() || sendMessageMutation.isPending}
-                  className="p-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white transition-colors disabled:opacity-50"
+                  className="p-2.5 rounded-xl bg-sky-600 hover:bg-[#186644] text-white transition-colors disabled:opacity-50"
                   title="Send Message"
                 >
                   <Send className="w-4 h-4" />

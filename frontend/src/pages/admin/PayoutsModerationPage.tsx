@@ -133,13 +133,13 @@ export const PayoutsModerationPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
 
       {/* Filter Tabs & Search */}
-      <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4">
+      <div className="p-4 rounded-[24px] bg-slate-900/90 border border-slate-800 space-y-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {[
             { key: 'PENDING', label: 'Pending Processing' },
@@ -176,7 +176,7 @@ export const PayoutsModerationPage: React.FC = () => {
       </div>
 
       {/* Payouts Table */}
-      <div className="rounded-2xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-xl">
+      <div className="rounded-[24px] bg-slate-900/90 border border-slate-800 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">

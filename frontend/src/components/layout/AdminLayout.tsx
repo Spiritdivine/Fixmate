@@ -29,12 +29,14 @@ export const AdminLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased">
+    <div className="flex h-screen bg-[#f9fafb] dark:bg-slate-950 text-slate-100 font-sans overflow-hidden antialiased">
       <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="lg:pl-72 flex flex-col flex-1 min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <AdminHeader onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="max-w-[1400px] w-full mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

@@ -131,7 +131,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -173,7 +173,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
       </div>
 
       {/* Hero Profile Card */}
-      <Card className="p-6 sm:p-8 border-slate-200 dark:border-slate-800 relative overflow-hidden">
+      <Card className="p-6 sm:p-8 border-slate-200 relative overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
             <Avatar
@@ -188,7 +188,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">
                   {displayName}
                 </h1>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#186644]/10 text-emerald-700 dark:text-sky-400 border border-emerald-600/20">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Verified Artisan</span>
                 </span>
@@ -235,7 +235,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
           <div className="flex flex-wrap sm:flex-col items-center justify-center sm:items-end gap-3 shrink-0">
             <button
               onClick={() => setInviteModalOpen(true)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-lg shadow-sky-600/20 transition-all active:scale-95"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold shadow-lg shadow-sky-600/20 transition-all active:scale-95"
             >
               <Send className="w-4 h-4" />
               <span>Invite to Job</span>
@@ -257,7 +257,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                 className={`p-2 rounded-xl border transition-colors ${
                   isSaved
                     ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/40 dark:border-rose-900'
-                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
+                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-800 dark:bg-slate-800 dark:text-slate-400'
                 }`}
                 title={isSaved ? 'Remove Bookmark' : 'Save Artisan'}
               >
@@ -278,7 +278,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
       </Card>
 
       {/* Tabs Header */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1">
         <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
@@ -340,7 +340,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               {/* About / Bio */}
-              <Card className="p-6 border-slate-200 dark:border-slate-800 space-y-3">
+              <Card className="p-6 border-slate-200 space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   About the Artisan
                 </h3>
@@ -350,7 +350,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
               </Card>
 
               {/* Skills & Expertise */}
-              <Card className="p-6 border-slate-200 dark:border-slate-800 space-y-3">
+              <Card className="p-6 border-slate-200 space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   Skills &amp; Expertise
                 </h3>
@@ -359,7 +359,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                     {artisan.skills.map((s) => (
                       <span
                         key={s.skill.id}
-                        className="px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-xs font-semibold"
+                        className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-xs font-semibold"
                       >
                         {s.skill.name}
                       </span>
@@ -373,7 +373,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
 
             {/* Right sidebar info */}
             <div className="space-y-6">
-              <Card className="p-6 border-slate-200 dark:border-slate-800 space-y-4">
+              <Card className="p-6 border-slate-200 space-y-4">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   Verification &amp; Badges
                 </h3>
@@ -391,7 +391,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600">
+                    <div className="p-2 rounded-xl bg-[#186644]/10 text-emerald-700">
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div>
@@ -411,7 +411,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
         {activeTab === 'portfolio' && (
           <div className="space-y-6">
             {(!artisan.portfolios || artisan.portfolios.length === 0) ? (
-              <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+              <Card className="p-12 text-center border-dashed border-slate-200 ">
                 <Layers className="w-12 h-12 mx-auto text-slate-400 mb-3" />
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                   No portfolio items uploaded yet
@@ -425,7 +425,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                 {artisan.portfolios.map((item) => (
                   <Card
                     key={item.id}
-                    className="overflow-hidden border-slate-200 dark:border-slate-800 flex flex-col justify-between"
+                    className="overflow-hidden border-slate-200 flex flex-col justify-between"
                   >
                     {item.mediaUrls && item.mediaUrls.length > 0 ? (
                       <div
@@ -474,7 +474,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
         {activeTab === 'services' && (
           <div className="space-y-6">
             {(!artisan.services || artisan.services.length === 0) ? (
-              <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+              <Card className="p-12 text-center border-dashed border-slate-200 ">
                 <Briefcase className="w-12 h-12 mx-auto text-slate-400 mb-3" />
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                   No packaged services listed
@@ -488,14 +488,14 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                 {artisan.services.map((service) => (
                   <Card
                     key={service.id}
-                    className="p-5 border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-4"
+                    className="p-5 border-slate-200 flex flex-col justify-between space-y-4"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-slate-500">
                           {service.deliveryDays} Days Turnaround
                         </span>
-                        <span className="text-sm font-extrabold text-sky-600 dark:text-sky-400">
+                        <span className="text-sm font-extrabold text-emerald-700 dark:text-sky-400">
                           {formatCurrency(service.price)}
                         </span>
                       </div>
@@ -509,7 +509,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
 
                     <button
                       onClick={() => setInviteModalOpen(true)}
-                      className="w-full py-2 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-sky-600 dark:hover:bg-sky-500 text-white dark:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors"
+                      className="w-full py-2 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-[#124d33] dark:hover:bg-[#186644] text-white dark:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors"
                     >
                       Book / Request This Service
                     </button>
@@ -524,7 +524,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
         {activeTab === 'reviews' && (
           <div className="space-y-6">
             {(!reviews || reviews.length === 0) ? (
-              <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+              <Card className="p-12 text-center border-dashed border-slate-200 ">
                 <Star className="w-12 h-12 mx-auto text-slate-400 mb-3" />
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                   No reviews yet
@@ -538,7 +538,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                 {reviews.map((rev) => (
                   <Card
                     key={rev.id}
-                    className="p-5 border-slate-200 dark:border-slate-800 space-y-3"
+                    className="p-5 border-slate-200 space-y-3"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -570,7 +570,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                     )}
 
                     {/* Criteria breakdown */}
-                    <div className="flex flex-wrap gap-4 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
+                    <div className="flex flex-wrap gap-4 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
                       {rev.qualityRating && <span>Quality: ★ {rev.qualityRating}</span>}
                       {rev.communicationRating && <span>Communication: ★ {rev.communicationRating}</span>}
                       {rev.punctualityRating && <span>Punctuality: ★ {rev.punctualityRating}</span>}
@@ -578,7 +578,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
 
                     {/* Artisan reply thread */}
                     {rev.artisanReply && (
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border-l-2 border-sky-500 text-xs space-y-1">
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border-l-2 border-emerald-600 text-xs space-y-1">
                         <p className="font-bold text-slate-800 dark:text-slate-200">
                           Artisan Response:
                         </p>
@@ -613,7 +613,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                 <p>Create a new job posting first so you can invite this artisan.</p>
                 <Link
                   to="/client/jobs/post"
-                  className="inline-flex items-center gap-1 font-bold text-sky-600 underline"
+                  className="inline-flex items-center gap-1 font-bold text-emerald-700 underline"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
                   <span>Post a New Job</span>
@@ -626,8 +626,8 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                     key={job.id}
                     className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
                       selectedJobId === job.id
-                        ? 'border-sky-500 bg-sky-50/50 dark:bg-sky-950/30 ring-1 ring-sky-500'
-                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+                        ? 'border-emerald-600 bg-emerald-50/50 dark:bg-sky-950/30 ring-1 ring-emerald-600'
+                        : 'border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
                     }`}
                   >
                     <div className="space-y-1">
@@ -644,14 +644,14 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                       value={job.id}
                       checked={selectedJobId === job.id}
                       onChange={(e) => setSelectedJobId(e.target.value)}
-                      className="text-sky-600 focus:ring-sky-500"
+                      className="text-emerald-700 focus:ring-emerald-600"
                     />
                   </label>
                 ))}
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 ">
               <Button variant="outline" size="sm" onClick={() => setInviteModalOpen(false)}>
                 Cancel
               </Button>
@@ -683,7 +683,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
             <img
               src={lightboxImage}
               alt="Portfolio Full View"
-              className="w-full h-auto max-h-[85vh] object-contain rounded-2xl"
+              className="w-full h-auto max-h-[85vh] object-contain rounded-[24px]"
             />
           </div>
         </div>

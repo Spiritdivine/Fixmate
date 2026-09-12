@@ -111,13 +111,13 @@ export const SystemSettingsPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
 
       {successMessage && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+        <div className="p-4 rounded-[24px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           <span>{successMessage}</span>
         </div>
@@ -126,7 +126,7 @@ export const SystemSettingsPage: React.FC = () => {
       {/* Preset System Configuration Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Platform Fee Parameter */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
             <span className="font-bold text-white text-sm">Escrow Platform Fee</span>
             <Badge variant="purple" size="sm">PLATFORM_FEE_PERCENT</Badge>
@@ -156,7 +156,7 @@ export const SystemSettingsPage: React.FC = () => {
         </div>
 
         {/* Minimum Payout Amount */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
             <span className="font-bold text-white text-sm">Minimum Payout Withdrawal</span>
             <Badge variant="purple" size="sm">MIN_WITHDRAWAL_AMOUNT</Badge>
@@ -186,7 +186,7 @@ export const SystemSettingsPage: React.FC = () => {
         </div>
 
         {/* Dispute Evidence Window */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
             <span className="font-bold text-white text-sm">Dispute Evidence Window</span>
             <Badge variant="purple" size="sm">DISPUTE_WINDOW_DAYS</Badge>
@@ -216,7 +216,7 @@ export const SystemSettingsPage: React.FC = () => {
         </div>
 
         {/* Monad Chain ID & RPC */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
             <span className="font-bold text-white text-sm">Monad Network Chain ID</span>
             <Badge variant="purple" size="sm">MONAD_CHAIN_ID</Badge>
@@ -234,7 +234,7 @@ export const SystemSettingsPage: React.FC = () => {
       </div>
 
       {/* All Dynamic System Parameters Table */}
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-xl">
+      <div className="rounded-[24px] bg-slate-900 border border-slate-800 overflow-hidden shadow-xl">
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <h3 className="text-sm font-bold text-white">All System Parameter Records</h3>
           <Button

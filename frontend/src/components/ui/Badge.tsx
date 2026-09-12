@@ -34,7 +34,7 @@ export const Badge: React.FC<BadgeProps> = ({
         badgeStyle = 'bg-amber-500/15 text-amber-400 border border-amber-500/30';
         break;
       case 'blue':
-        badgeStyle = 'bg-blue-500/15 text-blue-400 border border-blue-500/30';
+        badgeStyle = 'bg-blue-500/15 text-blue-400 border border-emerald-600/30';
         break;
       case 'purple':
         badgeStyle = 'bg-purple-500/15 text-purple-400 border border-purple-500/30';

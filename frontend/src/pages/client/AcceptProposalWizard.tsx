@@ -79,7 +79,7 @@ export const AcceptProposalWizard: React.FC = () => {
   if (loadingProposal) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -137,7 +137,7 @@ export const AcceptProposalWizard: React.FC = () => {
       )}
 
       {/* Escrow Terms & Breakdown Card */}
-      <Card className="p-6 sm:p-8 border-slate-200 dark:border-slate-800 space-y-6">
+      <Card className="p-6 sm:p-8 border-slate-200 space-y-6">
         {/* Milestone summary */}
         <div className="space-y-3">
           <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -148,22 +148,22 @@ export const AcceptProposalWizard: React.FC = () => {
               proposal.milestones.map((m, idx) => (
                 <div
                   key={m.id || idx}
-                  className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs"
+                  className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-xs"
                 >
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
                     Step {idx + 1}: {m.title}
                   </span>
-                  <span className="font-bold text-sky-600 dark:text-sky-400">
+                  <span className="font-bold text-emerald-700 dark:text-sky-400">
                     {formatCurrency(m.amount)}
                   </span>
                 </div>
               ))
             ) : (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
                   Full Project Completion
                 </span>
-                <span className="font-bold text-sky-600 dark:text-sky-400">
+                <span className="font-bold text-emerald-700 dark:text-sky-400">
                   {formatCurrency(bidAmount)}
                 </span>
               </div>
@@ -172,7 +172,7 @@ export const AcceptProposalWizard: React.FC = () => {
         </div>
 
         {/* Financial Summary */}
-        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3 text-xs">
+        <div className="p-5 rounded-[24px] bg-slate-50 dark:bg-slate-900 space-y-3 text-xs">
           <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
             <span>Contract Total (Artisan Bid):</span>
             <span className="font-semibold text-slate-900 dark:text-slate-100">
@@ -187,9 +187,9 @@ export const AcceptProposalWizard: React.FC = () => {
             </span>
           </div>
 
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-sm">
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-sm">
             <span className="font-bold text-slate-900 dark:text-slate-100">Total Contract Value:</span>
-            <span className="font-extrabold text-sky-600 dark:text-sky-400 text-base">
+            <span className="font-extrabold text-emerald-700 dark:text-sky-400 text-base">
               {formatCurrency(totalFunding)}
             </span>
           </div>
@@ -204,13 +204,13 @@ export const AcceptProposalWizard: React.FC = () => {
             <button
               type="button"
               onClick={() => setFundingSource('WALLET')}
-              className={`p-4 rounded-2xl border text-left transition-all ${
+              className={`p-4 rounded-[24px] border text-left transition-all ${
                 fundingSource === 'WALLET'
-                  ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/40 text-sky-950 dark:text-sky-100 ring-1 ring-sky-500'
-                  : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+                  ? 'border-emerald-600 bg-emerald-50 dark:bg-sky-950/40 text-sky-950 dark:text-sky-100 ring-1 ring-emerald-600'
+                  : 'border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
               }`}
             >
-              <div className="flex items-center gap-2 mb-1 text-sky-600 dark:text-sky-400 font-bold text-xs">
+              <div className="flex items-center gap-2 mb-1 text-emerald-700 dark:text-sky-400 font-bold text-xs">
                 <WalletIcon className="w-4 h-4" />
                 <span>Fixmate Wallet</span>
               </div>
@@ -222,10 +222,10 @@ export const AcceptProposalWizard: React.FC = () => {
             <button
               type="button"
               onClick={() => setFundingSource('MONAD_WEB3')}
-              className={`p-4 rounded-2xl border text-left transition-all ${
+              className={`p-4 rounded-[24px] border text-left transition-all ${
                 fundingSource === 'MONAD_WEB3'
                   ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 ring-1 ring-purple-500'
-                  : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+                  : 'border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
               }`}
             >
               <div className="flex items-center gap-2 mb-1 text-purple-600 dark:text-purple-400 font-bold text-xs">
@@ -251,7 +251,7 @@ export const AcceptProposalWizard: React.FC = () => {
         </div>
 
         {/* Final Acceptance Action */}
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+        <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
           <Button
             type="button"
             variant="outline"

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --background: #f8fafc;
@@ -132,4 +134,101 @@ body {
   background: rgba(244, 63, 94, 0.12);
   color: #f43f5e;
   border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+/* Artifix Editorial Blueprint / Canvas System */
+.artifix-canvas {
+  background-color: #F5EFEB !important;
+  color: #1C1917 !important;
+  position: relative;
+}
+
+.artifix-canvas.dark,
+.artifix-canvas.dark-theme,
+.dark .artifix-canvas {
+  background-color: #0E1310 !important;
+  color: #F5F5F4 !important;
+}
+
+/* Subtle Architectural Drafting Grid */
+.drafting-grid {
+  background-image: 
+    linear-gradient(to right, rgba(120, 113, 108, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(120, 113, 108, 0.08) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.artifix-canvas.dark .drafting-grid,
+.artifix-canvas.dark-theme .drafting-grid,
+.dark .drafting-grid {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+/* Tactile Masking Tape Label */
+.tape-strip {
+  background: rgba(226, 218, 203, 0.92);
+  color: #3F3935;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  letter-spacing: -0.01em;
+  padding: 3px 10px;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+  backdrop-filter: blur(2px);
+}
+
+.dark .tape-strip {
+  background: rgba(45, 52, 44, 0.9);
+  color: #E7E5E4;
+}
+
+/* Realistic Paper Shadow */
+.paper-card {
+  background: #FCFAF6 !important;
+  color: #1C1917 !important;
+  border: 1px solid rgba(214, 207, 195, 0.6);
+  box-shadow: 
+    0 4px 6px -1px rgba(28, 25, 23, 0.07),
+    0 10px 15px -3px rgba(28, 25, 23, 0.08),
+    0 1px 2px 0 rgba(28, 25, 23, 0.04);
+}
+
+.artifix-canvas.dark .paper-card,
+.artifix-canvas.dark-theme .paper-card,
+.dark .paper-card {
+  background: #18201A !important;
+  color: #F5F5F4 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+/* Terracotta Wax / Stamp Seal */
+.wax-seal {
+  background: radial-gradient(circle at 35% 35%, #D46938, #B85025 70%, #943A15);
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35),
+    0 4px 10px rgba(184, 80, 37, 0.35);
+}
+
+/* Warm Highlight Pill Behind Text */
+.text-highlight-pill {
+  background-color: #EADECE !important;
+  border-radius: 9999px;
+  padding: 0.08em 0.38em;
+  display: inline-block;
+  color: #1C1917 !important;
+}
+
+.artifix-canvas.dark .text-highlight-pill,
+.artifix-canvas.dark-theme .text-highlight-pill,
+.dark .text-highlight-pill {
+  background-color: #2E382E !important;
+  color: #FEF3C7 !important;
 }

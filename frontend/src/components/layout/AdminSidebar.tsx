@@ -22,6 +22,7 @@ import { clsx } from 'clsx';
 import { useAuthStore } from '../../stores/authStore';
 import { useAdminStore } from '../../stores/adminStore';
 import { Avatar } from '../ui/Avatar';
+import { FixmateLogo } from '../ui/FixmateLogo';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -104,17 +105,15 @@ export const AdminSidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       <aside
         className={clsx(
-          'fixed top-0 bottom-0 left-0 z-50 flex flex-col w-72 bg-slate-950 border-r border-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 flex flex-col transition-transform duration-300 lg:static lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Brand Header */}
         <div className="flex items-center gap-3 px-6 h-18 border-b border-slate-800 shrink-0 bg-slate-950/80">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20 font-bold">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
+          <FixmateLogo size="md" showWordmark={false} theme="dark" />
           <div>
-            <span className="text-base font-bold text-white tracking-tight">Fixmate Admin</span>
+            <span className="text-base font-bold text-white tracking-tight">Arti<span className="text-sky-400">fix</span> Admin</span>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] font-semibold tracking-wider text-purple-400 uppercase">

@@ -21,6 +21,7 @@ import {
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../stores/authStore';
 import { Avatar } from '../ui/Avatar';
+import { FixmateLogo } from '../ui/FixmateLogo';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -63,22 +64,20 @@ export const ClientSidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       <aside
         className={clsx(
-          'fixed inset-y-0 left-0 z-50 w-72 bg-white/95 dark:bg-slate-900/95 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-transform duration-200 lg:translate-x-0 backdrop-blur-md',
+          'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 flex flex-col justify-between transition-transform duration-300 lg:static lg:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Brand Header */}
         <div>
-          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20 font-bold">
-                <Sparkles className="w-5 h-5" />
-              </div>
+              <FixmateLogo size="md" showWordmark={false} />
               <div>
                 <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-none">
-                  Fixmate
+                  Arti<span className="text-sky-600 dark:text-sky-400">fix</span>
                 </h1>
-                <span className="text-[10px] font-semibold tracking-wider text-sky-600 dark:text-sky-400 uppercase">
+                <span className="text-[10px] font-semibold tracking-wider text-sky-700 dark:text-sky-400 uppercase">
                   Client Portal
                 </span>
               </div>
@@ -98,7 +97,7 @@ export const ClientSidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     isActive
                       ? 'bg-sky-600 text-white shadow-sm shadow-sky-600/20 font-semibold'
                       : item.highlight
-                      ? 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 font-semibold hover:bg-sky-100 dark:hover:bg-sky-900/50'
+                      ? 'text-emerald-700 dark:text-sky-400 bg-emerald-50 dark:bg-sky-950/40 font-semibold hover:bg-sky-100 dark:hover:bg-sky-900/50'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'
                   )
                 }
@@ -114,8 +113,8 @@ export const ClientSidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* User Card & Logout */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
-          <div className="flex items-center justify-between gap-3 mb-3 p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80">
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50 dark:bg-slate-950/50">
+          <div className="flex items-center justify-between gap-3 mb-3 p-2 rounded-xl bg-white dark:bg-slate-900 ">
             <div className="flex items-center gap-2.5 min-w-0">
               <Avatar
                 src={user?.avatarUrl}

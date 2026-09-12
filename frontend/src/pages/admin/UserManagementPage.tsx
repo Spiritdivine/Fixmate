@@ -203,20 +203,20 @@ export const UserManagementPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
 
       {successMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+        <div className="p-4 rounded-[24px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {/* Filter & Search Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4">
+      <div className="p-4 rounded-[24px] bg-slate-900/90 border border-slate-800 space-y-4">
         {/* Role Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           {['ALL', 'ARTISAN', 'CLIENT', 'ADMIN', 'SUPPORT'].map((r) => (
@@ -283,7 +283,7 @@ export const UserManagementPage: React.FC = () => {
       </div>
 
       {/* Users Data Table */}
-      <div className="rounded-2xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-xl">
+      <div className="rounded-[24px] bg-slate-900/90 border border-slate-800 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
@@ -357,7 +357,7 @@ export const UserManagementPage: React.FC = () => {
                             u.role === 'ARTISAN'
                               ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                               : u.role === 'CLIENT'
-                              ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                              ? 'bg-blue-500/10 text-blue-400 border border-emerald-600/20'
                               : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                           }`}
                         >

@@ -87,13 +87,13 @@ export const ReviewModerationPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
 
       {/* Filter Toolbar */}
-      <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4">
+      <div className="p-4 rounded-[24px] bg-slate-900/90 border border-slate-800 space-y-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {[
             { key: 'ALL', label: 'All Reviews' },
@@ -128,7 +128,7 @@ export const ReviewModerationPage: React.FC = () => {
       </div>
 
       {/* Reviews List */}
-      <div className="rounded-2xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-xl">
+      <div className="rounded-[24px] bg-slate-900/90 border border-slate-800 overflow-hidden shadow-xl">
         <div className="divide-y divide-slate-800">
           {isLoading ? (
             <div className="py-16 text-center text-slate-400">

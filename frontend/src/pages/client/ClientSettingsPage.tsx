@@ -98,9 +98,9 @@ export const ClientSettingsPage: React.FC = () => {
       )}
 
       {/* Change Password Card */}
-      <Card className="p-6 sm:p-8 border-slate-200 dark:border-slate-800 space-y-4">
+      <Card className="p-6 sm:p-8 border-slate-200 space-y-4">
         <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-bold text-sm">
-          <Lock className="w-4 h-4 text-sky-500" />
+          <Lock className="w-4 h-4 text-emerald-600" />
           <span>Change Password</span>
         </div>
 
@@ -113,7 +113,7 @@ export const ClientSettingsPage: React.FC = () => {
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100"
             />
           </div>
 
@@ -126,7 +126,7 @@ export const ClientSettingsPage: React.FC = () => {
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100"
               />
             </div>
 
@@ -138,7 +138,7 @@ export const ClientSettingsPage: React.FC = () => {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100"
               />
             </div>
           </div>
@@ -156,9 +156,9 @@ export const ClientSettingsPage: React.FC = () => {
       </Card>
 
       {/* Notification Preferences Card */}
-      <Card className="p-6 sm:p-8 border-slate-200 dark:border-slate-800 space-y-4">
+      <Card className="p-6 sm:p-8 border-slate-200 space-y-4">
         <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-bold text-sm">
-          <Bell className="w-4 h-4 text-sky-500" />
+          <Bell className="w-4 h-4 text-emerald-600" />
           <span>Notification Preferences</span>
         </div>
 
@@ -172,7 +172,7 @@ export const ClientSettingsPage: React.FC = () => {
               type="checkbox"
               checked={emailAlerts}
               onChange={(e) => setEmailAlerts(e.target.checked)}
-              className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+              className="w-4 h-4 rounded text-emerald-700 focus:ring-emerald-600"
             />
           </label>
 
@@ -185,7 +185,7 @@ export const ClientSettingsPage: React.FC = () => {
               type="checkbox"
               checked={smsAlerts}
               onChange={(e) => setSmsAlerts(e.target.checked)}
-              className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+              className="w-4 h-4 rounded text-emerald-700 focus:ring-emerald-600"
             />
           </label>
 
@@ -198,7 +198,7 @@ export const ClientSettingsPage: React.FC = () => {
               type="checkbox"
               checked={inAppSound}
               onChange={(e) => setInAppSound(e.target.checked)}
-              className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+              className="w-4 h-4 rounded text-emerald-700 focus:ring-emerald-600"
             />
           </label>
         </div>

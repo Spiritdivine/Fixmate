@@ -161,13 +161,13 @@ export const CategoriesManagerPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
 
       {/* Search Input */}
-      <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800">
+      <div className="p-4 rounded-[24px] bg-slate-900/90 border border-slate-800">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -187,7 +187,7 @@ export const CategoriesManagerPage: React.FC = () => {
           Loading categories...
         </div>
       ) : filteredCategories.length === 0 ? (
-        <div className="py-16 text-center text-slate-500 bg-slate-900 rounded-2xl border border-slate-800">
+        <div className="py-16 text-center text-slate-500 bg-slate-900 rounded-[24px] border border-slate-800">
           No categories found.
         </div>
       ) : (
@@ -195,7 +195,7 @@ export const CategoriesManagerPage: React.FC = () => {
           {filteredCategories.map((cat) => (
             <div
               key={cat.id}
-              className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-purple-500/40 transition-all flex flex-col justify-between space-y-4"
+              className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 hover:border-purple-500/40 transition-all flex flex-col justify-between space-y-4"
             >
               <div>
                 <div className="flex items-start justify-between gap-2">

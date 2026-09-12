@@ -209,7 +209,7 @@ export const ClientContractWorkspace: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -302,28 +302,28 @@ export const ClientContractWorkspace: React.FC = () => {
 
       {/* Financial Overview Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4 border-slate-200 dark:border-slate-800">
+        <Card className="p-4 border-slate-200 ">
           <span className="text-[11px] font-semibold text-slate-500">Total Contract</span>
           <p className="text-lg font-black text-slate-900 dark:text-slate-100 mt-1">
             {formatCurrency(contract.totalAmount)}
           </p>
         </Card>
 
-        <Card className="p-4 border-slate-200 dark:border-slate-800">
+        <Card className="p-4 border-slate-200 ">
           <span className="text-[11px] font-semibold text-slate-500">Escrow Funded</span>
-          <p className="text-lg font-black text-sky-600 dark:text-sky-400 mt-1">
+          <p className="text-lg font-black text-emerald-700 dark:text-sky-400 mt-1">
             {formatCurrency(contract.escrowFundedAmount)}
           </p>
         </Card>
 
-        <Card className="p-4 border-slate-200 dark:border-slate-800">
+        <Card className="p-4 border-slate-200 ">
           <span className="text-[11px] font-semibold text-slate-500">Released to Artisan</span>
           <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {formatCurrency(contract.escrowReleasedAmount)}
           </p>
         </Card>
 
-        <Card className="p-4 border-slate-200 dark:border-slate-800">
+        <Card className="p-4 border-slate-200 ">
           <span className="text-[11px] font-semibold text-slate-500">Refunded / Disputed</span>
           <p className="text-lg font-black text-slate-600 dark:text-slate-400 mt-1">
             {formatCurrency(contract.escrowRefundedAmount)}
@@ -332,7 +332,7 @@ export const ClientContractWorkspace: React.FC = () => {
       </div>
 
       {/* Workspace Tabs Header */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1">
         <button
           onClick={() => setActiveTab('milestones')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
@@ -386,7 +386,7 @@ export const ClientContractWorkspace: React.FC = () => {
                   className={`p-5 sm:p-6 border transition-all ${
                     isSubmitted
                       ? 'border-amber-500/60 bg-amber-50/10 dark:bg-amber-950/20 shadow-md'
-                      : 'border-slate-200 dark:border-slate-800'
+                      : 'border-slate-200 '
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -443,7 +443,7 @@ export const ClientContractWorkspace: React.FC = () => {
                       {isPendingFunding && (
                         <button
                           onClick={() => setFundingMilestone(m)}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-md shadow-sky-600/20 transition-all active:scale-95"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold shadow-md shadow-sky-600/20 transition-all active:scale-95"
                         >
                           <Lock className="w-3.5 h-3.5" />
                           <span>Fund Milestone</span>
@@ -461,7 +461,7 @@ export const ClientContractWorkspace: React.FC = () => {
                       )}
 
                       {isFunded && (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 dark:text-sky-400">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-sky-400">
                           <Clock className="w-3.5 h-3.5" />
                           <span>Artisan is working...</span>
                         </span>
@@ -484,7 +484,7 @@ export const ClientContractWorkspace: React.FC = () => {
 
       {/* TAB 2: TRANSACTIONS / ESCROW LEDGER */}
       {activeTab === 'transactions' && (
-        <Card className="p-6 border-slate-200 dark:border-slate-800 space-y-4">
+        <Card className="p-6 border-slate-200 space-y-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
             Escrow Audit Ledger &amp; Transactions
           </h3>
@@ -497,7 +497,7 @@ export const ClientContractWorkspace: React.FC = () => {
               {transactions.map((tx) => (
                 <div
                   key={tx.id}
-                  className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs"
+                  className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-xs"
                 >
                   <div className="space-y-0.5">
                     <p className="font-bold text-slate-900 dark:text-slate-100">
@@ -524,7 +524,7 @@ export const ClientContractWorkspace: React.FC = () => {
 
       {/* TAB 3: DISPUTES */}
       {activeTab === 'dispute' && (
-        <Card className="p-6 border-slate-200 dark:border-slate-800 space-y-6">
+        <Card className="p-6 border-slate-200 space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -546,7 +546,7 @@ export const ClientContractWorkspace: React.FC = () => {
           </div>
 
           {disputes.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+            <div className="p-8 text-center border border-dashed border-slate-200 rounded-[24px]">
               <ShieldCheck className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
               <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
                 No active disputes on this contract.
@@ -576,7 +576,7 @@ export const ClientContractWorkspace: React.FC = () => {
                   </p>
                   <Link
                     to={`/client/disputes/${dsp.id}`}
-                    className="inline-block text-xs font-bold text-sky-600 hover:underline pt-2"
+                    className="inline-block text-xs font-bold text-emerald-700 hover:underline pt-2"
                   >
                     Open Dispute Workspace &amp; Arbitration Chat &rarr;
                   </Link>
@@ -599,7 +599,7 @@ export const ClientContractWorkspace: React.FC = () => {
               You are locking <span className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(fundingMilestone.amount)}</span> into smart escrow. The artisan will only receive these funds once you inspect the completed work and approve.
             </p>
 
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between">
               <span className="text-slate-500">Your Available Wallet Balance:</span>
               <span className="font-extrabold text-slate-900 dark:text-slate-100">
                 {formatCurrency(wallet?.availableBalance || 0)}
@@ -612,7 +612,7 @@ export const ClientContractWorkspace: React.FC = () => {
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 ">
               <Button variant="outline" size="sm" onClick={() => setFundingMilestone(null)}>
                 Cancel
               </Button>
@@ -642,7 +642,7 @@ export const ClientContractWorkspace: React.FC = () => {
             {/* Submission Notes */}
             <div className="space-y-1">
               <h4 className="font-bold text-slate-700 dark:text-slate-300">Artisan&apos;s Notes:</h4>
-              <p className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 leading-relaxed">
+              <p className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 leading-relaxed">
                 {inspectingMilestone.submissionNotes || 'Work has been completed as specified.'}
               </p>
             </div>
@@ -672,7 +672,7 @@ export const ClientContractWorkspace: React.FC = () => {
 
             {/* Revision Input Box */}
             {showRevisionInput && (
-              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="space-y-2 pt-2 border-t border-slate-100 ">
                 <label className="font-bold text-slate-700 dark:text-slate-300">
                   Revision Instructions for Artisan:
                 </label>
@@ -681,7 +681,7 @@ export const ClientContractWorkspace: React.FC = () => {
                   value={revisionNotes}
                   onChange={(e) => setRevisionNotes(e.target.value)}
                   placeholder="Explain exactly what needs rework or adjustment..."
-                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
                 />
                 <Button
                   size="sm"
@@ -701,7 +701,7 @@ export const ClientContractWorkspace: React.FC = () => {
 
             {/* Action Buttons */}
             {!showRevisionInput && (
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100 ">
                 <button
                   type="button"
                   onClick={() => setShowRevisionInput(true)}
@@ -737,7 +737,7 @@ export const ClientContractWorkspace: React.FC = () => {
               <select
                 value={disputeMilestoneId}
                 onChange={(e) => setDisputeMilestoneId(e.target.value)}
-                className="w-full p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100"
+                className="w-full p-2 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100"
               >
                 <option value="">Entire Contract / General Dispute</option>
                 {milestones.map((m, idx) => (
@@ -753,7 +753,7 @@ export const ClientContractWorkspace: React.FC = () => {
               <select
                 value={disputeReason}
                 onChange={(e) => setDisputeReason(e.target.value)}
-                className="w-full p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100"
+                className="w-full p-2 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100"
               >
                 <option value="Poor workmanship or incomplete deliverables">Poor workmanship or incomplete deliverables</option>
                 <option value="Artisan abandoned job / unresponsive">Artisan abandoned job / unresponsive</option>
@@ -769,11 +769,11 @@ export const ClientContractWorkspace: React.FC = () => {
                 value={disputeExplanation}
                 onChange={(e) => setDisputeExplanation(e.target.value)}
                 placeholder="Explain what transpired in detail..."
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100"
+                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 ">
               <Button variant="outline" size="sm" onClick={() => setDisputeModalOpen(false)}>
                 Cancel
               </Button>
@@ -820,7 +820,7 @@ export const ClientContractWorkspace: React.FC = () => {
                 <select
                   value={qualityRating}
                   onChange={(e) => setQualityRating(Number(e.target.value))}
-                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100"
+                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-900 dark:text-slate-100"
                 >
                   {[5, 4, 3, 2, 1].map((n) => (
                     <option key={n} value={n}>★ {n}</option>
@@ -833,7 +833,7 @@ export const ClientContractWorkspace: React.FC = () => {
                 <select
                   value={communicationRating}
                   onChange={(e) => setCommunicationRating(Number(e.target.value))}
-                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100"
+                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-900 dark:text-slate-100"
                 >
                   {[5, 4, 3, 2, 1].map((n) => (
                     <option key={n} value={n}>★ {n}</option>
@@ -846,7 +846,7 @@ export const ClientContractWorkspace: React.FC = () => {
                 <select
                   value={punctualityRating}
                   onChange={(e) => setPunctualityRating(Number(e.target.value))}
-                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100"
+                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-900 dark:text-slate-100"
                 >
                   {[5, 4, 3, 2, 1].map((n) => (
                     <option key={n} value={n}>★ {n}</option>
@@ -862,11 +862,11 @@ export const ClientContractWorkspace: React.FC = () => {
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
                 placeholder="Share your experience working with this artisan..."
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100"
+                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 ">
               <Button variant="outline" size="sm" onClick={() => setReviewModalOpen(false)}>
                 Cancel
               </Button>
@@ -899,7 +899,7 @@ export const ClientContractWorkspace: React.FC = () => {
             <img
               src={lightboxImage}
               alt="Proof Full View"
-              className="w-full h-auto max-h-[85vh] object-contain rounded-2xl"
+              className="w-full h-auto max-h-[85vh] object-contain rounded-[24px]"
             />
           </div>
         </div>

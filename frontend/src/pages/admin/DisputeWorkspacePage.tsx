@@ -205,7 +205,7 @@ export const DisputeWorkspacePage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
@@ -215,7 +215,7 @@ export const DisputeWorkspacePage: React.FC = () => {
         {/* Col 1: Facts & Parties (4 Cols) */}
         <div className="lg:col-span-4 space-y-4">
           {/* Dispute Summary Card */}
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 text-xs">
+          <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3 text-xs">
             <h3 className="font-bold text-white uppercase tracking-wider text-[11px] text-purple-400">
               Dispute Statement
             </h3>
@@ -236,7 +236,7 @@ export const DisputeWorkspacePage: React.FC = () => {
           </div>
 
           {/* Parties Dossier */}
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-xs">
+          <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4 text-xs">
             <h3 className="font-bold text-white uppercase tracking-wider text-[11px] text-purple-400">
               Opposing Parties
             </h3>
@@ -261,7 +261,7 @@ export const DisputeWorkspacePage: React.FC = () => {
           </div>
 
           {/* Blockchain & Milestone facts */}
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 text-xs">
+          <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3 text-xs">
             <h3 className="font-bold text-white uppercase tracking-wider text-[11px] text-purple-400">
               Escrow & On-Chain Facts
             </h3>
@@ -284,7 +284,7 @@ export const DisputeWorkspacePage: React.FC = () => {
 
         {/* Col 2: Evidence Dossier (4 Cols) */}
         <div className="lg:col-span-4 space-y-4">
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider text-purple-400">
                 Evidence Dossier ({dispute.evidences?.length || 0})
@@ -324,7 +324,7 @@ export const DisputeWorkspacePage: React.FC = () => {
 
         {/* Col 3: Real-Time Chat & Discussion (4 Cols) */}
         <div className="lg:col-span-4 space-y-4 flex flex-col h-full">
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col flex-1 min-h-[480px]">
+          <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 flex flex-col flex-1 min-h-[480px]">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider text-purple-400 mb-3">
               Tribunal Discussion Thread
             </h3>
@@ -339,7 +339,7 @@ export const DisputeWorkspacePage: React.FC = () => {
                   return (
                     <div
                       key={m.id}
-                      className={`p-3 rounded-2xl text-xs space-y-1 ${
+                      className={`p-3 rounded-[24px] text-xs space-y-1 ${
                         isAdmin
                           ? 'bg-purple-950/60 border border-purple-800/60 text-purple-200'
                           : 'bg-slate-950 border border-slate-800 text-slate-300'
@@ -471,7 +471,7 @@ export const DisputeWorkspacePage: React.FC = () => {
           onClick={() => setLightboxUrl(null)}
           className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
         >
-          <img src={lightboxUrl} alt="Evidence Fullscreen" className="max-w-4xl max-h-[85vh] object-contain rounded-2xl border border-slate-800" />
+          <img src={lightboxUrl} alt="Evidence Fullscreen" className="max-w-4xl max-h-[85vh] object-contain rounded-[24px] border border-slate-800" />
         </div>
       )}
     </div>

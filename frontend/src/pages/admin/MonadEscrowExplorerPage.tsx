@@ -104,13 +104,13 @@ export const MonadEscrowExplorerPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
 
       {syncSuccessMessage && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+        <div className="p-4 rounded-[24px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           <span>{syncSuccessMessage}</span>
         </div>
@@ -118,25 +118,25 @@ export const MonadEscrowExplorerPage: React.FC = () => {
 
       {/* Network & Contract Telemetry Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-1">
           <span className="text-[10px] font-bold uppercase text-slate-400">Target EVM Chain</span>
           <p className="text-lg font-black text-white">Monad Testnet</p>
           <span className="text-[11px] font-mono text-purple-400">Chain ID: 10143</span>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-1">
           <span className="text-[10px] font-bold uppercase text-slate-400">Smart Contract</span>
           <p className="text-lg font-black text-white font-mono">ArtisanEscrow.sol</p>
           <span className="text-[11px] text-slate-400 truncate block">Multi-Milestone Escrow</span>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-1">
           <span className="text-[10px] font-bold uppercase text-slate-400">On-Chain Contracts</span>
           <p className="text-lg font-black text-purple-400">{contracts.length}</p>
           <span className="text-[11px] text-slate-400">Synced in database</span>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-1">
           <span className="text-[10px] font-bold uppercase text-slate-400">RPC Protocol</span>
           <p className="text-lg font-black text-emerald-400 flex items-center gap-1">
             <CheckCircle2 className="w-4 h-4" />
@@ -149,7 +149,7 @@ export const MonadEscrowExplorerPage: React.FC = () => {
       {/* Manual Sync Tool & Verified On-Chain Transactions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 1 Col: Manual Reconciliation Tool */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <div>
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Zap className="w-4 h-4 text-purple-400" />
@@ -209,7 +209,7 @@ export const MonadEscrowExplorerPage: React.FC = () => {
         </div>
 
         {/* Right 2 Cols: On-Chain Escrows List */}
-        <div className="lg:col-span-2 p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="lg:col-span-2 p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Activity className="w-4 h-4 text-purple-400" />
             <span>Monad On-Chain Escrow Records</span>

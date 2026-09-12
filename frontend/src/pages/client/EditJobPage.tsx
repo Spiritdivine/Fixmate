@@ -105,7 +105,7 @@ export const EditJobPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -133,14 +133,14 @@ export const EditJobPage: React.FC = () => {
         </div>
       )}
 
-      <Card className="p-6 sm:p-8 border-slate-200 dark:border-slate-800 space-y-6">
+      <Card className="p-6 sm:p-8 border-slate-200 space-y-6">
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Job Title</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
           />
         </div>
 
@@ -150,7 +150,7 @@ export const EditJobPage: React.FC = () => {
             rows={5}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
           />
         </div>
 
@@ -160,7 +160,7 @@ export const EditJobPage: React.FC = () => {
             <select
               value={state}
               onChange={(e) => setState(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
             >
               <option value="Lagos">Lagos</option>
               <option value="Abuja">Abuja (FCT)</option>
@@ -182,7 +182,7 @@ export const EditJobPage: React.FC = () => {
               type="text"
               value={lgaCity}
               onChange={(e) => setLgaCity(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
             />
           </div>
         </div>
@@ -193,7 +193,7 @@ export const EditJobPage: React.FC = () => {
             <select
               value={materialsProvidedBy}
               onChange={(e) => setMaterialsProvidedBy(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
             >
               <option value="CLIENT_PROVIDES">Client Provides All Materials</option>
               <option value="ARTISAN_PROVIDES">Artisan Supplies Materials</option>
@@ -206,7 +206,7 @@ export const EditJobPage: React.FC = () => {
             <select
               value={budgetType}
               onChange={(e) => setBudgetType(e.target.value as any)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
             >
               <option value="FIXED">Fixed Price Project</option>
               <option value="MILESTONE_BASED">Milestone-Based Escrow</option>
@@ -224,7 +224,7 @@ export const EditJobPage: React.FC = () => {
             value={expectedOutcome}
             onChange={(e) => setExpectedOutcome(e.target.value)}
             placeholder="e.g. Fully installed 5kVA inverter system with battery bank wiring"
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
           />
         </div>
 
@@ -237,7 +237,7 @@ export const EditJobPage: React.FC = () => {
             value={completionProofReq}
             onChange={(e) => setCompletionProofReq(e.target.value)}
             placeholder="e.g. Before and after photos of DB panel, voltage testing report"
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
           />
         </div>
 
@@ -248,7 +248,7 @@ export const EditJobPage: React.FC = () => {
               type="number"
               value={budgetMin}
               onChange={(e) => setBudgetMin(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
             />
           </div>
 
@@ -258,7 +258,7 @@ export const EditJobPage: React.FC = () => {
               type="number"
               value={budgetMax}
               onChange={(e) => setBudgetMax(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
             />
           </div>
         </div>
@@ -269,13 +269,13 @@ export const EditJobPage: React.FC = () => {
             type="date"
             value={deadlineDate}
             onChange={(e) => setDeadlineDate(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
           />
         </div>
 
         {/* Existing Attachments */}
         {job?.attachments && job.attachments.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="space-y-2 pt-2 border-t border-slate-100 ">
             <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
               Attached Files
             </label>
@@ -283,10 +283,10 @@ export const EditJobPage: React.FC = () => {
               {job.attachments.map((att) => (
                 <div
                   key={att.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs"
+                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs"
                 >
                   <div className="flex items-center gap-2 truncate">
-                    <FileText className="w-4 h-4 text-sky-500 shrink-0" />
+                    <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
                       {att.fileName}
                     </span>
@@ -306,7 +306,7 @@ export const EditJobPage: React.FC = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 ">
           <Button
             type="button"
             variant="outline"

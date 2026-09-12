@@ -60,7 +60,7 @@ export const SavedArtisansPage: React.FC = () => {
             </Link>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Bookmark className="w-5 h-5 text-sky-500 fill-sky-500/20" />
+            <Bookmark className="w-5 h-5 text-emerald-600 fill-sky-500/20" />
             <span>Saved Artisans ({list.length})</span>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -70,7 +70,7 @@ export const SavedArtisansPage: React.FC = () => {
 
         <Link
           to="/client/artisans"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-colors self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold transition-colors self-start sm:self-auto"
         >
           <Search className="w-3.5 h-3.5" />
           <span>Browse More Artisans</span>
@@ -81,11 +81,11 @@ export const SavedArtisansPage: React.FC = () => {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((n) => (
-            <Card key={n} className="p-6 border-slate-200 dark:border-slate-800 animate-pulse h-48" />
+            <Card key={n} className="p-6 border-slate-200 animate-pulse h-48" />
           ))}
         </div>
       ) : list.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+        <Card className="p-12 text-center border-dashed border-slate-200 ">
           <Bookmark className="w-12 h-12 mx-auto text-slate-400 mb-3" />
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
             No saved artisans yet
@@ -111,7 +111,7 @@ export const SavedArtisansPage: React.FC = () => {
             return (
               <Card
                 key={item.id}
-                className="p-5 flex flex-col justify-between hover:border-sky-500/40 transition-all border-slate-200 dark:border-slate-800 space-y-4"
+                className="p-5 flex flex-col justify-between hover:border-emerald-600/40 transition-all border-slate-200 space-y-4"
               >
                 <div>
                   <div className="flex items-start justify-between gap-3">
@@ -127,7 +127,7 @@ export const SavedArtisansPage: React.FC = () => {
                           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
                             {displayName}
                           </h3>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                         </div>
                         <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                           <MapPin className="w-3 h-3 text-slate-400" />
@@ -153,7 +153,7 @@ export const SavedArtisansPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                <div className="pt-3 border-t border-slate-100 space-y-3">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1 text-amber-500 font-bold">
                       <Star className="w-3.5 h-3.5 fill-amber-500" />
@@ -178,7 +178,7 @@ export const SavedArtisansPage: React.FC = () => {
                     </Link>
                     <Link
                       to={`/client/artisans/${artisan?.id}?action=invite`}
-                      className="flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition-colors"
+                      className="flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold transition-colors"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>Invite</span>

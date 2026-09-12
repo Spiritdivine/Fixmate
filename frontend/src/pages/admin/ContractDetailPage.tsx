@@ -80,7 +80,7 @@ export const ContractDetailPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
@@ -99,7 +99,7 @@ export const ContractDetailPage: React.FC = () => {
         </div>
 
         {/* Financial Badges */}
-        <div className="flex items-center gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800/80">
+        <div className="flex items-center gap-4 bg-slate-950 p-4 rounded-[24px] border border-slate-800/80">
           <div>
             <span className="text-[10px] uppercase font-bold text-slate-400">Total Contract</span>
             <p className="text-base font-black text-white">{formatCurrency(contract.totalAmount)}</p>
@@ -120,7 +120,7 @@ export const ContractDetailPage: React.FC = () => {
       {/* Grid: Parties & Monad Web3 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Parties Card */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <h3 className="text-sm font-bold text-white">Contract Counterparties</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
@@ -144,7 +144,7 @@ export const ContractDetailPage: React.FC = () => {
         </div>
 
         {/* Monad Web3 Blockchain Card */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 text-xs">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3 text-xs">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-purple-400" />
@@ -181,7 +181,7 @@ export const ContractDetailPage: React.FC = () => {
       </div>
 
       {/* Milestone Schedule */}
-      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+      <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
         <h3 className="text-sm font-bold text-white">Milestone Deliverable Progress</h3>
         <div className="space-y-3">
           {contract.milestones?.map((m: any) => (
@@ -216,7 +216,7 @@ export const ContractDetailPage: React.FC = () => {
       </div>
 
       {/* Financial Transactions Log */}
-      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+      <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
         <h3 className="text-sm font-bold text-white flex items-center gap-2">
           <Receipt className="w-4 h-4 text-purple-400" />
           <span>Linked Financial Transactions</span>

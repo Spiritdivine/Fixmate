@@ -78,7 +78,7 @@ export const ClientNotificationsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Bell className="w-5 h-5 text-sky-500" />
+            <Bell className="w-5 h-5 text-emerald-600" />
             <span>Notifications Center</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -97,7 +97,7 @@ export const ClientNotificationsPage: React.FC = () => {
           <button
             onClick={() => clearReadMutation.mutate()}
             disabled={clearReadMutation.isPending}
-            className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 hover:text-rose-600 transition-colors"
+            className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:text-rose-600 transition-colors"
           >
             Clear Read
           </button>
@@ -132,11 +132,11 @@ export const ClientNotificationsPage: React.FC = () => {
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((n) => (
-            <Card key={n} className="p-4 border-slate-200 dark:border-slate-800 animate-pulse h-20" />
+            <Card key={n} className="p-4 border-slate-200 animate-pulse h-20" />
           ))}
         </div>
       ) : notifications.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+        <Card className="p-12 text-center border-dashed border-slate-200 ">
           <Bell className="w-12 h-12 mx-auto text-slate-400 mb-3" />
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
             No notifications
@@ -152,8 +152,8 @@ export const ClientNotificationsPage: React.FC = () => {
               key={notif.id}
               className={`p-4 border transition-all flex items-start justify-between gap-4 ${
                 !notif.isRead
-                  ? 'border-sky-500/50 bg-sky-50/30 dark:bg-sky-950/20 shadow-xs'
-                  : 'border-slate-200 dark:border-slate-800'
+                  ? 'border-emerald-600/50 bg-emerald-50/30 dark:bg-sky-950/20 shadow-xs'
+                  : 'border-slate-200 '
               }`}
             >
               <div
@@ -168,7 +168,7 @@ export const ClientNotificationsPage: React.FC = () => {
                     {notif.title}
                   </h3>
                   {!notif.isRead && (
-                    <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                    <span className="w-2 h-2 rounded-full bg-[#186644] shrink-0" />
                   )}
                 </div>
 
@@ -188,7 +188,7 @@ export const ClientNotificationsPage: React.FC = () => {
                       if (!notif.isRead) markAsReadMutation.mutate(notif.id);
                       navigate(notif.actionUrl!);
                     }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700"
                     title="Go to Page"
                   >
                     <ExternalLink className="w-4 h-4" />

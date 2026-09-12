@@ -133,7 +133,7 @@ export const ClientWalletPage: React.FC = () => {
 
         <button
           onClick={() => setDepositModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-lg shadow-sky-600/20 transition-all active:scale-95 self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[24px] bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold shadow-lg shadow-sky-600/20 transition-all active:scale-95 self-start sm:self-auto"
         >
           <PlusCircle className="w-4 h-4" />
           <span>Deposit Funds</span>
@@ -143,7 +143,7 @@ export const ClientWalletPage: React.FC = () => {
       {/* Financial Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Available Balance */}
-        <Card className="p-6 border-slate-200 dark:border-slate-800 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 flex flex-col justify-between">
+        <Card className="p-6 border-slate-200 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Available Balance</span>
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
@@ -161,7 +161,7 @@ export const ClientWalletPage: React.FC = () => {
         </Card>
 
         {/* Escrow Locked */}
-        <Card className="p-6 border-slate-200 dark:border-slate-800 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 flex flex-col justify-between">
+        <Card className="p-6 border-slate-200 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Escrow Locked Funds</span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
@@ -179,10 +179,10 @@ export const ClientWalletPage: React.FC = () => {
         </Card>
 
         {/* Total Portfolio Value */}
-        <Card className="p-6 border-slate-200 dark:border-slate-800 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 flex flex-col justify-between">
+        <Card className="p-6 border-slate-200 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Total Portfolio Value</span>
-            <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600">
+            <div className="p-2 rounded-xl bg-[#186644]/10 text-emerald-700">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
@@ -198,17 +198,17 @@ export const ClientWalletPage: React.FC = () => {
       </div>
 
       {/* Saved Payment Methods Section */}
-      <Card className="p-6 border-slate-200 dark:border-slate-800 space-y-4">
+      <Card className="p-6 border-slate-200 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-sky-500" />
+            <CreditCard className="w-4 h-4 text-emerald-600" />
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
               Saved Payment Cards
             </h2>
           </div>
           <button
             onClick={() => setDepositModalOpen(true)}
-            className="text-xs font-semibold text-sky-600 hover:text-sky-500"
+            className="text-xs font-semibold text-emerald-700 hover:text-emerald-600"
           >
             + Add New Card
           </button>
@@ -225,8 +225,8 @@ export const ClientWalletPage: React.FC = () => {
                 key={card.id}
                 className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
                   card.isDefault
-                    ? 'border-sky-500 bg-sky-50/40 dark:bg-sky-950/20'
-                    : 'border-slate-200 dark:border-slate-800'
+                    ? 'border-emerald-600 bg-emerald-50/40 dark:bg-sky-950/20'
+                    : 'border-slate-200 '
                 }`}
               >
                 <div className="space-y-0.5">
@@ -250,7 +250,7 @@ export const ClientWalletPage: React.FC = () => {
                     <button
                       onClick={() => setDefaultCardMutation.mutate(card.id)}
                       disabled={setDefaultCardMutation.isPending}
-                      className="text-[10px] text-sky-600 hover:underline font-bold mr-2"
+                      className="text-[10px] text-emerald-700 hover:underline font-bold mr-2"
                     >
                       Make Default
                     </button>
@@ -271,10 +271,10 @@ export const ClientWalletPage: React.FC = () => {
       </Card>
 
       {/* Transaction Ledger */}
-      <Card className="p-6 border-slate-200 dark:border-slate-800 space-y-4">
+      <Card className="p-6 border-slate-200 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-sky-500" />
+            <Receipt className="w-4 h-4 text-emerald-600" />
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
               Transaction History
             </h2>
@@ -306,7 +306,7 @@ export const ClientWalletPage: React.FC = () => {
             value={searchRef}
             onChange={(e) => setSearchRef(e.target.value)}
             placeholder="Search by reference code..."
-            className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100"
+            className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100"
           />
         </div>
 
@@ -323,14 +323,14 @@ export const ClientWalletPage: React.FC = () => {
                 <div
                   key={tx.id}
                   onClick={() => setReceiptTx(tx)}
-                  className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-sky-500/40 cursor-pointer flex items-center justify-between text-xs transition-colors"
+                  className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 hover:border-emerald-600/40 cursor-pointer flex items-center justify-between text-xs transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div
                       className={`p-2 rounded-xl shrink-0 ${
                         isCredit
                           ? 'bg-emerald-500/10 text-emerald-600'
-                          : 'bg-sky-500/10 text-sky-600'
+                          : 'bg-[#186644]/10 text-emerald-700'
                       }`}
                     >
                       {isCredit ? (
@@ -392,7 +392,7 @@ export const ClientWalletPage: React.FC = () => {
                   step="1000"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
-                  className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-sky-500"
+                  className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600"
                 />
               </div>
 
@@ -403,7 +403,7 @@ export const ClientWalletPage: React.FC = () => {
                     type="button"
                     key={amt}
                     onClick={() => setDepositAmount(amt)}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-[11px] font-semibold text-slate-700 dark:text-slate-300"
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-sky-950/40 text-[11px] font-semibold text-slate-700 dark:text-slate-300"
                   >
                     +{formatCurrency(amt)}
                   </button>
@@ -419,8 +419,8 @@ export const ClientWalletPage: React.FC = () => {
                   onClick={() => setDepositMethod('PAYSTACK')}
                   className={`p-3 rounded-xl border text-left transition-all ${
                     depositMethod === 'PAYSTACK'
-                      ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/40 ring-1 ring-sky-500 text-sky-950 dark:text-sky-100'
-                      : 'border-slate-200 dark:border-slate-800'
+                      ? 'border-emerald-600 bg-emerald-50 dark:bg-sky-950/40 ring-1 ring-emerald-600 text-sky-950 dark:text-sky-100'
+                      : 'border-slate-200 '
                   }`}
                 >
                   <p className="font-bold text-xs">Paystack Gateway</p>
@@ -433,7 +433,7 @@ export const ClientWalletPage: React.FC = () => {
                   className={`p-3 rounded-xl border text-left transition-all ${
                     depositMethod === 'SIMULATE'
                       ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/40 ring-1 ring-purple-500 text-purple-950 dark:text-purple-100'
-                      : 'border-slate-200 dark:border-slate-800'
+                      : 'border-slate-200 '
                   }`}
                 >
                   <p className="font-bold text-xs">Sandbox / Instant Test</p>
@@ -442,7 +442,7 @@ export const ClientWalletPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 ">
               <Button variant="outline" size="sm" onClick={() => setDepositModalOpen(false)}>
                 Cancel
               </Button>
@@ -467,7 +467,7 @@ export const ClientWalletPage: React.FC = () => {
           title="Transaction Receipt"
         >
           <div className="space-y-4 text-xs">
-            <div className="text-center py-4 border-b border-slate-100 dark:border-slate-800">
+            <div className="text-center py-4 border-b border-slate-100 ">
               <span className="text-[11px] text-slate-400">Total Amount</span>
               <p className="text-2xl font-black text-slate-900 dark:text-slate-100">
                 {formatCurrency(receiptTx.amount)}
@@ -496,7 +496,7 @@ export const ClientWalletPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="pt-4 border-t border-slate-100 ">
               <Button variant="outline" size="sm" onClick={() => setReceiptTx(null)} className="w-full">
                 Close
               </Button>

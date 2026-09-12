@@ -55,7 +55,7 @@ export const ClientDisputesPage: React.FC = () => {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
         {[
           { label: 'All Disputes', value: 'ALL' },
           { label: 'Active & Under Review', value: 'OPEN' },
@@ -79,11 +79,11 @@ export const ClientDisputesPage: React.FC = () => {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2].map((n) => (
-            <Card key={n} className="p-6 border-slate-200 dark:border-slate-800 animate-pulse h-36" />
+            <Card key={n} className="p-6 border-slate-200 animate-pulse h-36" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+        <Card className="p-12 text-center border-dashed border-slate-200 ">
           <ShieldCheck className="w-12 h-12 mx-auto text-emerald-500 mb-3" />
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
             No disputes found
@@ -99,7 +99,7 @@ export const ClientDisputesPage: React.FC = () => {
           {filtered.map((d) => (
             <Card
               key={d.id}
-              className="p-5 sm:p-6 border-slate-200 dark:border-slate-800 hover:border-rose-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              className="p-5 sm:p-6 border-slate-200 hover:border-rose-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="space-y-1.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export const ClientDisputesPage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 ">
                 <div className="text-left sm:text-right">
                   <span className="text-[10px] text-slate-400 uppercase font-semibold">
                     Disputed Value

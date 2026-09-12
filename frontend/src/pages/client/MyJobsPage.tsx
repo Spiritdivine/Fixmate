@@ -92,7 +92,7 @@ export const MyJobsPage: React.FC = () => {
 
         <Link
           to="/client/jobs/post"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-lg shadow-sky-600/20 transition-all active:scale-95 self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[24px] bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold shadow-lg shadow-sky-600/20 transition-all active:scale-95 self-start sm:self-auto"
         >
           <PlusCircle className="w-4 h-4" />
           <span>Post a New Job</span>
@@ -124,7 +124,7 @@ export const MyJobsPage: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search jobs by title, LGA, or state..."
-            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
           />
         </div>
       </div>
@@ -133,11 +133,11 @@ export const MyJobsPage: React.FC = () => {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((n) => (
-            <Card key={n} className="p-6 border-slate-200 dark:border-slate-800 animate-pulse h-36" />
+            <Card key={n} className="p-6 border-slate-200 animate-pulse h-36" />
           ))}
         </div>
       ) : jobs.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+        <Card className="p-12 text-center border-dashed border-slate-200 ">
           <Briefcase className="w-12 h-12 mx-auto text-slate-400 mb-3" />
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
             No job postings found
@@ -172,7 +172,7 @@ export const MyJobsPage: React.FC = () => {
             return (
               <Card
                 key={job.id}
-                className="p-5 sm:p-6 hover:border-sky-500/40 transition-all border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-6"
+                className="p-5 sm:p-6 hover:border-emerald-600/40 transition-all border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-6"
               >
                 <div className="space-y-2 flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -189,7 +189,7 @@ export const MyJobsPage: React.FC = () => {
 
                   <Link
                     to={`/client/jobs/${job.id}`}
-                    className="text-base font-bold text-slate-900 dark:text-slate-100 hover:text-sky-600 dark:hover:text-sky-400 transition-colors block truncate"
+                    className="text-base font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-sky-400 transition-colors block truncate"
                   >
                     {job.title}
                   </Link>
@@ -216,8 +216,8 @@ export const MyJobsPage: React.FC = () => {
                 </div>
 
                 {/* Right Actions & Proposal Badge */}
-                <div className="flex flex-wrap sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800 shrink-0">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 text-xs font-bold border border-sky-200 dark:border-sky-800">
+                <div className="flex flex-wrap sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 text-xs font-bold border border-sky-200 dark:border-sky-800">
                     <Users className="w-3.5 h-3.5" />
                     <span>{job.proposalsCount} Proposals Received</span>
                   </div>
@@ -225,7 +225,7 @@ export const MyJobsPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Link
                       to={`/client/jobs/${job.id}`}
-                      className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-sky-600 dark:hover:bg-sky-500 text-white dark:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors"
+                      className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-[#124d33] dark:hover:bg-[#186644] text-white dark:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors"
                     >
                       View Details &amp; Bids
                     </Link>

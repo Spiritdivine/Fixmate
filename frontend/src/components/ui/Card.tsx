@@ -16,9 +16,9 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={clsx(
-        'rounded-2xl border p-6 transition-all duration-200',
-        glass ? 'glass-panel' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
-        hoverable && 'hover:shadow-lg hover:border-sky-500/30 dark:hover:border-sky-500/30 cursor-pointer',
+        'rounded-[24px] shadow-sm p-6 transition-all duration-200',
+        glass ? 'glass-panel border border-white/20' : 'bg-white',
+        hoverable && 'hover:shadow-lg hover:ring-2 hover:ring-emerald-600/30 cursor-pointer',
         className
       )}
       {...props}
@@ -29,7 +29,7 @@ export const Card: React.FC<CardProps> = ({
 };
 
 export const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, className, ...props }) => (
-  <div className={clsx('flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800/80 mb-4', className)} {...props}>
+  <div className={clsx('flex items-center justify-between pb-4 border-b border-slate-100 mb-4', className)} {...props}>
     {children}
   </div>
 );

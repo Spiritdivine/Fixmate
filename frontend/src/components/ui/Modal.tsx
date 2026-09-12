@@ -52,11 +52,11 @@ export const Modal: React.FC<ModalProps> = ({
       />
       <div
         className={clsx(
-          'relative w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-150',
+          'relative w-full bg-white dark:bg-slate-900 rounded-[24px] shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-150',
           maxWidths[maxWidth]
         )}
       >
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between p-6 border-b border-slate-100 ">
           <div>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
             {description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>}

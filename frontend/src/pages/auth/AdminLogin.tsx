@@ -55,7 +55,7 @@ export const AdminLogin: React.FC = () => {
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 text-slate-100">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-xl shadow-purple-500/20 font-bold mb-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-[24px] bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-xl shadow-purple-500/20 font-bold mb-2">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <h2 className="text-2xl font-extrabold tracking-tight text-white">Fixmate Admin Console</h2>

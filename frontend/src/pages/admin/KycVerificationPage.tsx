@@ -220,20 +220,20 @@ export const KycVerificationPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
 
       {successMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+        <div className="p-4 rounded-[24px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {/* Filter Tabs & Search Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4">
+      <div className="p-4 rounded-[24px] bg-slate-900/90 border border-slate-800 space-y-4">
         {/* Status Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {[
@@ -287,7 +287,7 @@ export const KycVerificationPage: React.FC = () => {
       </div>
 
       {/* Submissions Table */}
-      <div className="rounded-2xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-xl">
+      <div className="rounded-[24px] bg-slate-900/90 border border-slate-800 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
@@ -646,7 +646,7 @@ export const KycVerificationPage: React.FC = () => {
               </div>
 
               {previewImage && (
-                <div className="relative rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center min-h-[220px] max-h-[300px]">
+                <div className="relative rounded-[24px] bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center min-h-[220px] max-h-[300px]">
                   <img
                     src={previewImage}
                     alt="Document preview"

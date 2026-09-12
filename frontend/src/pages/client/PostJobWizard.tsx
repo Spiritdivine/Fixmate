@@ -227,7 +227,7 @@ export const PostJobWizard: React.FC = () => {
       )}
 
       {/* Wizard Form Card */}
-      <Card className="p-6 sm:p-8 border-slate-200 dark:border-slate-800 space-y-6">
+      <Card className="p-6 sm:p-8 border-slate-200 space-y-6">
         {/* STEP 1: BASICS & CATEGORY */}
         {currentStep === 1 && (
           <div className="space-y-5 animate-in fade-in duration-200">
@@ -249,7 +249,7 @@ export const PostJobWizard: React.FC = () => {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Complete Re-piping for 3-Bedroom Flat or Inverter Solar Installation"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
               />
             </div>
 
@@ -263,7 +263,7 @@ export const PostJobWizard: React.FC = () => {
                   setCategoryId(Number(e.target.value));
                   setSelectedSkillIds([]);
                 }}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
               >
                 <option value="">Select a category...</option>
                 {categories?.map((cat) => (
@@ -290,7 +290,7 @@ export const PostJobWizard: React.FC = () => {
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                           isSelected
                             ? 'bg-sky-600 border-sky-600 text-white shadow-sm'
-                            : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-sky-500'
+                            : 'bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-700 dark:text-slate-300 hover:border-emerald-600'
                         }`}
                       >
                         {skill.name}
@@ -324,7 +324,7 @@ export const PostJobWizard: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Explain the exact issue, current condition of the site, special requirements, and any constraints..."
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100 leading-relaxed"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100 leading-relaxed"
               />
             </div>
 
@@ -337,7 +337,7 @@ export const PostJobWizard: React.FC = () => {
                 value={expectedOutcome}
                 onChange={(e) => setExpectedOutcome(e.target.value)}
                 placeholder="e.g. Zero leakages tested under pressure, fully functional inverter powering all lights..."
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
               />
             </div>
 
@@ -349,7 +349,7 @@ export const PostJobWizard: React.FC = () => {
                 <select
                   value={materialsProvidedBy}
                   onChange={(e) => setMaterialsProvidedBy(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
                 >
                   <option value="CLIENT_PROVIDES">I (Client) will provide all materials</option>
                   <option value="ARTISAN_PROVIDES">Artisan must supply all materials</option>
@@ -366,7 +366,7 @@ export const PostJobWizard: React.FC = () => {
                   value={completionProofReq}
                   onChange={(e) => setCompletionProofReq(e.target.value)}
                   placeholder="e.g. High-res before/after photos and on-site testing"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
                 />
               </div>
             </div>
@@ -393,7 +393,7 @@ export const PostJobWizard: React.FC = () => {
                 <select
                   value={state}
                   onChange={(e) => setState(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
                 >
                   <option value="Lagos">Lagos</option>
                   <option value="Abuja">Abuja (FCT)</option>
@@ -418,7 +418,7 @@ export const PostJobWizard: React.FC = () => {
                   value={lgaCity}
                   onChange={(e) => setLgaCity(e.target.value)}
                   placeholder="e.g. Lekki Phase 1, Ikeja, Maitama, Wuse 2"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
                 />
               </div>
             </div>
@@ -432,7 +432,7 @@ export const PostJobWizard: React.FC = () => {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="e.g. Plot 14, Admiralty Way, Lekki"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
               />
             </div>
 
@@ -444,7 +444,7 @@ export const PostJobWizard: React.FC = () => {
                 type="date"
                 value={deadlineDate}
                 onChange={(e) => setDeadlineDate(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
               />
             </div>
           </div>
@@ -478,8 +478,8 @@ export const PostJobWizard: React.FC = () => {
                     onClick={() => setBudgetType(item.type as any)}
                     className={`p-3 rounded-xl border text-left transition-all ${
                       budgetType === item.type
-                        ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-100 ring-1 ring-sky-500'
-                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+                        ? 'border-emerald-600 bg-emerald-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-100 ring-1 ring-emerald-600'
+                        : 'border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
                     }`}
                   >
                     <p className="text-xs font-bold">{item.title}</p>
@@ -501,7 +501,7 @@ export const PostJobWizard: React.FC = () => {
                   value={budgetMin}
                   onChange={(e) => setBudgetMin(e.target.value)}
                   placeholder="e.g. 50000"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100 font-mono"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100 font-mono"
                 />
               </div>
 
@@ -516,15 +516,15 @@ export const PostJobWizard: React.FC = () => {
                   value={budgetMax}
                   onChange={(e) => setBudgetMax(e.target.value)}
                   placeholder="e.g. 150000"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100 font-mono"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100 font-mono"
                 />
               </div>
             </div>
 
             {budgetMin && budgetMax && (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-xs">
                 <span className="text-slate-500 font-medium">Estimated Range:</span>
-                <span className="font-bold text-sky-600 dark:text-sky-400">
+                <span className="font-bold text-emerald-700 dark:text-sky-400">
                   {formatCurrency(budgetMin)} – {formatCurrency(budgetMax)}
                 </span>
               </div>
@@ -544,7 +544,7 @@ export const PostJobWizard: React.FC = () => {
               </p>
             </div>
 
-            <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-8 text-center hover:border-sky-500 transition-colors">
+            <div className="border-2 border-dashed border-slate-300 rounded-[24px] p-8 text-center hover:border-emerald-600 transition-colors">
               <input
                 type="file"
                 multiple
@@ -554,7 +554,7 @@ export const PostJobWizard: React.FC = () => {
                 accept="image/*,.pdf,.doc,.docx"
               />
               <label htmlFor="file-upload" className="cursor-pointer space-y-3 block">
-                <div className="w-12 h-12 rounded-full bg-sky-500/10 text-sky-600 mx-auto flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-[#186644]/10 text-emerald-700 mx-auto flex items-center justify-center">
                   <Upload className="w-6 h-6" />
                 </div>
                 <div className="space-y-1">
@@ -577,10 +577,10 @@ export const PostJobWizard: React.FC = () => {
                   {attachments.map((att, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs"
+                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="w-4 h-4 text-sky-500 shrink-0" />
+                        <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
                           {att.fileName}
                         </span>
@@ -615,10 +615,10 @@ export const PostJobWizard: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 text-xs">
-              <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div className="p-5 rounded-[24px] bg-slate-50 dark:bg-slate-900 space-y-4 text-xs">
+              <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-200 ">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-sky-400">
                     {selectedCategoryObj?.name || 'Category'}
                   </span>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
@@ -673,7 +673,7 @@ export const PostJobWizard: React.FC = () => {
                     {attachments.map((att, i) => (
                       <span
                         key={i}
-                        className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-700 dark:text-slate-300"
+                        className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-[11px] text-slate-700 dark:text-slate-300"
                       >
                         {att.fileName}
                       </span>
@@ -686,7 +686,7 @@ export const PostJobWizard: React.FC = () => {
         )}
 
         {/* Wizard Controls */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100 ">
           {currentStep > 1 ? (
             <Button
               type="button"

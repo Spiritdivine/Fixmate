@@ -36,7 +36,7 @@ export const Stepper: React.FC<StepperProps> = ({ steps, currentStep = 1 }) => {
           return {
             icon: <Clock className="w-4 h-4 animate-pulse" />,
             style: 'bg-sky-600 text-white border-sky-600 shadow-sky-500/20 shadow-md',
-            line: 'bg-sky-500',
+            line: 'bg-[#186644]',
           };
         case 'DISPUTED':
           return {
@@ -47,7 +47,7 @@ export const Stepper: React.FC<StepperProps> = ({ steps, currentStep = 1 }) => {
         default:
           return {
             icon: <span className="w-2 h-2 rounded-full bg-slate-400" />,
-            style: 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-300 dark:border-slate-700',
+            style: 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-300 ',
             line: 'bg-slate-200 dark:bg-slate-800',
           };
       }
@@ -63,13 +63,13 @@ export const Stepper: React.FC<StepperProps> = ({ steps, currentStep = 1 }) => {
     } else if (stepNum === currentStep) {
       return {
         icon: <span className="text-xs font-bold">{stepNum}</span>,
-        style: 'bg-sky-600 text-white border-sky-600 shadow-sky-500/20 shadow-md ring-4 ring-sky-500/20',
+        style: 'bg-sky-600 text-white border-sky-600 shadow-sky-500/20 shadow-md ring-4 ring-emerald-600/20',
         line: 'bg-slate-200 dark:bg-slate-800',
       };
     } else {
       return {
         icon: <span className="text-xs font-bold text-slate-400">{stepNum}</span>,
-        style: 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-400',
+        style: 'bg-slate-100 dark:bg-slate-800 border-slate-300 text-slate-400',
         line: 'bg-slate-200 dark:bg-slate-800',
       };
     }

@@ -97,7 +97,7 @@ export const ClientReviewsPage: React.FC = () => {
 
       {/* Pending Reviews Reminder Banner */}
       {pendingContracts.length > 0 && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 rounded-[24px] bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-0.5">
             <h3 className="text-xs font-bold">
               Pending Reviews ({pendingContracts.length} Completed Projects)
@@ -120,11 +120,11 @@ export const ClientReviewsPage: React.FC = () => {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2].map((n) => (
-            <Card key={n} className="p-6 border-slate-200 dark:border-slate-800 animate-pulse h-36" />
+            <Card key={n} className="p-6 border-slate-200 animate-pulse h-36" />
           ))}
         </div>
       ) : reviewsGiven.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+        <Card className="p-12 text-center border-dashed border-slate-200 ">
           <Star className="w-12 h-12 mx-auto text-slate-400 mb-3" />
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
             No reviews left yet
@@ -143,7 +143,7 @@ export const ClientReviewsPage: React.FC = () => {
             return (
               <Card
                 key={review.id}
-                className="p-5 sm:p-6 border-slate-200 dark:border-slate-800 space-y-4"
+                className="p-5 sm:p-6 border-slate-200 space-y-4"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
@@ -178,7 +178,7 @@ export const ClientReviewsPage: React.FC = () => {
                           setCommVal(review.communicationRating || 5);
                           setPunctVal(review.punctualityRating || 5);
                         }}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700"
                         title="Edit Review"
                       >
                         <Edit className="w-3.5 h-3.5" />
@@ -197,13 +197,13 @@ export const ClientReviewsPage: React.FC = () => {
                 </div>
 
                 {review.comment && (
-                  <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-100 ">
                     &quot;{review.comment}&quot;
                   </p>
                 )}
 
                 {review.artisanReply && (
-                  <div className="p-3 rounded-xl bg-sky-50/50 dark:bg-sky-950/20 border-l-2 border-sky-500 text-xs space-y-1">
+                  <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-sky-950/20 border-l-2 border-emerald-600 text-xs space-y-1">
                     <p className="font-bold text-sky-900 dark:text-sky-300 flex items-center gap-1">
                       <MessageSquare className="w-3.5 h-3.5" />
                       <span>Artisan Reply:</span>
@@ -249,7 +249,7 @@ export const ClientReviewsPage: React.FC = () => {
                 <select
                   value={qualityVal}
                   onChange={(e) => setQualityVal(Number(e.target.value))}
-                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100"
+                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-900 dark:text-slate-100"
                 >
                   {[5, 4, 3, 2, 1].map((n) => (
                     <option key={n} value={n}>★ {n}</option>
@@ -262,7 +262,7 @@ export const ClientReviewsPage: React.FC = () => {
                 <select
                   value={commVal}
                   onChange={(e) => setCommVal(Number(e.target.value))}
-                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100"
+                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-900 dark:text-slate-100"
                 >
                   {[5, 4, 3, 2, 1].map((n) => (
                     <option key={n} value={n}>★ {n}</option>
@@ -275,7 +275,7 @@ export const ClientReviewsPage: React.FC = () => {
                 <select
                   value={punctVal}
                   onChange={(e) => setPunctVal(Number(e.target.value))}
-                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100"
+                  className="w-full p-1.5 rounded-lg border text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-900 dark:text-slate-100"
                 >
                   {[5, 4, 3, 2, 1].map((n) => (
                     <option key={n} value={n}>★ {n}</option>
@@ -290,11 +290,11 @@ export const ClientReviewsPage: React.FC = () => {
                 rows={4}
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100"
+                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 ">
               <Button variant="outline" size="sm" onClick={() => setEditingReview(null)}>
                 Cancel
               </Button>

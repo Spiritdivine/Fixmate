@@ -238,13 +238,13 @@ export const UserDetailPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
 
       {successMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+        <div className="p-4 rounded-[24px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           <span>{successMsg}</span>
         </div>
@@ -312,7 +312,7 @@ export const UserDetailPage: React.FC = () => {
         </div>
 
         {/* Quick Stats Badges */}
-        <div className="flex items-center gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800/80">
+        <div className="flex items-center gap-4 bg-slate-950 p-4 rounded-[24px] border border-slate-800/80">
           <div>
             <span className="text-[10px] uppercase font-bold text-slate-400">Available Balance</span>
             <p className="text-lg font-black text-purple-400">{formatCurrency(user.wallet?.availableBalance || 0)}</p>
@@ -354,7 +354,7 @@ export const UserDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
           {/* Artisan Profile Details */}
           {user.role === 'ARTISAN' && user.artisanProfile && (
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+            <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3">
               <h3 className="text-sm font-bold text-white">Artisan Business Profile</h3>
               <p className="text-slate-300">{user.artisanProfile.bio || 'No bio provided.'}</p>
               <div className="pt-2 border-t border-slate-800 space-y-1 text-slate-400">
@@ -382,7 +382,7 @@ export const UserDetailPage: React.FC = () => {
 
           {/* Client Profile Details */}
           {user.role === 'CLIENT' && user.clientProfile && (
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+            <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3">
               <h3 className="text-sm font-bold text-white">Client Personal Profile</h3>
               <div className="space-y-1 text-slate-400">
                 <p>Name: <strong className="text-white">{user.clientProfile.firstName} {user.clientProfile.lastName}</strong></p>
@@ -393,7 +393,7 @@ export const UserDetailPage: React.FC = () => {
           )}
 
           {/* Metadata */}
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+          <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3">
             <h3 className="text-sm font-bold text-white">Account System Metadata</h3>
             <div className="space-y-1.5 text-slate-400 font-mono text-[11px]">
               <p>User ID: <span className="text-slate-200">{user.id}</span></p>
@@ -407,7 +407,7 @@ export const UserDetailPage: React.FC = () => {
       {/* Tab 2: Wallet */}
       {activeTab === 'wallet' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
             <h3 className="text-sm font-bold text-white">Linked Bank Accounts</h3>
             {(!user.bankAccounts || user.bankAccounts.length === 0) ? (
               <p className="text-xs text-slate-500">No bank accounts linked.</p>
@@ -428,7 +428,7 @@ export const UserDetailPage: React.FC = () => {
             )}
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
             <h3 className="text-sm font-bold text-white">Recent Transactions</h3>
             {(!user.wallet?.transactions || user.wallet.transactions.length === 0) ? (
               <p className="text-xs text-slate-500">No transactions recorded.</p>
@@ -456,7 +456,7 @@ export const UserDetailPage: React.FC = () => {
 
       {/* Tab 3: KYC */}
       {activeTab === 'kyc' && (
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white">KYC Verification Submissions</h3>
             <Button
@@ -470,7 +470,7 @@ export const UserDetailPage: React.FC = () => {
           </div>
 
           {(!user.kycSubmissions || user.kycSubmissions.length === 0) ? (
-            <div className="p-8 text-center bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+            <div className="p-8 text-center bg-slate-950 rounded-[24px] border border-slate-800 space-y-2">
               <p className="text-xs text-slate-400">No formal KYC document submissions on record for this user.</p>
               <Button size="sm" variant="outline" onClick={openVerifyModal}>
                 Manually Verify This User
@@ -516,7 +516,7 @@ export const UserDetailPage: React.FC = () => {
 
       {/* Tab 4: Contracts & Jobs */}
       {activeTab === 'contracts' && (
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <h3 className="text-sm font-bold text-white">Contracts History</h3>
           {(!user.contractsAsArtisan?.length && !user.contractsAsClient?.length) ? (
             <p className="text-xs text-slate-500">No contract records found.</p>
@@ -543,7 +543,7 @@ export const UserDetailPage: React.FC = () => {
 
       {/* Tab 5: Reviews */}
       {activeTab === 'reviews' && (
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <h3 className="text-sm font-bold text-white">Reviews & Feedback</h3>
           {(!user.reviewsReceived || user.reviewsReceived.length === 0) ? (
             <p className="text-xs text-slate-500">No reviews received.</p>
@@ -567,7 +567,7 @@ export const UserDetailPage: React.FC = () => {
 
       {/* Tab 6: Audit Trail */}
       {activeTab === 'audit' && (
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <h3 className="text-sm font-bold text-white">Administrator Audit Trail</h3>
           {(!user.auditLogs || user.auditLogs.length === 0) ? (
             <p className="text-xs text-slate-500">No recorded administrative actions.</p>

@@ -91,7 +91,7 @@ export const ClientContractsPage: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search contracts by code, job title, or artisan name..."
-            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
           />
         </div>
       </div>
@@ -100,11 +100,11 @@ export const ClientContractsPage: React.FC = () => {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((n) => (
-            <Card key={n} className="p-6 border-slate-200 dark:border-slate-800 animate-pulse h-40" />
+            <Card key={n} className="p-6 border-slate-200 animate-pulse h-40" />
           ))}
         </div>
       ) : contracts.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+        <Card className="p-12 text-center border-dashed border-slate-200 ">
           <FileCheck className="w-12 h-12 mx-auto text-slate-400 mb-3" />
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
             No contracts found
@@ -144,7 +144,7 @@ export const ClientContractsPage: React.FC = () => {
             return (
               <Card
                 key={contract.id}
-                className="p-5 sm:p-6 hover:border-sky-500/40 transition-all border-slate-200 dark:border-slate-800 space-y-4"
+                className="p-5 sm:p-6 hover:border-emerald-600/40 transition-all border-slate-200 space-y-4"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1.5 flex-1 min-w-0">
@@ -164,7 +164,7 @@ export const ClientContractsPage: React.FC = () => {
 
                     <Link
                       to={`/client/contracts/${contract.id}`}
-                      className="text-base font-bold text-slate-900 dark:text-slate-100 hover:text-sky-600 dark:hover:text-sky-400 transition-colors block truncate"
+                      className="text-base font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-sky-400 transition-colors block truncate"
                     >
                       {contract.job?.title || 'Contract Agreement'}
                     </Link>
@@ -186,7 +186,7 @@ export const ClientContractsPage: React.FC = () => {
                   </div>
 
                   {/* Financial Details & Workspace CTA */}
-                  <div className="flex flex-wrap sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800 shrink-0">
+                  <div className="flex flex-wrap sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
                     <div className="text-left sm:text-right">
                       <span className="text-[10px] text-slate-400 uppercase font-semibold">
                         Total Amount
@@ -201,7 +201,7 @@ export const ClientContractsPage: React.FC = () => {
 
                     <Link
                       to={`/client/contracts/${contract.id}`}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-sky-600 dark:hover:bg-sky-500 text-white dark:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-[#124d33] dark:hover:bg-[#186644] text-white dark:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Open Workspace</span>
@@ -213,11 +213,11 @@ export const ClientContractsPage: React.FC = () => {
                 <div className="space-y-1 pt-2">
                   <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
                     <span>Milestones: {completedMilestones} of {totalMilestones} Completed</span>
-                    <span className="font-bold text-sky-600 dark:text-sky-400">{progressPct}%</span>
+                    <span className="font-bold text-emerald-700 dark:text-sky-400">{progressPct}%</span>
                   </div>
                   <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
                     <div
-                      className="bg-sky-500 h-full rounded-full transition-all duration-500"
+                      className="bg-[#186644] h-full rounded-full transition-all duration-500"
                       style={{ width: `${progressPct}%` }}
                     />
                   </div>

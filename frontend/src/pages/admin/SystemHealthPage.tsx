@@ -68,7 +68,7 @@ export const SystemHealthPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+        <div className="p-4 rounded-[24px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
           {error}
         </div>
       )}
@@ -77,7 +77,7 @@ export const SystemHealthPage: React.FC = () => {
       <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-4">
           <div
-            className={`p-3.5 rounded-2xl ${
+            className={`p-3.5 rounded-[24px] ${
               isHealthy ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
             }`}
           >
@@ -98,7 +98,7 @@ export const SystemHealthPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+        <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-[24px] border border-slate-800">
           <div>
             <span className="text-[10px] uppercase font-bold text-slate-400">Gateway Latency</span>
             <p className="text-sm font-black text-purple-400 font-mono">{latency !== null ? `${latency} ms` : '--'}</p>
@@ -114,7 +114,7 @@ export const SystemHealthPage: React.FC = () => {
       {/* Diagnostic Service Probes Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* PostgreSQL Database Probe */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 font-bold text-white text-sm">
               <Database className="w-4 h-4 text-purple-400" />
@@ -136,7 +136,7 @@ export const SystemHealthPage: React.FC = () => {
         </div>
 
         {/* Monad Testnet RPC Probe */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 font-bold text-white text-sm">
               <Layers className="w-4 h-4 text-purple-400" />
@@ -158,7 +158,7 @@ export const SystemHealthPage: React.FC = () => {
         </div>
 
         {/* Real-time Socket.io Gateway Probe */}
-        <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 font-bold text-white text-sm">
               <Zap className="w-4 h-4 text-purple-400" />
@@ -178,7 +178,7 @@ export const SystemHealthPage: React.FC = () => {
       </div>
 
       {/* Raw Health Response Payload Card */}
-      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+      <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3">
         <h3 className="text-xs font-bold text-white uppercase tracking-wider text-slate-400">
           Raw Probe Response Payload
         </h3>

@@ -155,7 +155,7 @@ export const ClientProfilePage: React.FC = () => {
       )}
 
       {/* Profile Card / Avatar */}
-      <Card className="p-6 sm:p-8 border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-6">
+      <Card className="p-6 sm:p-8 border-slate-200 flex flex-col sm:flex-row items-center gap-6">
         <div className="relative group">
           <Avatar
             src={user?.avatarUrl}
@@ -163,7 +163,7 @@ export const ClientProfilePage: React.FC = () => {
             size="lg"
             className="w-24 h-24 text-2xl"
           />
-          <label className="absolute inset-0 rounded-full bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer">
+          <label className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer">
             <Upload className="w-6 h-6" />
             <input type="file" onChange={handleAvatarUpload} accept="image/*" className="hidden" />
           </label>
@@ -174,7 +174,7 @@ export const ClientProfilePage: React.FC = () => {
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
               {displayName}
             </h2>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#186644]/10 text-emerald-700 dark:text-sky-400">
               CLIENT
             </span>
           </div>
@@ -186,7 +186,7 @@ export const ClientProfilePage: React.FC = () => {
           </p>
 
           <div className="flex items-center justify-center sm:justify-start gap-2 pt-2">
-            <label className="text-xs font-bold text-sky-600 hover:underline cursor-pointer">
+            <label className="text-xs font-bold text-emerald-700 hover:underline cursor-pointer">
               Upload New Photo
               <input type="file" onChange={handleAvatarUpload} accept="image/*" className="hidden" />
             </label>
@@ -207,7 +207,7 @@ export const ClientProfilePage: React.FC = () => {
       </Card>
 
       {/* Main Details Form */}
-      <Card className="p-6 sm:p-8 border-slate-200 dark:border-slate-800 space-y-6">
+      <Card className="p-6 sm:p-8 border-slate-200 space-y-6">
         <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
           Personal &amp; Company Details
         </h3>
@@ -219,7 +219,7 @@ export const ClientProfilePage: React.FC = () => {
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
             />
           </div>
 
@@ -229,7 +229,7 @@ export const ClientProfilePage: React.FC = () => {
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
             />
           </div>
         </div>
@@ -241,7 +241,7 @@ export const ClientProfilePage: React.FC = () => {
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             placeholder="e.g. Apex Property Holdings Ltd"
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
           />
         </div>
 
@@ -251,7 +251,7 @@ export const ClientProfilePage: React.FC = () => {
             <select
               value={state}
               onChange={(e) => setState(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
             >
               <option value="Lagos">Lagos</option>
               <option value="Abuja">Abuja (FCT)</option>
@@ -273,7 +273,7 @@ export const ClientProfilePage: React.FC = () => {
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
             />
           </div>
         </div>
@@ -284,7 +284,7 @@ export const ClientProfilePage: React.FC = () => {
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-sky-500 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
           />
         </div>
 
@@ -300,7 +300,7 @@ export const ClientProfilePage: React.FC = () => {
       </Card>
 
       {/* Monad Web3 Integration Card */}
-      <Card className="p-6 sm:p-8 border-slate-200 dark:border-slate-800 space-y-4">
+      <Card className="p-6 sm:p-8 border-slate-200 space-y-4">
         <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
           <Sparkles className="w-5 h-5" />
           <h3 className="text-sm font-bold">Monad Blockchain Integration</h3>
@@ -319,7 +319,7 @@ export const ClientProfilePage: React.FC = () => {
             value={walletAddress}
             onChange={(e) => setWalletAddress(e.target.value)}
             placeholder="0x1234567890abcdef1234567890abcdef12345678"
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono focus:ring-2 focus:ring-purple-500 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:ring-2 focus:ring-purple-500 text-slate-900 dark:text-slate-100"
           />
         </div>
 

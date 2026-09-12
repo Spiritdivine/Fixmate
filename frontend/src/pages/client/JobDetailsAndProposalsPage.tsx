@@ -80,7 +80,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
   if (loadingJob) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -120,7 +120,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
       </div>
 
       {/* Job Summary Header */}
-      <Card className="p-6 border-slate-200 dark:border-slate-800 space-y-4">
+      <Card className="p-6 border-slate-200 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="space-y-2 flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -131,7 +131,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
                 Posted on {formatDate(job.createdAt)}
               </span>
               {job.category && (
-                <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
+                <span className="text-xs font-semibold text-emerald-700 dark:text-sky-400">
                   • {job.category.name}
                 </span>
               )}
@@ -177,7 +177,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
       </Card>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
         <button
           onClick={() => setActiveTab('proposals')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
@@ -219,11 +219,11 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
           {loadingProposals ? (
             <div className="space-y-4">
               {[1, 2].map((n) => (
-                <Card key={n} className="p-6 border-slate-200 dark:border-slate-800 animate-pulse h-40" />
+                <Card key={n} className="p-6 border-slate-200 animate-pulse h-40" />
               ))}
             </div>
           ) : proposalsList.length === 0 ? (
-            <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+            <Card className="p-12 text-center border-dashed border-slate-200 ">
               <Users className="w-12 h-12 mx-auto text-slate-400 mb-3" />
               <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
                 No proposals received yet
@@ -258,7 +258,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
                 return (
                   <Card
                     key={proposal.id}
-                    className="p-5 sm:p-6 border-slate-200 dark:border-slate-800 hover:border-sky-500/40 transition-all space-y-4"
+                    className="p-5 sm:p-6 border-slate-200 hover:border-emerald-600/40 transition-all space-y-4"
                   >
                     {/* Header: Artisan Info & Bid Amount */}
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -273,7 +273,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <Link
                               to={`/client/artisans/${artisanProfile?.id || proposal.artisan?.id}`}
-                              className="text-sm font-bold text-slate-900 dark:text-slate-100 hover:text-sky-600 transition-colors truncate"
+                              className="text-sm font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-700 transition-colors truncate"
                             >
                               {artisanName}
                             </Link>
@@ -307,7 +307,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
                     </div>
 
                     {/* Cover Letter */}
-                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-xs space-y-1">
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs space-y-1">
                       <span className="font-bold text-slate-700 dark:text-slate-300">Cover Letter:</span>
                       <p className="text-slate-600 dark:text-slate-400 whitespace-pre-line leading-relaxed">
                         {proposal.coverLetter}
@@ -324,12 +324,12 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
                           {proposal.milestones.map((m, idx) => (
                             <div
                               key={m.id || idx}
-                              className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs"
+                              className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-xs"
                             >
                               <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
                                 Step {idx + 1}: {m.title}
                               </span>
-                              <span className="font-bold text-sky-600 dark:text-sky-400 ml-2">
+                              <span className="font-bold text-emerald-700 dark:text-sky-400 ml-2">
                                 {formatCurrency(m.amount)}
                               </span>
                             </div>
@@ -339,7 +339,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
                     )}
 
                     {/* Actions Toolbar */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 ">
                       <div className="flex items-center gap-2">
                         {proposal.status !== 'SHORTLISTED' && proposal.status !== 'ACCEPTED' && (
                           <button
@@ -409,7 +409,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
 
       {/* TAB 2: DETAILS */}
       {activeTab === 'details' && (
-        <Card className="p-6 border-slate-200 dark:border-slate-800 space-y-6">
+        <Card className="p-6 border-slate-200 space-y-6">
           <div className="space-y-2">
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
               Project Description
@@ -420,7 +420,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
           </div>
 
           {job.expectedOutcome && (
-            <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="space-y-1 pt-2 border-t border-slate-100 ">
               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
                 Expected Deliverable / Outcome
               </h4>
@@ -431,7 +431,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
           )}
 
           {job.materialsProvidedBy && (
-            <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="space-y-1 pt-2 border-t border-slate-100 ">
               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
                 Materials Responsibility
               </h4>
@@ -442,7 +442,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
           )}
 
           {job.completionProofReq && (
-            <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="space-y-1 pt-2 border-t border-slate-100 ">
               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
                 Proof of Completion Requirements
               </h4>
@@ -454,7 +454,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
 
           {/* Attachments */}
           {job.attachments && job.attachments.length > 0 && (
-            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="space-y-2 pt-2 border-t border-slate-100 ">
               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
                 Attached Files &amp; Plans ({job.attachments.length})
               </h4>
@@ -465,15 +465,15 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
                     href={att.fileUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-sky-500 transition-colors text-xs"
+                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 hover:border-emerald-600 transition-colors text-xs"
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <FileText className="w-4 h-4 text-sky-500 shrink-0" />
+                      <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
                         {att.fileName}
                       </span>
                     </div>
-                    <span className="text-[10px] text-sky-600 font-bold shrink-0">Open &rarr;</span>
+                    <span className="text-[10px] text-emerald-700 font-bold shrink-0">Open &rarr;</span>
                   </a>
                 ))}
               </div>
@@ -486,7 +486,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
       {activeTab === 'invitations' && (
         <div className="space-y-4">
           {invitationsList.length === 0 ? (
-            <Card className="p-12 text-center border-dashed border-slate-200 dark:border-slate-800">
+            <Card className="p-12 text-center border-dashed border-slate-200 ">
               <Send className="w-12 h-12 mx-auto text-slate-400 mb-3" />
               <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
                 No direct invitations sent
@@ -506,7 +506,7 @@ export const JobDetailsAndProposalsPage: React.FC = () => {
               {invitationsList.map((inv) => (
                 <Card
                   key={inv.id}
-                  className="p-4 border-slate-200 dark:border-slate-800 flex items-center justify-between"
+                  className="p-4 border-slate-200 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <Avatar

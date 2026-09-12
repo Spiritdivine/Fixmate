@@ -47,7 +47,7 @@ export const Avatar: React.FC<AvatarProps> = ({
           src={src}
           alt={name}
           className={clsx(
-            'rounded-full object-cover border border-slate-200 dark:border-slate-700',
+            'rounded-full object-cover ',
             sizeStyles[size],
             className
           )}

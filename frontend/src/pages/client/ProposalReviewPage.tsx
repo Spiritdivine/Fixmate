@@ -71,7 +71,7 @@ export const ProposalReviewPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -112,8 +112,8 @@ export const ProposalReviewPage: React.FC = () => {
       </div>
 
       {/* Hero Header */}
-      <Card className="p-6 sm:p-8 border-slate-200 dark:border-slate-800 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
+      <Card className="p-6 sm:p-8 border-slate-200 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 ">
           <div className="flex items-center gap-4">
             <Avatar
               src={artisan?.avatarUrl}
@@ -126,7 +126,7 @@ export const ProposalReviewPage: React.FC = () => {
                 <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">
                   {artisanName}
                 </h1>
-                <CheckCircle2 className="w-4 h-4 text-sky-500" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 <Badge variant={proposal.status === 'ACCEPTED' ? 'emerald' : 'blue'}>
                   {proposal.status}
                 </Badge>
@@ -162,14 +162,14 @@ export const ProposalReviewPage: React.FC = () => {
           <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
             Proposal Statement / Cover Letter
           </h2>
-          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+          <div className="p-5 rounded-[24px] bg-slate-50 dark:bg-slate-900 text-xs sm:text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
             {proposal.coverLetter}
           </div>
         </div>
 
         {/* Milestones Breakdown */}
         {proposal.milestones && proposal.milestones.length > 0 && (
-          <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="space-y-3 pt-4 border-t border-slate-100 ">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
               Proposed Milestones ({proposal.milestones.length})
             </h2>
@@ -177,10 +177,10 @@ export const ProposalReviewPage: React.FC = () => {
               {proposal.milestones.map((m, idx) => (
                 <div
                   key={m.id || idx}
-                  className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs"
+                  className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-xs"
                 >
                   <div className="space-y-0.5">
-                    <span className="text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400">
+                    <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-sky-400">
                       Step {idx + 1}
                     </span>
                     <h3 className="font-bold text-slate-900 dark:text-slate-100">
@@ -200,7 +200,7 @@ export const ProposalReviewPage: React.FC = () => {
         )}
 
         {/* Actions Bottom Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-100 ">
           <div className="flex items-center gap-2">
             <button
               onClick={() => updateStatusMutation.mutate('SHORTLISTED')}

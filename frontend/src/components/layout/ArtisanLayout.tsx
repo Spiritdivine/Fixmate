@@ -13,6 +13,15 @@ export const ArtisanLayout: React.FC = () => {
   const { user, isInitialized } = useAuthStore();
   const navigate = useNavigate();
 
+  // Force Light Mode for the Artisan Dashboard
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    return () => {
+      // Re-add dark mode when leaving artisan dashboard (optional, if app defaults to dark)
+      document.documentElement.classList.add('dark');
+    };
+  }, []);
+
   useEffect(() => {
     if (isInitialized && (!user || (user.role !== 'ARTISAN' && user.role !== 'ADMIN'))) {
       navigate('/login');
@@ -35,17 +44,17 @@ export const ArtisanLayout: React.FC = () => {
 
   if (!isInitialized) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white">
+      <div className="flex items-center justify-center min-h-screen bg-[#f4f7f6] text-slate-900">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Loading Fixmate...</p>
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Loading Fixmate...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
+    <div className="flex h-screen bg-[#f9fafb] text-slate-900 font-sans overflow-hidden antialiased">
       {/* Toast Notification Popup */}
       {toastNotification && (
         <div
@@ -53,16 +62,16 @@ export const ArtisanLayout: React.FC = () => {
             if (toastNotification.actionUrl) navigate(toastNotification.actionUrl);
             setToastNotification(null);
           }}
-          className="fixed top-4 right-4 z-50 flex items-start gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-sky-500/40 shadow-2xl max-w-sm cursor-pointer animate-in slide-in-from-top-4 duration-200"
+          className="fixed top-4 right-4 z-50 flex items-start gap-3 p-4 rounded-[24px] bg-white border border-emerald-500/20 shadow-2xl max-w-sm cursor-pointer animate-in slide-in-from-top-4 duration-200"
         >
-          <div className="p-2 rounded-xl bg-sky-500/10 text-sky-500 shrink-0">
+          <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
             <Bell className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+            <h4 className="text-xs font-bold text-slate-900 truncate">
               {toastNotification.title}
             </h4>
-            <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-0.5">
+            <p className="text-xs text-slate-600 line-clamp-2 mt-0.5">
               {toastNotification.body}
             </p>
           </div>
@@ -71,10 +80,12 @@ export const ArtisanLayout: React.FC = () => {
 
       <ArtisanSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="lg:pl-72 flex flex-col flex-1 min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <ArtisanHeader onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+          <div className="max-w-[1400px] w-full mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
