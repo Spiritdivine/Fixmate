@@ -31,8 +31,8 @@ export const LANDING_IMAGES = {
   // Commercial & Residential modern building
   building: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80',
   
-  // Skilled artisan with safety glasses in workshop
-  welder: 'https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&w=600&q=80',
+  // Skilled artisan / welder in workshop
+  welder: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=600&q=80',
   
   // Social proof avatars
   avatars: [

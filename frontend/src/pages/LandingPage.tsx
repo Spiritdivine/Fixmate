@@ -590,8 +590,8 @@ export const LandingPage: React.FC = () => {
             {/* Status Pill */}
             <div className="inline-flex items-center gap-2 sm:gap-2.5 px-3.5 sm:px-4 py-1.5 rounded-full border border-stone-300 dark:border-stone-700 bg-white/70 dark:bg-stone-900/70 backdrop-blur-sm text-[11px] font-mono text-stone-700 dark:text-stone-300 mb-6 sm:mb-8 shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-semibold uppercase tracking-wider">Live on Monad Testnet</span>
-              <span className="hidden sm:inline text-stone-400">|</span>
+              
+              
               <span className="uppercase text-amber-700 dark:text-amber-400 font-bold">Early Access Open</span>
             </div>
 
