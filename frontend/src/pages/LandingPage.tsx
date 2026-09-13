@@ -1800,10 +1800,10 @@ export const LandingPage: React.FC = () => {
             <p className="text-xs text-stone-500 leading-relaxed mb-4">
               Verified artisans and milestone escrow. Payments protected from quote to completion.
             </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-mono text-[10px]">
+            {/* <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-mono text-[10px]">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>Monad Testnet 10143</span>
-            </div>
+            </div> */}
           </div>
 
           <div>
@@ -1840,7 +1840,6 @@ export const LandingPage: React.FC = () => {
               Security
             </div>
             <ul className="space-y-2 font-mono text-[11px]">
-              <li><span className="text-stone-500">Chain ID: 10143</span></li>
               <li><span className="text-stone-500">Monad Testnet Escrow</span></li>
               <li><span className="text-stone-500">Paystack NGN Gateway</span></li>
               <li><span className="text-stone-500">NIN Identity Verification</span></li>
