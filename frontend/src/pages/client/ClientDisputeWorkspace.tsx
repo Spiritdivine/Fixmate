@@ -107,12 +107,12 @@ export const ClientDisputeWorkspace: React.FC = () => {
   });
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
+    <div className="max-w-4xl mx-auto space-y-8 pb-16 font-dashboard">
       {/* Back Link */}
-      <div>
+      <div className="space-y-3">
         <Link
           to="/client/disputes"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-emerald-700 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>Back to Dispute Center</span>
@@ -120,44 +120,46 @@ export const ClientDisputeWorkspace: React.FC = () => {
       </div>
 
       {/* Header Card */}
-      <Card className="p-6 border-slate-200 space-y-4">
+      <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold text-rose-600">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-mono font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-md border border-rose-200">
                 Dispute Workspace #{disputeId?.slice(0, 8)}
               </span>
-              <Badge variant="rose">UNDER ARBITRATION</Badge>
+              <span className="px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200">
+                UNDER ARBITRATION
+              </span>
             </div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               3-Way Mediation Channel
             </h1>
-            <p className="text-xs text-slate-500">
-              All messages and uploaded proofs in this workspace are reviewed by Fixmate&apos;s administrative arbitrators.
+            <p className="text-sm text-slate-500">
+              All messages and uploaded proofs in this workspace are reviewed by Artifix&apos;s administrative arbitrators.
             </p>
           </div>
 
           <button
             onClick={() => cancelDisputeMutation.mutate()}
             disabled={cancelDisputeMutation.isPending}
-            className="px-3.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 self-start sm:self-auto"
+            className="px-5 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-sm self-start sm:self-auto"
           >
             Cancel Dispute
           </button>
         </div>
-      </Card>
+      </div>
 
       {/* 3-Way Chat Thread */}
-      <Card className="p-6 border-slate-200 space-y-4">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+      <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-5">
+        <h2 className="text-base font-bold text-slate-900">
           Arbitration Communication Thread
         </h2>
 
-        <div className="space-y-3 max-h-96 overflow-y-auto p-4 rounded-[24px] bg-slate-50 dark:bg-slate-900 ">
+        <div className="space-y-3.5 max-h-96 overflow-y-auto p-4 rounded-2xl bg-slate-50 border border-slate-100">
           {isLoading ? (
-            <p className="text-xs text-slate-400 text-center py-4">Loading messages...</p>
+            <p className="text-xs text-slate-400 text-center py-6">Loading messages...</p>
           ) : (messagesData || []).length === 0 ? (
-            <p className="text-xs text-slate-400 text-center py-4">
+            <p className="text-xs text-slate-400 text-center py-8">
               No arbitration statements posted yet. Use the box below to describe the issue.
             </p>
           ) : (
@@ -167,26 +169,26 @@ export const ClientDisputeWorkspace: React.FC = () => {
               return (
                 <div
                   key={msg.id}
-                  className={`p-3.5 rounded-xl text-xs space-y-1 ${
+                  className={`p-4 rounded-xl text-xs space-y-1.5 ${
                     isAdmin
-                      ? 'bg-purple-500/10 border border-purple-500/30'
+                      ? 'bg-purple-50 border border-purple-200 text-purple-900'
                       : isMe
-                      ? 'bg-emerald-50 dark:bg-sky-950/40 border border-emerald-600/20'
-                      : 'bg-white dark:bg-slate-800 '
+                      ? 'bg-emerald-50 border border-emerald-500/20 text-emerald-950'
+                      : 'bg-white border border-slate-200/80 text-slate-800'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <span className="font-bold text-slate-900 flex items-center gap-2">
                       <span>{msg.sender?.email}</span>
                       {isAdmin && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-600 text-white">
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-600 text-white tracking-wider">
                           ARBITRATOR
                         </span>
                       )}
                     </span>
-                    <span className="text-[10px] text-slate-400">{formatDate(msg.createdAt)}</span>
+                    <span className="text-[10px] text-slate-400 font-medium">{formatDate(msg.createdAt)}</span>
                   </div>
-                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                  <p className="leading-relaxed whitespace-pre-line font-normal">
                     {msg.body}
                   </p>
                 </div>
@@ -196,60 +198,59 @@ export const ClientDisputeWorkspace: React.FC = () => {
         </div>
 
         {/* Message Input */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <input
             type="text"
             value={messageBody}
             onChange={(e) => setMessageBody(e.target.value)}
             placeholder="Type your official arbitration statement..."
-            className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-rose-500"
+            className="flex-1 px-4 py-2.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all"
           />
           <button
             onClick={() => sendMessageMutation.mutate()}
             disabled={!messageBody.trim() || sendMessageMutation.isPending}
-            className="p-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition-colors"
+            className="p-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/20 transition-all disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
           </button>
         </div>
-      </Card>
+      </div>
 
       {/* Supplementary Evidence Upload Card */}
-      <Card className="p-6 border-slate-200 space-y-4">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+      <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-5">
+        <h2 className="text-base font-bold text-slate-900">
           Upload Supplementary Evidence
         </h2>
 
         {errorMessage && (
-          <p className="text-xs text-rose-600">{errorMessage}</p>
+          <p className="text-xs text-rose-600 font-medium">{errorMessage}</p>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <input
             type="text"
             value={evidenceTitle}
             onChange={(e) => setEvidenceTitle(e.target.value)}
             placeholder="Evidence title (e.g. Broken pipe photo, Chat screenshot)"
-            className="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100"
+            className="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-700 outline-none transition-all"
           />
           <input
             type="file"
             onChange={(e) => setEvidenceFile(e.target.files?.[0] || null)}
-            className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 dark:file:bg-slate-800 dark:file:text-slate-300"
+            className="text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
           />
         </div>
 
-        <div className="flex justify-end">
-          <Button
-            size="sm"
+        <div className="flex justify-end pt-2">
+          <button
             disabled={!evidenceFile || !evidenceTitle.trim() || isUploading}
             onClick={() => uploadEvidenceMutation.mutate()}
-            className="bg-rose-600 hover:bg-rose-500 text-white"
+            className="px-6 py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all disabled:opacity-50"
           >
             {isUploading ? 'Uploading...' : 'Submit Evidence File'}
-          </Button>
+          </button>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

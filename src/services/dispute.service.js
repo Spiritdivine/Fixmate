@@ -1,6 +1,9 @@
 import prisma from '../config/db.js';
 import { ApiError } from '../utils/api-error.js';
 import { NotificationService } from './notification.service.js';
+import { MonadEscrowService } from './monad-escrow.service.js';
+import { TreasuryService } from './treasury.service.js';
+import crypto from 'crypto';
 
 export class DisputeService {
   static async fileDispute(userId, data) {
@@ -83,54 +86,198 @@ export class DisputeService {
     if (!dispute) throw ApiError.notFound('Dispute not found');
     if (dispute.status === 'RESOLVED') throw ApiError.badRequest('Dispute is already resolved');
 
+    let finalOnChainTxHash = onChainResolutionTxHash;
+
+    // Execute automated settlement on Monad smart contract if on-chain escrow exists
+    if (dispute.contract.onChainEscrowId && !finalOnChainTxHash) {
+      try {
+        const escrowId = dispute.contract.onChainEscrowId;
+        const totalAmount = Number(dispute.contract.cryptoAmount || dispute.disputedAmount || 0);
+        let artisanAmount = 0;
+        let clientRefund = 0;
+
+        if (resolution === 'FULL_REFUND_CLIENT') {
+          clientRefund = totalAmount;
+        } else if (resolution === 'FULL_PAYOUT_ARTISAN') {
+          artisanAmount = totalAmount;
+        } else if (resolution === 'SPLIT_SETTLEMENT') {
+          artisanAmount = Number(payoutToArtisanAmount || 0);
+          clientRefund = Number(refundToClientAmount || 0);
+        }
+
+        const onChainRes = await MonadEscrowService.executeAdminDisputeResolution(
+          escrowId,
+          artisanAmount,
+          clientRefund
+        );
+        if (onChainRes && onChainRes.txHash) {
+          finalOnChainTxHash = onChainRes.txHash;
+        }
+      } catch (onChainErr) {
+        console.warn('⚠️ Could not execute automated on-chain dispute settlement:', onChainErr.message);
+      }
+    }
+
+    const disputedTotal = Number(dispute.disputedAmount);
+    let actualClientRefund = 0;
+    let actualArtisanGross = 0;
+
+    if (resolution === 'FULL_REFUND_CLIENT') {
+      actualClientRefund = disputedTotal;
+    } else if (resolution === 'FULL_PAYOUT_ARTISAN') {
+      actualArtisanGross = disputedTotal;
+    } else if (resolution === 'SPLIT_SETTLEMENT') {
+      actualClientRefund = Number(refundToClientAmount || 0);
+      actualArtisanGross = Number(payoutToArtisanAmount || 0);
+    }
+
+    const totalResolved = actualClientRefund + actualArtisanGross;
+    const isOnChain = Boolean(
+      dispute.contract.onChainEscrowId ||
+      dispute.contract.cryptoCurrency === 'USDC' ||
+      finalOnChainTxHash
+    );
+
     return prisma.$transaction(async (tx) => {
-      // 1. Execute monetary settlement
-      if (resolution === 'FULL_REFUND_CLIENT' || refundToClientAmount > 0) {
-        const clientWallet = await tx.wallet.findUnique({ where: { userId: dispute.contract.clientId } });
-        if (clientWallet) {
-          const refund = resolution === 'FULL_REFUND_CLIENT' ? Number(dispute.disputedAmount) : Number(refundToClientAmount);
-          await tx.wallet.update({
-            where: { id: clientWallet.id },
+      // 1. Pessimistic Row Lock on both Client and Artisan wallets
+      const lockedWallets = await tx.$queryRaw`
+        SELECT id, user_id, available_balance, escrow_locked_balance 
+        FROM wallets 
+        WHERE user_id IN (${dispute.contract.clientId}::uuid, ${dispute.contract.artisanId}::uuid)
+        FOR UPDATE
+      `;
+
+      const clientWalletRow = lockedWallets?.find((w) => w.user_id === dispute.contract.clientId);
+      const artisanWalletRow = lockedWallets?.find((w) => w.user_id === dispute.contract.artisanId);
+
+      // 2. Client Wallet: Fully decrement escrowLockedBalance by total disputed funds
+      if (clientWalletRow) {
+        const clientAvailBefore = Number(clientWalletRow.available_balance);
+        const clientLockedBefore = Number(clientWalletRow.escrow_locked_balance);
+        const lockToDeduct = Math.min(clientLockedBefore, totalResolved > 0 ? totalResolved : disputedTotal);
+
+        await tx.wallet.update({
+          where: { id: clientWalletRow.id },
+          data: {
+            availableBalance: { increment: actualClientRefund },
+            escrowLockedBalance: { decrement: lockToDeduct },
+          },
+        });
+
+        if (actualClientRefund > 0) {
+          const refundRef = `DSP-REF-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
+          await tx.transaction.create({
             data: {
-              availableBalance: { increment: refund },
-              escrowLockedBalance: { decrement: refund },
+              walletId: clientWalletRow.id,
+              contractId: dispute.contractId,
+              reference: refundRef,
+              type: 'ESCROW_REFUND',
+              amount: actualClientRefund,
+              netAmount: actualClientRefund,
+              status: 'SUCCESS',
+              balanceBefore: clientAvailBefore,
+              balanceAfter: clientAvailBefore + actualClientRefund,
+              description: `Dispute Resolution Refund (Dispute #${dispute.disputeCode})`,
+              metadata: {
+                disputeId: dispute.id,
+                disputeCode: dispute.disputeCode,
+                resolution,
+              },
             },
           });
         }
       }
 
-      if (resolution === 'FULL_PAYOUT_ARTISAN' || payoutToArtisanAmount > 0) {
-        const artisanWallet = await tx.wallet.findUnique({ where: { userId: dispute.contract.artisanId } });
-        if (artisanWallet) {
-          const payout = resolution === 'FULL_PAYOUT_ARTISAN' ? Number(dispute.disputedAmount) : Number(payoutToArtisanAmount);
-          await tx.wallet.update({
-            where: { id: artisanWallet.id },
+      // 3. Artisan Wallet: Credit net payout (less platform fee) if not on-chain
+      let feeAmount = 0;
+      let netArtisanPayout = 0;
+      if (actualArtisanGross > 0) {
+        const feePercent = Number(dispute.contract.platformFeePercent || 5);
+        feeAmount = Number(((actualArtisanGross * feePercent) / 100).toFixed(2));
+        netArtisanPayout = actualArtisanGross - feeAmount;
+
+        if (artisanWalletRow) {
+          const artisanAvailBefore = Number(artisanWalletRow.available_balance);
+          const artisanAvailAfter = isOnChain ? artisanAvailBefore : artisanAvailBefore + netArtisanPayout;
+
+          if (!isOnChain) {
+            await tx.wallet.update({
+              where: { id: artisanWalletRow.id },
+              data: {
+                availableBalance: { increment: netArtisanPayout },
+              },
+            });
+          }
+
+          const payoutRef = `DSP-PAY-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
+          await tx.transaction.create({
             data: {
-              availableBalance: { increment: payout },
+              walletId: artisanWalletRow.id,
+              contractId: dispute.contractId,
+              reference: payoutRef,
+              paymentGatewayRef: finalOnChainTxHash || null,
+              type: 'ESCROW_RELEASE',
+              amount: actualArtisanGross,
+              fee: feeAmount,
+              netAmount: isOnChain ? 0 : netArtisanPayout,
+              status: 'SUCCESS',
+              balanceBefore: artisanAvailBefore,
+              balanceAfter: artisanAvailAfter,
+              description: isOnChain
+                ? `Dispute Settlement Payout (#${dispute.disputeCode}) - Settled on Monad`
+                : `Dispute Settlement Payout (#${dispute.disputeCode}) - Net after ${feePercent}% platform fee`,
+              metadata: {
+                disputeId: dispute.id,
+                disputeCode: dispute.disputeCode,
+                resolution,
+                feeAmount,
+                isOnChain,
+              },
             },
           });
+
+          // Record Fee in Treasury
+          if (!isOnChain && feeAmount > 0) {
+            await TreasuryService.recordFee(tx, {
+              amount: feeAmount,
+              contractId: dispute.contractId,
+              reference: `FEE-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+              description: `Platform Fee (${feePercent}%) on Dispute Settlement (#${dispute.disputeCode})`,
+              metadata: {
+                disputeId: dispute.id,
+                disputeCode: dispute.disputeCode,
+                actualArtisanGross,
+                feePercent,
+              },
+            });
+          }
         }
       }
 
-      // 2. Update Dispute with resolution details and on-chain hash
+      // 4. Update Dispute with resolution details and on-chain hash
       const updatedDispute = await tx.dispute.update({
         where: { id: disputeId },
         data: {
           status: 'RESOLVED',
           resolution,
-          refundToClientAmount,
-          payoutToArtisanAmount,
+          refundToClientAmount: actualClientRefund,
+          payoutToArtisanAmount: actualArtisanGross,
           adminResolutionNotes,
-          onChainResolutionTxHash,
+          onChainResolutionTxHash: finalOnChainTxHash,
           resolvedByAdminId: adminId,
           resolvedAt: new Date(),
         },
       });
 
-      // 3. Mark contract resolved / completed
+      // 5. Mark contract resolved / completed
       await tx.contract.update({
         where: { id: dispute.contractId },
-        data: { status: 'COMPLETED' },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          escrowRefundedAmount: { increment: actualClientRefund },
+          escrowReleasedAmount: { increment: actualArtisanGross },
+        },
       });
 
       await NotificationService.createNotification(

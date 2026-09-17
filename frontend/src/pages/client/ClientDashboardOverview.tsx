@@ -102,7 +102,34 @@ export const ClientDashboardOverview: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 font-dashboard">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-dashboard">Client Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Manage your project requests, milestone escrows, and verified artisan contracts.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link
+            to="/client/jobs/post"
+            className="flex items-center gap-2 bg-emerald-800 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-colors shadow-sm"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Post a Job</span>
+          </Link>
+          <Link
+            to="/client/artisans"
+            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-full text-sm font-semibold transition-colors shadow-sm border border-slate-200"
+          >
+            <Search className="w-4 h-4" />
+            <span>Find Artisans</span>
+          </Link>
+        </div>
+      </div>
+
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard

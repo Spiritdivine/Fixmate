@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import confetti from 'canvas-confetti';
@@ -16,6 +16,8 @@ import {
   Eye,
   RefreshCw,
   X,
+  ExternalLink,
+  Coins,
 } from 'lucide-react';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import {
@@ -29,6 +31,22 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { ContractLocationCard } from '../../components/contracts/ContractLocationCard';
+import {
+  hasWeb3Provider,
+  connectWallet,
+  getUsdcBalance,
+  getUsdcAllowance,
+  approveUsdc,
+  mintTestUsdc,
+  fundOnChainEscrow,
+  releaseOnChainEscrow,
+  raiseDisputeOnChain,
+  ESCROW_CONTRACT_ADDRESS,
+  STABLECOIN_ADDRESS,
+  MONAD_EXPLORER_URL,
+} from '../../lib/monad-web3';
+import { useUnifiedWallet } from '../../lib/privy-provider';
 
 export const ClientContractWorkspace: React.FC = () => {
   const { contractId } = useParams<{ contractId: string }>();
@@ -43,6 +61,25 @@ export const ClientContractWorkspace: React.FC = () => {
   const [disputeModalOpen, setDisputeModalOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  // Web3 Monad USDC State
+  const { address: unifiedAddress, connect: connectUnified } = useUnifiedWallet();
+  const [fundingRail, setFundingRail] = useState<'fiat' | 'usdc'>('fiat');
+  const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
+  const [usdcBalance, setUsdcBalance] = useState<string>('0.00');
+  const [usdcAllowance, setUsdcAllowance] = useState<string>('0.00');
+  const [isConnectingWallet, setIsConnectingWallet] = useState(false);
+  const [isApprovingUsdc, setIsApprovingUsdc] = useState(false);
+  const [isMintingUsdc, setIsMintingUsdc] = useState(false);
+  const [isLockingUsdc, setIsLockingUsdc] = useState(false);
+  const [isReleasingOnChain, setIsReleasingOnChain] = useState(false);
+
+  useEffect(() => {
+    if (unifiedAddress) {
+      setConnectedWallet(unifiedAddress);
+      refreshWalletState(unifiedAddress);
+    }
+  }, [unifiedAddress]);
 
   // Dispute form state
   const [disputeReason, setDisputeReason] = useState('Poor workmanship or incomplete deliverables');
@@ -80,10 +117,71 @@ export const ClientContractWorkspace: React.FC = () => {
     },
   });
 
-  // 3. Fund Milestone Mutation
+  // Helper to refresh on-chain wallet balance & allowance
+  const refreshWalletState = async (addr?: string) => {
+    const addressToUse = addr || connectedWallet;
+    if (!addressToUse) return;
+    try {
+      const [bal, allow] = await Promise.all([
+        getUsdcBalance(addressToUse),
+        getUsdcAllowance(addressToUse),
+      ]);
+      setUsdcBalance(bal);
+      setUsdcAllowance(allow);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleConnectWallet = async () => {
+    try {
+      setIsConnectingWallet(true);
+      const { address } = await connectWallet();
+      setConnectedWallet(address);
+      await refreshWalletState(address);
+    } catch (err: any) {
+      alert(`Wallet connection failed: ${err.message}`);
+    } finally {
+      setIsConnectingWallet(false);
+    }
+  };
+
+  const handleMintFaucet = async () => {
+    try {
+      setIsMintingUsdc(true);
+      await mintTestUsdc(100);
+      await refreshWalletState();
+      alert('100 Test USDC minted to your wallet on Monad Testnet!');
+    } catch (err: any) {
+      alert(`Faucet mint failed: ${err.message}`);
+    } finally {
+      setIsMintingUsdc(false);
+    }
+  };
+
+  const handleApproveUsdc = async (neededAmount: number) => {
+    try {
+      setIsApprovingUsdc(true);
+      await approveUsdc(neededAmount);
+      await refreshWalletState();
+      alert('USDC spending approved for Escrow contract!');
+    } catch (err: any) {
+      alert(`Approval failed: ${err.message}`);
+    } finally {
+      setIsApprovingUsdc(false);
+    }
+  };
+
+  // 3. Fund Milestone Mutation (Supports Fiat or Web3)
   const fundMilestoneMutation = useMutation({
-    mutationFn: async (milestoneId: string) => {
-      await apiClient.post(`/escrow/fund-milestone/${milestoneId}`, {});
+    mutationFn: async ({
+      milestoneId,
+      payload = {},
+    }: {
+      milestoneId: string;
+      payload?: { fundingTxHash?: string; cryptoAmount?: number; cryptoCurrency?: string };
+    }) => {
+      await apiClient.post(`/escrow/fund-milestone/${milestoneId}`, payload);
     },
     onSuccess: () => {
       setFundingMilestone(null);
@@ -96,10 +194,38 @@ export const ClientContractWorkspace: React.FC = () => {
     },
   });
 
+  const handleLockUsdc = async (milestone: Milestone) => {
+    if (!contract) return;
+    const artisanAddr = contract.artisan?.walletAddress;
+    if (!artisanAddr) {
+      alert(
+        'The artisan has not yet configured or connected their Web3 wallet. Please ask them to link a wallet on their profile, or switch to the In-App Wallet (₦) tab to fund with Naira Escrow.'
+      );
+      return;
+    }
+    const neededUsdc = Math.max(1, Math.round(Number(milestone.amount) / 1500));
+    try {
+      setIsLockingUsdc(true);
+      const { txHash } = await fundOnChainEscrow(contract.contractCode, artisanAddr, neededUsdc);
+      await fundMilestoneMutation.mutateAsync({
+        milestoneId: milestone.id,
+        payload: {
+          fundingTxHash: txHash,
+          cryptoAmount: neededUsdc,
+          cryptoCurrency: 'USDC',
+        },
+      });
+    } catch (err: any) {
+      alert(`On-chain funding failed: ${err.message}`);
+    } finally {
+      setIsLockingUsdc(false);
+    }
+  };
+
   // 4. Approve & Release Funds Mutation
   const approveReleaseMutation = useMutation({
-    mutationFn: async (milestoneId: string) => {
-      await apiClient.post(`/escrow/approve-release/${milestoneId}`, {});
+    mutationFn: async ({ milestoneId, releaseTxHash }: { milestoneId: string; releaseTxHash?: string }) => {
+      await apiClient.post(`/escrow/approve-release/${milestoneId}`, { releaseTxHash });
     },
     onSuccess: () => {
       confetti({
@@ -115,6 +241,24 @@ export const ClientContractWorkspace: React.FC = () => {
       alert(`Release failed: ${getErrorMessage(err)}`);
     },
   });
+
+  const handleApproveAndRelease = async (milestoneId: string) => {
+    if (contract?.onChainEscrowId) {
+      try {
+        setIsReleasingOnChain(true);
+        const txHash = await releaseOnChainEscrow(contract.onChainEscrowId);
+        await approveReleaseMutation.mutateAsync({ milestoneId, releaseTxHash: txHash });
+      } catch (err: any) {
+        if (confirm(`On-chain release failed or was rejected (${err.message}). Proceed with off-chain platform approval?`)) {
+          await approveReleaseMutation.mutateAsync({ milestoneId });
+        }
+      } finally {
+        setIsReleasingOnChain(false);
+      }
+    } else {
+      await approveReleaseMutation.mutateAsync({ milestoneId });
+    }
+  };
 
   // 5. Request Revision Mutation
   const requestRevisionMutation = useMutation({
@@ -140,11 +284,21 @@ export const ClientContractWorkspace: React.FC = () => {
   // 6. Raise Dispute Mutation
   const raiseDisputeMutation = useMutation({
     mutationFn: async () => {
+      let onChainDisputeTxHash: string | undefined;
+      if (contract?.onChainEscrowId) {
+        try {
+          onChainDisputeTxHash = await raiseDisputeOnChain(contract.onChainEscrowId, disputeReason);
+        } catch (onChainErr: any) {
+          console.warn('On-chain dispute notice failed or cancelled:', onChainErr.message);
+        }
+      }
+
       await apiClient.post('/disputes', {
         contractId,
         milestoneId: disputeMilestoneId || undefined,
         reason: disputeReason,
         explanation: disputeExplanation,
+        onChainDisputeTxHash,
       });
     },
     onSuccess: () => {
@@ -244,43 +398,50 @@ export const ClientContractWorkspace: React.FC = () => {
   const hasClientReviewed = reviews.some((r) => r.reviewerId === contract.clientId);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-8 pb-16 font-dashboard">
       {/* Back Link & Title */}
-      <div>
+      <div className="space-y-3">
         <Link
           to="/client/contracts"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors mb-2"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-emerald-700 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>Back to Contracts Hub</span>
         </Link>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-slate-400 font-mono font-bold">
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="text-xs text-slate-500 font-mono font-bold bg-slate-100 px-2.5 py-0.5 rounded-md">
                 {contract.contractCode}
               </span>
-              <Badge variant={contract.status === 'ACTIVE' ? 'emerald' : 'amber'}>
+              <span className={`px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                contract.status === 'ACTIVE' 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-500/20' 
+                  : 'bg-amber-50 text-amber-800 border-amber-500/20'
+              }`}>
                 {contract.status.replace('_', ' ')}
-              </Badge>
+              </span>
               {contract.onChainEscrowId && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
                   <Sparkles className="w-3 h-3" />
                   <span>Monad Escrow #{contract.onChainEscrowId}</span>
                 </span>
               )}
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               {contract.job?.title || 'Contract Workspace'}
             </h1>
+            <p className="text-xs text-slate-500 font-medium">
+              Contracted Artisan: <span className="font-bold text-slate-800">{artisanName}</span>
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={() => syncOnChainMutation.mutate()}
               disabled={syncOnChainMutation.isPending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-sm"
               title="Synchronize on-chain Monad smart contract state"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncOnChainMutation.isPending ? 'animate-spin' : ''}`} />
@@ -290,7 +451,7 @@ export const ClientContractWorkspace: React.FC = () => {
             {contract.status === 'COMPLETED' && !hasClientReviewed && (
               <button
                 onClick={() => setReviewModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-md transition-all active:scale-95"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-md transition-all active:scale-95"
               >
                 <Star className="w-3.5 h-3.5 fill-white" />
                 <span>Leave Review</span>
@@ -302,43 +463,58 @@ export const ClientContractWorkspace: React.FC = () => {
 
       {/* Financial Overview Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4 border-slate-200 ">
-          <span className="text-[11px] font-semibold text-slate-500">Total Contract</span>
-          <p className="text-lg font-black text-slate-900 dark:text-slate-100 mt-1">
+        <div className="p-5 bg-white rounded-[24px] border border-slate-200/80 shadow-sm">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Contract</span>
+          <p className="text-xl font-black text-slate-900 mt-1">
             {formatCurrency(contract.totalAmount)}
           </p>
-        </Card>
+        </div>
 
-        <Card className="p-4 border-slate-200 ">
-          <span className="text-[11px] font-semibold text-slate-500">Escrow Funded</span>
-          <p className="text-lg font-black text-emerald-700 dark:text-sky-400 mt-1">
+        <div className="p-5 bg-white rounded-[24px] border border-slate-200/80 shadow-sm">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Escrow Funded</span>
+          <p className="text-xl font-black text-emerald-800 mt-1">
             {formatCurrency(contract.escrowFundedAmount)}
           </p>
-        </Card>
+        </div>
 
-        <Card className="p-4 border-slate-200 ">
-          <span className="text-[11px] font-semibold text-slate-500">Released to Artisan</span>
-          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">
+        <div className="p-5 bg-white rounded-[24px] border border-slate-200/80 shadow-sm">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Released to Artisan</span>
+          <p className="text-xl font-black text-emerald-700 mt-1">
             {formatCurrency(contract.escrowReleasedAmount)}
           </p>
-        </Card>
+        </div>
 
-        <Card className="p-4 border-slate-200 ">
-          <span className="text-[11px] font-semibold text-slate-500">Refunded / Disputed</span>
-          <p className="text-lg font-black text-slate-600 dark:text-slate-400 mt-1">
+        <div className="p-5 bg-white rounded-[24px] border border-slate-200/80 shadow-sm">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Refunded / Disputed</span>
+          <p className="text-xl font-black text-slate-600 mt-1">
             {formatCurrency(contract.escrowRefundedAmount)}
           </p>
-        </Card>
+        </div>
       </div>
 
+      {/* Verified Workshop & Navigation Card */}
+      <ContractLocationCard
+        artisanName={artisanName}
+        address={artisanProfile?.address}
+        state={artisanProfile?.state}
+        lgaCity={artisanProfile?.lgaCity}
+        latitude={artisanProfile?.latitude}
+        longitude={artisanProfile?.longitude}
+        navigationSuite={(contract as any).navigationSuite}
+        isLocationRevealed={
+          (contract as any).isLocationRevealed ??
+          (contract.status === 'ACTIVE' || contract.status === 'COMPLETED')
+        }
+      />
+
       {/* Workspace Tabs Header */}
-      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100/80 rounded-2xl w-fit">
         <button
           onClick={() => setActiveTab('milestones')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === 'milestones'
-              ? 'bg-sky-600 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-emerald-800 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
           }`}
         >
           <FileCheck className="w-3.5 h-3.5" />
@@ -347,10 +523,10 @@ export const ClientContractWorkspace: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('transactions')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === 'transactions'
-              ? 'bg-sky-600 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-emerald-800 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
           }`}
         >
           <WalletIcon className="w-3.5 h-3.5" />
@@ -359,10 +535,10 @@ export const ClientContractWorkspace: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('dispute')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === 'dispute'
-              ? 'bg-sky-600 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-emerald-800 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
           }`}
         >
           <AlertTriangle className="w-3.5 h-3.5" />
@@ -373,7 +549,7 @@ export const ClientContractWorkspace: React.FC = () => {
       {/* TAB 1: MILESTONES PROGRESSION */}
       {activeTab === 'milestones' && (
         <div className="space-y-4">
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {milestones.map((m, index) => {
               const isFunded = m.status === 'FUNDED' || m.status === 'IN_PROGRESS';
               const isSubmitted = m.status === 'SUBMITTED';
@@ -381,60 +557,60 @@ export const ClientContractWorkspace: React.FC = () => {
               const isPendingFunding = m.status === 'PENDING_FUNDING';
 
               return (
-                <Card
+                <div
                   key={m.id}
-                  className={`p-5 sm:p-6 border transition-all ${
+                  className={`p-6 bg-white rounded-[24px] border transition-all ${
                     isSubmitted
-                      ? 'border-amber-500/60 bg-amber-50/10 dark:bg-amber-950/20 shadow-md'
-                      : 'border-slate-200 '
+                      ? 'border-amber-400 bg-amber-50/20 shadow-md ring-1 ring-amber-400/30'
+                      : 'border-slate-200/80 shadow-sm'
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div className="space-y-2 flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
+                    <div className="space-y-2.5 flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700">
                           Step {m.stepOrder || index + 1}
                         </span>
-                        <Badge
-                          variant={
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                             isReleased
-                              ? 'emerald'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-500/20'
                               : isSubmitted
-                              ? 'amber'
+                              ? 'bg-amber-50 text-amber-800 border-amber-500/20'
                               : isFunded
-                              ? 'blue'
-                              : 'slate'
-                          }
+                              ? 'bg-blue-50 text-blue-800 border-blue-500/20'
+                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}
                         >
                           {m.status.replace('_', ' ')}
-                        </Badge>
+                        </span>
                       </div>
 
-                      <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                      <h3 className="text-lg font-bold text-slate-900">
                         {m.title}
                       </h3>
 
                       {m.description && (
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                        <p className="text-xs text-slate-600 leading-relaxed">
                           {m.description}
                         </p>
                       )}
 
                       {/* Timestamps */}
-                      <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 pt-1">
+                      <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 font-medium pt-1">
                         {m.fundedAt && <span>Funded on: {formatDate(m.fundedAt)}</span>}
                         {m.submittedAt && <span>Work submitted: {formatDate(m.submittedAt)}</span>}
-                        {m.releasedAt && <span className="text-emerald-600 font-bold">Funds released: {formatDate(m.releasedAt)}</span>}
+                        {m.releasedAt && <span className="text-emerald-700 font-bold">Funds released: {formatDate(m.releasedAt)}</span>}
                       </div>
                     </div>
 
                     {/* Amount & Actions */}
                     <div className="flex flex-wrap sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 shrink-0">
                       <div className="text-left sm:text-right">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
                           Milestone Amount
                         </span>
-                        <p className="text-lg font-black text-slate-900 dark:text-slate-100">
+                        <p className="text-xl font-black text-slate-900">
                           {formatCurrency(m.amount)}
                         </p>
                       </div>
@@ -443,7 +619,7 @@ export const ClientContractWorkspace: React.FC = () => {
                       {isPendingFunding && (
                         <button
                           onClick={() => setFundingMilestone(m)}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold shadow-md shadow-sky-600/20 transition-all active:scale-95"
+                          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-900/15 transition-all active:scale-95"
                         >
                           <Lock className="w-3.5 h-3.5" />
                           <span>Fund Milestone</span>
@@ -453,7 +629,7 @@ export const ClientContractWorkspace: React.FC = () => {
                       {isSubmitted && (
                         <button
                           onClick={() => setInspectingMilestone(m)}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md shadow-amber-600/20 transition-all active:scale-95 animate-pulse"
+                          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md shadow-amber-600/20 transition-all active:scale-95 animate-pulse"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Inspect Submitted Work</span>
@@ -461,21 +637,21 @@ export const ClientContractWorkspace: React.FC = () => {
                       )}
 
                       {isFunded && (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-sky-400">
-                          <Clock className="w-3.5 h-3.5" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+                          <Clock className="w-3.5 h-3.5 text-emerald-700" />
                           <span>Artisan is working...</span>
                         </span>
                       )}
 
                       {isReleased && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
-                          <CheckCircle2 className="w-4 h-4" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                           <span>Completed &amp; Released</span>
                         </span>
                       )}
                     </div>
                   </div>
-                </Card>
+                </div>
               );
             })}
           </div>
@@ -484,50 +660,62 @@ export const ClientContractWorkspace: React.FC = () => {
 
       {/* TAB 2: TRANSACTIONS / ESCROW LEDGER */}
       {activeTab === 'transactions' && (
-        <Card className="p-6 border-slate-200 space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-            Escrow Audit Ledger &amp; Transactions
-          </h3>
+        <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-slate-900">
+              Escrow Audit Ledger &amp; Transactions
+            </h3>
+            <p className="text-xs text-slate-500">
+              Immutable log of all deposit locks, milestone payouts, and transaction receipts.
+            </p>
+          </div>
+
           {transactions.length === 0 ? (
-            <p className="text-xs text-slate-500 py-6 text-center">
+            <p className="text-xs text-slate-500 py-12 text-center">
               No financial transactions recorded for this contract yet.
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {transactions.map((tx) => (
                 <div
                   key={tx.id}
-                  className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-xs"
+                  className="p-4 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-between text-xs"
                 >
-                  <div className="space-y-0.5">
-                    <p className="font-bold text-slate-900 dark:text-slate-100">
+                  <div className="space-y-1">
+                    <p className="font-bold text-slate-900 text-sm">
                       {tx.description}
                     </p>
-                    <p className="text-[10px] text-slate-400 font-mono">
+                    <p className="text-[11px] text-slate-400 font-mono">
                       Ref: {tx.reference} • {formatDate(tx.createdAt)}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <span className="font-extrabold text-slate-900 dark:text-slate-100">
+                  <div className="text-right space-y-1">
+                    <span className="font-black text-slate-900 text-sm block">
                       {formatCurrency(tx.amount)}
                     </span>
-                    <Badge variant={tx.status === 'SUCCESS' ? 'emerald' : 'amber'}>
+                    <span
+                      className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                        tx.status === 'SUCCESS'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-500/20'
+                          : 'bg-amber-50 text-amber-800 border-amber-500/20'
+                      }`}
+                    >
                       {tx.status}
-                    </Badge>
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </Card>
+        </div>
       )}
 
       {/* TAB 3: DISPUTES */}
       {activeTab === 'dispute' && (
-        <Card className="p-6 border-slate-200 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+        <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-slate-900">
                 Dispute Center &amp; Mediation
               </h3>
               <p className="text-xs text-slate-500">
@@ -537,7 +725,7 @@ export const ClientContractWorkspace: React.FC = () => {
             {disputes.length === 0 && contract.status !== 'COMPLETED' && (
               <button
                 onClick={() => setDisputeModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all self-start sm:self-auto"
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>Open Dispute</span>
@@ -546,13 +734,15 @@ export const ClientContractWorkspace: React.FC = () => {
           </div>
 
           {disputes.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-slate-200 rounded-[24px]">
-              <ShieldCheck className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            <div className="p-12 text-center border border-dashed border-slate-200 rounded-[24px] bg-slate-50/50">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3">
+                <ShieldCheck className="w-6 h-6 text-emerald-700" />
+              </div>
+              <p className="text-sm font-bold text-slate-800">
                 No active disputes on this contract.
               </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                All milestones are running smoothly under escrow protection.
+              <p className="text-xs text-slate-500 mt-1">
+                All milestones are running smoothly under Artifix escrow protection.
               </p>
             </div>
           ) : (
@@ -560,73 +750,240 @@ export const ClientContractWorkspace: React.FC = () => {
               {disputes.map((dsp) => (
                 <div
                   key={dsp.id}
-                  className="p-4 rounded-xl bg-rose-50/20 border border-rose-500/30 space-y-2 text-xs"
+                  className="p-5 rounded-2xl bg-rose-50/40 border border-rose-200 space-y-2.5 text-xs"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-rose-600 font-mono">
+                    <span className="font-bold text-rose-700 font-mono text-sm">
                       Dispute #{dsp.disputeCode}
                     </span>
-                    <Badge variant="rose">{dsp.status}</Badge>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">
+                      {dsp.status}
+                    </span>
                   </div>
-                  <p className="text-slate-800 dark:text-slate-200 font-semibold">
+                  <p className="text-slate-900 font-bold text-sm">
                     Reason: {dsp.reason}
                   </p>
-                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <p className="text-slate-600 leading-relaxed font-normal">
                     {dsp.explanation}
                   </p>
                   <Link
                     to={`/client/disputes/${dsp.id}`}
-                    className="inline-block text-xs font-bold text-emerald-700 hover:underline pt-2"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-700 pt-2 transition-colors"
                   >
-                    Open Dispute Workspace &amp; Arbitration Chat &rarr;
+                    <span>Open Dispute Workspace &amp; Arbitration Chat &rarr;</span>
                   </Link>
                 </div>
               ))}
             </div>
           )}
-        </Card>
+        </div>
       )}
 
-      {/* FUND MILESTONE MODAL */}
-      {fundingMilestone && (
-        <Modal
-          isOpen={!!fundingMilestone}
-          onClose={() => setFundingMilestone(null)}
-          title={`Fund Milestone: ${fundingMilestone.title}`}
-        >
-          <div className="space-y-4 text-xs">
-            <p className="text-slate-600 dark:text-slate-400">
-              You are locking <span className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(fundingMilestone.amount)}</span> into smart escrow. The artisan will only receive these funds once you inspect the completed work and approve.
-            </p>
+      {/* FUND MILESTONE MODAL (DUAL RAIL: FIAT & MONAD WEB3 USDC) */}
+      {fundingMilestone && (() => {
+        const neededUsdc = Math.max(1, Math.round(Number(fundingMilestone.amount) / 1500));
+        const hasEnoughAllowance = Number(usdcAllowance) >= neededUsdc;
+        const hasEnoughUsdc = Number(usdcBalance) >= neededUsdc;
 
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between">
-              <span className="text-slate-500">Your Available Wallet Balance:</span>
-              <span className="font-extrabold text-slate-900 dark:text-slate-100">
-                {formatCurrency(wallet?.availableBalance || 0)}
-              </span>
-            </div>
-
-            {Number(wallet?.availableBalance || 0) < Number(fundingMilestone.amount) && (
-              <div className="p-3 rounded-xl bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs">
-                Your available balance is low. Please deposit funds via Paystack or use Monad Web3.
+        return (
+          <Modal
+            isOpen={!!fundingMilestone}
+            onClose={() => setFundingMilestone(null)}
+            title={`Fund Escrow: ${fundingMilestone.title}`}
+          >
+            <div className="space-y-4 text-xs">
+              {/* Rail Selector Tabs */}
+              <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800/80 p-1 border border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setFundingRail('fiat')}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    fundingRail === 'fiat'
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <WalletIcon className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>In-App Wallet (₦)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFundingRail('usdc');
+                    if (!connectedWallet && hasWeb3Provider()) {
+                      handleConnectWallet();
+                    }
+                  }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    fundingRail === 'usdc'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+                  <span>Monad Web3 ($USDC)</span>
+                </button>
               </div>
-            )}
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 ">
-              <Button variant="outline" size="sm" onClick={() => setFundingMilestone(null)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={fundMilestoneMutation.isPending}
-                onClick={() => fundMilestoneMutation.mutate(fundingMilestone.id)}
-              >
-                {fundMilestoneMutation.isPending ? 'Funding...' : 'Confirm Escrow Lock'}
-              </Button>
+              {/* RAIL A: FIAT WALLET */}
+              {fundingRail === 'fiat' && (
+                <div className="space-y-4">
+                  <p className="text-slate-600 dark:text-slate-400">
+                    Lock <span className="font-bold text-slate-900 dark:text-slate-100">{formatCurrency(fundingMilestone.amount)}</span> into platform escrow from your in-app balance.
+                  </p>
+
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between border border-slate-200/60 dark:border-slate-800">
+                    <span className="text-slate-500">Your Available Balance:</span>
+                    <span className="font-extrabold text-slate-900 dark:text-slate-100">
+                      {formatCurrency(wallet?.availableBalance || 0)}
+                    </span>
+                  </div>
+
+                  {Number(wallet?.availableBalance || 0) < Number(fundingMilestone.amount) && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+                      <span>Low balance. Please top up your wallet or use Monad Web3 tab.</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <Button variant="outline" size="sm" onClick={() => setFundingMilestone(null)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={fundMilestoneMutation.isPending || Number(wallet?.availableBalance || 0) < Number(fundingMilestone.amount)}
+                      onClick={() => fundMilestoneMutation.mutate({ milestoneId: fundingMilestone.id })}
+                    >
+                      {fundMilestoneMutation.isPending ? 'Funding...' : 'Confirm Escrow Lock'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* RAIL B: MONAD WEB3 USDC STABLECOIN */}
+              {fundingRail === 'usdc' && (
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-900 dark:text-purple-200">
+                    <div className="flex items-center justify-between font-bold pb-1">
+                      <span>Monad Smart Contract Escrow</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-600 text-white">Chain ID 10143</span>
+                    </div>
+                    <p className="text-[11px] text-purple-700 dark:text-purple-300">
+                      Payment is settled in <strong>USD Coin (USDC)</strong> locked trustlessly on Monad EVM.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Escrow Required:</span>
+                      <span className="font-extrabold text-purple-600 dark:text-purple-400 text-sm">
+                        ${neededUsdc}.00 USDC
+                      </span>
+                    </div>
+
+                    {connectedWallet ? (
+                      <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400">Connected Wallet:</span>
+                          <span className="font-mono text-slate-700 dark:text-slate-300">
+                            {connectedWallet.slice(0, 6)}...{connectedWallet.slice(-4)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400">Your USDC Balance:</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                            {usdcBalance} USDC
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleConnectWallet}
+                          disabled={isConnectingWallet}
+                          className="w-full text-xs font-bold border-purple-500/50 text-purple-600 hover:bg-purple-50"
+                        >
+                          {isConnectingWallet ? 'Connecting...' : 'Connect MetaMask / Browser Wallet'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Faucet Helper Button */}
+                  {connectedWallet && (
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px]">
+                      <span className="text-slate-500">Need test funds on Monad?</span>
+                      <button
+                        type="button"
+                        onClick={handleMintFaucet}
+                        disabled={isMintingUsdc}
+                        className="font-bold text-purple-600 hover:text-purple-500 underline disabled:opacity-50"
+                      >
+                        {isMintingUsdc ? 'Minting 100 USDC...' : '🚰 Faucet: Get 100 Test USDC'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Artisan Wallet Warning */}
+                  {!contract.artisan?.walletAddress && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Artisan Has Not Linked a Web3 Wallet</p>
+                        <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5 leading-relaxed">
+                          The artisan has not yet configured their Monad EVM address. You can ask them to link a wallet in their profile, or switch to the <strong>In-App Wallet (₦)</strong> tab to fund with Naira Escrow.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Steps */}
+                  <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <Button variant="outline" size="sm" onClick={() => setFundingMilestone(null)}>
+                      Cancel
+                    </Button>
+
+                    {!connectedWallet ? (
+                      <Button size="sm" onClick={handleConnectWallet} disabled={isConnectingWallet}>
+                        Connect Wallet
+                      </Button>
+                    ) : !contract.artisan?.walletAddress ? (
+                      <Button size="sm" disabled className="bg-slate-300 text-slate-500 cursor-not-allowed">
+                        Artisan Wallet Missing
+                      </Button>
+                    ) : !hasEnoughAllowance ? (
+                      <Button
+                        size="sm"
+                        disabled={isApprovingUsdc}
+                        onClick={() => handleApproveUsdc(neededUsdc)}
+                        className="bg-purple-600 hover:bg-purple-500 text-white font-bold"
+                      >
+                        {isApprovingUsdc ? 'Approving in Wallet...' : `1. Approve ${neededUsdc} USDC`}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        disabled={isLockingUsdc || !hasEnoughUsdc}
+                        onClick={() => handleLockUsdc(fundingMilestone)}
+                        className="bg-purple-600 hover:bg-purple-500 text-white font-bold"
+                      >
+                        {isLockingUsdc
+                          ? 'Signing Escrow Lock...'
+                          : !hasEnoughUsdc
+                          ? 'Insufficient USDC'
+                          : `2. Deposit ${neededUsdc} USDC to Escrow`}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        );
+      })()}
 
       {/* INSPECT SUBMITTED WORK MODAL */}
       {inspectingMilestone && (
@@ -712,11 +1069,15 @@ export const ClientContractWorkspace: React.FC = () => {
 
                 <Button
                   size="sm"
-                  disabled={approveReleaseMutation.isPending}
-                  onClick={() => approveReleaseMutation.mutate(inspectingMilestone.id)}
+                  disabled={approveReleaseMutation.isPending || isReleasingOnChain}
+                  onClick={() => handleApproveAndRelease(inspectingMilestone.id)}
                   className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
                 >
-                  {approveReleaseMutation.isPending ? 'Releasing...' : 'Approve & Release Funds'}
+                  {approveReleaseMutation.isPending || isReleasingOnChain
+                    ? 'Releasing...'
+                    : contract?.onChainEscrowId
+                    ? '⚡ Approve & Release On-Chain'
+                    : 'Approve & Release Funds'}
                 </Button>
               </div>
             )}

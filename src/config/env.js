@@ -32,6 +32,16 @@ const envSchema = z.object({
   ESCROW_CONTRACT_ADDRESS: optionalCleanString,
   ESCROW_ARBITER_ADDRESS: optionalCleanString,
   ESCROW_FEE_RECIPIENT: optionalCleanString,
+  STABLECOIN_CONTRACT_ADDRESS: optionalCleanString,
+
+  // Kotani Pay Configuration
+  KOTANI_API_KEY: optionalCleanString,
+  KOTANI_SECRET_KEY: optionalCleanString,
+  KOTANI_BASE_URL: cleanString.default('https://sandbox-api.kotanipay.io/api/v1'),
+
+  // Privy Configuration
+  PRIVY_APP_ID: optionalCleanString,
+  PRIVY_APP_SECRET: optionalCleanString,
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

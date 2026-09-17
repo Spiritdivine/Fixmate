@@ -78,7 +78,7 @@ export const Login: React.FC = () => {
             <Input
               label="Email Address or Phone Number"
               type="text"
-              placeholder="e.g. client@fixmate.ng or 08012345678"
+              placeholder="e.g. client@artifix.ng or 08012345678"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               leftIcon={<Mail className="w-4 h-4" />}
@@ -166,7 +166,7 @@ export const Login: React.FC = () => {
             </Link>
           </p>
           <p className="text-[11px] text-slate-500">
-            Fixmate Staff or Compliance?{' '}
+            Artifix Staff or Compliance?{' '}
             <Link to="/admin/login" className="text-emerald-600 hover:text-emerald-700 transition-colors">
               Admin Console Login
             </Link>

@@ -5,24 +5,16 @@ import {
   Briefcase,
   PlusCircle,
   Search,
-  Filter,
   Users,
   MapPin,
   Calendar,
-  MoreVertical,
   Edit,
   Trash2,
-  XCircle,
-  Eye,
-  CheckCircle2,
-  Clock,
 } from 'lucide-react';
-import { apiClient, getErrorMessage } from '../../lib/api-client';
+import { apiClient } from '../../lib/api-client';
 import { Job, JobStatus, ApiResponse } from '../../types';
 import { formatCurrency, formatDate } from '../../lib/formatters';
-import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
-import { Button } from '../../components/ui/Button';
 
 export const MyJobsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -50,16 +42,6 @@ export const MyJobsPage: React.FC = () => {
     },
   });
 
-  // 3. Update Job Status Mutation (e.g. Cancel or Complete)
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ jobId, status }: { jobId: string; status: JobStatus }) => {
-      await apiClient.patch(`/jobs/${jobId}/status`, { status });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-my-jobs'] });
-    },
-  });
-
   const jobs = (jobsData || []).filter((j) =>
     searchQuery
       ? j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -78,21 +60,21 @@ export const MyJobsPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300 font-dashboard">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-dashboard">
             My Job Postings
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-500 mt-1">
             Manage your repair requests, inspect incoming proposals, and track active contracts.
           </p>
         </div>
 
         <Link
           to="/client/jobs/post"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[24px] bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold shadow-lg shadow-sky-600/20 transition-all active:scale-95 self-start sm:self-auto"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-sm font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
         >
           <PlusCircle className="w-4 h-4" />
           <span>Post a New Job</span>
@@ -100,16 +82,16 @@ export const MyJobsPage: React.FC = () => {
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
           {statusFilters.map((tab) => (
             <button
               key={tab.value}
               onClick={() => setSelectedStatus(tab.value)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedStatus === tab.value
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                  ? 'bg-emerald-800 text-white shadow-sm'
+                  : 'text-slate-600 bg-white hover:bg-slate-50 shadow-xs border border-slate-100'
               }`}
             >
               {tab.label}
@@ -117,14 +99,14 @@ export const MyJobsPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <div className="relative max-w-xl">
+          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search jobs by title, LGA, or state..."
-            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+            className="w-full pl-11 pr-4 py-2.5 rounded-full bg-white text-sm font-medium border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none shadow-xs text-slate-900 placeholder:text-slate-400"
           />
         </div>
       </div>
@@ -133,13 +115,13 @@ export const MyJobsPage: React.FC = () => {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((n) => (
-            <Card key={n} className="p-6 border-slate-200 animate-pulse h-36" />
+            <div key={n} className="p-6 bg-white rounded-[24px] border border-slate-100 animate-pulse h-36 shadow-xs" />
           ))}
         </div>
       ) : jobs.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-slate-200 ">
-          <Briefcase className="w-12 h-12 mx-auto text-slate-400 mb-3" />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
+        <div className="p-12 text-center bg-white rounded-[24px] border border-dashed border-slate-200 shadow-xs">
+          <Briefcase className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+          <h3 className="text-base font-bold text-slate-800">
             No job postings found
           </h3>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
@@ -149,12 +131,12 @@ export const MyJobsPage: React.FC = () => {
           </p>
           <Link
             to="/client/jobs/post"
-            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-semibold"
+            className="mt-4 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>Post a Job</span>
           </Link>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-4">
           {jobs.map((job) => {
@@ -170,9 +152,9 @@ export const MyJobsPage: React.FC = () => {
                 : 'slate';
 
             return (
-              <Card
+              <div
                 key={job.id}
-                className="p-5 sm:p-6 hover:border-emerald-600/40 transition-all border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-6"
+                className="p-6 rounded-[24px] bg-white border border-slate-100 hover:border-emerald-500/30 hover:shadow-md transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-6"
               >
                 <div className="space-y-2 flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -189,7 +171,7 @@ export const MyJobsPage: React.FC = () => {
 
                   <Link
                     to={`/client/jobs/${job.id}`}
-                    className="text-base font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-sky-400 transition-colors block truncate"
+                    className="text-base font-bold text-slate-900 hover:text-emerald-800 transition-colors block truncate"
                   >
                     {job.title}
                   </Link>
@@ -200,7 +182,7 @@ export const MyJobsPage: React.FC = () => {
                       {job.lgaCity}, {job.state}
                     </span>
                     <span>•</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                    <span className="font-bold text-slate-800">
                       {formatCurrency(job.budgetMin)} – {formatCurrency(job.budgetMax)}
                     </span>
                     {job.deadlineDate && (
@@ -217,7 +199,7 @@ export const MyJobsPage: React.FC = () => {
 
                 {/* Right Actions & Proposal Badge */}
                 <div className="flex flex-wrap sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 text-xs font-bold border border-sky-200 dark:border-sky-800">
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200/60">
                     <Users className="w-3.5 h-3.5" />
                     <span>{job.proposalsCount} Proposals Received</span>
                   </div>
@@ -225,7 +207,7 @@ export const MyJobsPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Link
                       to={`/client/jobs/${job.id}`}
-                      className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-[#124d33] dark:hover:bg-[#186644] text-white dark:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors"
+                      className="px-4 py-2 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors"
                     >
                       View Details &amp; Bids
                     </Link>
@@ -233,7 +215,7 @@ export const MyJobsPage: React.FC = () => {
                     {job.status === 'OPEN' && (
                       <Link
                         to={`/client/jobs/${job.id}/edit`}
-                        className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+                        className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
                         title="Edit Job"
                       >
                         <Edit className="w-4 h-4" />
@@ -244,7 +226,7 @@ export const MyJobsPage: React.FC = () => {
                       <button
                         onClick={() => deleteJobMutation.mutate(job.id)}
                         disabled={deleteJobMutation.isPending}
-                        className="p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900 text-rose-600 transition-colors"
+                        className="p-2 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
                         title="Delete Job"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -252,7 +234,7 @@ export const MyJobsPage: React.FC = () => {
                     )}
                   </div>
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>

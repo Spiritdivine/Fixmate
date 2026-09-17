@@ -137,7 +137,7 @@ export const KycVerificationPage: React.FC = () => {
  </h3>
  <p className="text-xs text-slate-500 dark:text-slate-400">
  {user?.isKycVerified
- ? 'Your identity documents have been approved by Fixmate Compliance.'
+ ? 'Your identity documents have been approved by Artifix Compliance.'
  : 'Submit a valid government-issued ID to unlock verified status.'}
  </p>
  </div>

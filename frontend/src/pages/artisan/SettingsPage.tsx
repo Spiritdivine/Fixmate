@@ -104,7 +104,7 @@ export const SettingsPage: React.FC = () => {
  const handleDeactivateAccount = async () => {
  if (
  !window.confirm(
- 'WARNING: Are you sure you want to deactivate your Fixmate artisan account? Your profile and service offerings will be hidden.'
+ 'WARNING: Are you sure you want to deactivate your Artifix artisan account? Your profile and service offerings will be hidden.'
  )
  )
  return;

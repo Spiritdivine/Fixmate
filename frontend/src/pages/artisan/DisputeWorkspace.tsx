@@ -230,7 +230,7 @@ export const DisputeWorkspace: React.FC = () => {
  3-Way Arbitration Hearing Thread
  </h3>
  <p className="text-[11px] text-slate-400">
- Official communication log between Artisan, Client, and Fixmate Arbitrator
+ Official communication log between Artisan, Client, and Artifix Arbitrator
  </p>
  </div>
 

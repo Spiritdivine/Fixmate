@@ -5,6 +5,9 @@ import tailwindcss from '@tailwindcss/vite';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    include: ['react-is', 'recharts', '@stripe/stripe-js'],
+  },
   server: {
     port: 5173,
     proxy: {

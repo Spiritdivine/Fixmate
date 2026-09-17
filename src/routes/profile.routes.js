@@ -18,12 +18,14 @@ import {
   updateAvailabilitySchema,
   updateLocationSchema,
   artisanParamSchema,
+  nearbyArtisansQuerySchema,
 } from '../validators/profile.validator.js';
 import { updateAvatarSchema } from '../validators/auth.validator.js';
 
 const router = Router();
 
 // Public artisan discovery
+router.get('/artisans/nearby', validate(nearbyArtisansQuerySchema), ProfileController.getNearbyArtisans);
 router.get('/artisans', ProfileController.listArtisans);
 router.get('/artisans/:id', ProfileController.getArtisanDetails);
 

@@ -19,6 +19,7 @@ import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { Select } from '../../components/ui/Select';
 import { Avatar } from '../../components/ui/Avatar';
+import { WorkshopLocationCard } from '../../components/artisan/WorkshopLocationCard';
 import { useAuthStore } from '../../stores/authStore';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { JobCategory } from '../../types';
@@ -35,11 +36,30 @@ export const ProfilePage: React.FC = () => {
  const [state, setState] = useState(profile?.state || 'Lagos');
  const [lgaCity, setLgaCity] = useState(profile?.lgaCity || 'Ikeja');
  const [address, setAddress] = useState(profile?.address || '');
+ const [latitude, setLatitude] = useState<number | null>(
+  profile?.latitude !== null && profile?.latitude !== undefined
+   ? Number(profile.latitude)
+   : null
+ );
+ const [longitude, setLongitude] = useState<number | null>(
+  profile?.longitude !== null && profile?.longitude !== undefined
+   ? Number(profile.longitude)
+   : null
+ );
  const [walletAddress, setWalletAddress] = useState(user?.walletAddress || '');
  const [categories, setCategories] = useState<JobCategory[]>([]);
  const [selectedSkills, setSelectedSkills] = useState<number[]>(
- (profile?.skills || []).map((s) => s.skill.id)
+  (profile?.skills || []).map((s) => s.skill.id)
  );
+
+ useEffect(() => {
+  if (profile?.latitude !== undefined && profile?.latitude !== null) {
+   setLatitude(Number(profile.latitude));
+  }
+  if (profile?.longitude !== undefined && profile?.longitude !== null) {
+   setLongitude(Number(profile.longitude));
+  }
+ }, [profile?.latitude, profile?.longitude]);
 
  const [isLoading, setIsLoading] = useState(false);
  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -57,6 +77,12 @@ export const ProfilePage: React.FC = () => {
  };
  fetchCategories();
  }, []);
+
+ useEffect(() => {
+ if (user?.walletAddress) {
+ setWalletAddress(user.walletAddress);
+ }
+ }, [user?.walletAddress]);
 
  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
  const file = e.target.files?.[0];
@@ -99,12 +125,14 @@ export const ProfilePage: React.FC = () => {
  state,
  lgaCity,
  address,
+ latitude: latitude !== null && !isNaN(latitude) ? Number(latitude) : undefined,
+ longitude: longitude !== null && !isNaN(longitude) ? Number(longitude) : undefined,
  skillIds: selectedSkills,
  });
 
- if (walletAddress && walletAddress !== user?.walletAddress) {
- await apiClient.patch('/profiles/wallet-address', { walletAddress });
- updateUser({ walletAddress });
+ if (walletAddress !== user?.walletAddress) {
+ await apiClient.patch('/profiles/wallet-address', { walletAddress: walletAddress.trim() || null });
+ updateUser({ walletAddress: walletAddress.trim() || undefined });
  }
 
  updateUser({ artisanProfile: data.data });
@@ -268,35 +296,26 @@ export const ProfilePage: React.FC = () => {
  </div>
  </Card>
 
- {/* Location & Physical Workshop Address */}
- <Card className="space-y-4">
- <CardHeader>
- <CardTitle>Operating Location & Workshop Address</CardTitle>
- <CardDescription>Clients search for nearby artisans based on State and LGA.</CardDescription>
- </CardHeader>
-
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
- <Input
- label="State"
- value={state}
- onChange={(e) => setState(e.target.value)}
- required
- />
- <Input
- label="LGA or City"
- value={lgaCity}
- onChange={(e) => setLgaCity(e.target.value)}
- required
- />
- </div>
-
- <Input
- label="Workshop or Office Address"
- placeholder="e.g. 14 Awolowo Way, Ikeja, Lagos"
- value={address}
- onChange={(e) => setAddress(e.target.value)}
- />
- </Card>
+        {/* Workshop Location & Interactive Map Pin-Drop */}
+        <WorkshopLocationCard
+          latitude={latitude}
+          longitude={longitude}
+          state={state}
+          lgaCity={lgaCity}
+          address={address}
+          onCoordinatesChange={(lat, lng) => {
+            setLatitude(lat);
+            setLongitude(lng);
+          }}
+          onAddressFill={({ state: s, lgaCity: l, address: a }) => {
+            if (s) setState(s);
+            if (l) setLgaCity(l);
+            if (a) setAddress(a);
+          }}
+          onStateChange={setState}
+          onLgaCityChange={setLgaCity}
+          onAddressChange={setAddress}
+        />
 
  {/* Monad Web3 Blockchain Address Binding */}
  <Card className="space-y-4 border-purple-500/30">

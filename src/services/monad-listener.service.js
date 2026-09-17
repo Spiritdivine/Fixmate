@@ -114,9 +114,9 @@ export class MonadListenerService {
       if (eventName === 'EscrowCreated') {
         const [escrowId, contractCode, client, artisan, amount] = args;
         const escrowIdNum = Number(escrowId);
-        const amountMon = ethers.formatEther(amount);
+        const amountUsdc = ethers.formatUnits(amount, 6);
 
-        console.log(`🔔 [Monad Event] EscrowCreated: #${escrowIdNum} (${contractCode}, ${amountMon} MON)`);
+        console.log(`🔔 [Monad Event] EscrowCreated: #${escrowIdNum} (${contractCode}, ${amountUsdc} USDC)`);
 
         const contractRecord = await prisma.contract.findUnique({
           where: { contractCode },
@@ -131,8 +131,8 @@ export class MonadListenerService {
                 status: 'ACTIVE',
                 onChainEscrowId: escrowIdNum,
                 fundingTxHash: txHash,
-                cryptoAmount: parseFloat(amountMon),
-                cryptoCurrency: 'MON',
+                cryptoAmount: parseFloat(amountUsdc),
+                cryptoCurrency: 'USDC',
                 startedAt: contractRecord.startedAt || new Date(),
               },
             });
@@ -149,14 +149,18 @@ export class MonadListenerService {
             contractId: contractRecord.id,
             contractCode,
             onChainEscrowId: escrowIdNum,
-            amountMon,
+            amountUsdc,
+            amountMon: amountUsdc,
+            currency: 'USDC',
             txHash,
           });
           this.safeEmitSocket(contractRecord.artisanId, 'escrow:funded', {
             contractId: contractRecord.id,
             contractCode,
             onChainEscrowId: escrowIdNum,
-            amountMon,
+            amountUsdc,
+            amountMon: amountUsdc,
+            currency: 'USDC',
             txHash,
           });
         }
@@ -188,10 +192,10 @@ export class MonadListenerService {
       } else if (eventName === 'EscrowReleased') {
         const [escrowId, artisan, artisanAmount, platformFee] = args;
         const escrowIdNum = Number(escrowId);
-        const netMon = ethers.formatEther(artisanAmount);
-        const feeMon = ethers.formatEther(platformFee);
+        const netUsdc = ethers.formatUnits(artisanAmount, 6);
+        const feeUsdc = ethers.formatUnits(platformFee, 6);
 
-        console.log(`🔔 [Monad Event] EscrowReleased: #${escrowIdNum} -> Artisan: ${netMon} MON, Platform Fee: ${feeMon} MON`);
+        console.log(`🔔 [Monad Event] EscrowReleased: #${escrowIdNum} -> Artisan: ${netUsdc} USDC, Fee: ${feeUsdc} USDC`);
 
         const contractRecord = await prisma.contract.findFirst({
           where: { onChainEscrowId: escrowIdNum },
@@ -234,13 +238,15 @@ export class MonadListenerService {
           this.safeEmitSocket(contractRecord.clientId, 'escrow:released', {
             contractId: contractRecord.id,
             onChainEscrowId: escrowIdNum,
-            netMon,
+            netUsdc,
+            currency: 'USDC',
             txHash,
           });
           this.safeEmitSocket(contractRecord.artisanId, 'escrow:released', {
             contractId: contractRecord.id,
             onChainEscrowId: escrowIdNum,
-            netMon,
+            netUsdc,
+            currency: 'USDC',
             txHash,
           });
         }

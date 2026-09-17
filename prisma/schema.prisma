@@ -674,6 +674,10 @@ model PayoutRequest {
   bankAccountId      String       @map("bank_account_id") @db.Uuid
   amount             Decimal      @db.Decimal(14, 2)
   fee                Decimal      @default(0.00) @db.Decimal(12, 2)
+  sourceCurrency     String       @default("NGN") @map("source_currency") @db.VarChar(10)
+  destinationCurrency String      @default("NGN") @map("destination_currency") @db.VarChar(10)
+  exchangeRate       Decimal?     @map("exchange_rate") @db.Decimal(12, 4)
+  gateway            String       @default("PAYSTACK") @db.VarChar(50) // PAYSTACK, KOTANI
   reference          String       @unique @db.VarChar(64)
   gatewayTransferCode String?     @map("gateway_transfer_code") @db.VarChar(128)
   status             PayoutStatus @default(PENDING)
@@ -704,6 +708,7 @@ model SavedPaymentMethod {
 
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, authorizationCode])
   @@index([userId])
   @@map("saved_payment_methods")
 }
@@ -719,6 +724,23 @@ model WebhookEvent {
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("webhook_events")
+}
+
+model DailyFinancialReport {
+  id                    String   @id @default(uuid()) @db.Uuid
+  date                  DateTime @unique @db.Date
+  paystackBalanceNgn    Decimal  @map("paystack_balance_ngn") @db.Decimal(14, 2)
+  dbTotalAvailableNgn   Decimal  @map("db_total_available_ngn") @db.Decimal(14, 2)
+  dbTotalLockedNgn      Decimal  @map("db_total_locked_ngn") @db.Decimal(14, 2)
+  ngnVariance           Decimal  @map("ngn_variance") @db.Decimal(14, 2)
+  monadEscrowUsdc       Decimal  @map("monad_escrow_usdc") @db.Decimal(14, 2)
+  dbActiveCryptoEscrow  Decimal  @map("db_active_crypto_escrow") @db.Decimal(14, 2)
+  cryptoVariance        Decimal  @map("crypto_variance") @db.Decimal(14, 2)
+  status                String   @db.VarChar(20) // BALANCED, DISCREPANCY, CRITICAL
+  details               Json     @default("{}")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("daily_financial_reports")
 }
 
 // ==============================================================================

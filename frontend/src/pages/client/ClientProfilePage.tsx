@@ -129,33 +129,33 @@ export const ClientProfilePage: React.FC = () => {
   const displayName = firstName ? `${firstName} ${lastName}`.trim() : user?.email;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
+    <div className="max-w-4xl mx-auto space-y-8 pb-16 font-dashboard">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+      <div className="space-y-1">
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
           Client Profile &amp; Preferences
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+        <p className="text-sm text-slate-500">
           Manage your contact information, company billing details, and Monad Web3 wallet connection.
         </p>
       </div>
 
       {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{successMessage}</span>
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-500/20 text-emerald-800 text-xs flex items-center gap-2.5">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-700" />
+          <span className="font-medium">{successMessage}</span>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{errorMessage}</span>
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+          <span className="font-medium">{errorMessage}</span>
         </div>
       )}
 
       {/* Profile Card / Avatar */}
-      <Card className="p-6 sm:p-8 border-slate-200 flex flex-col sm:flex-row items-center gap-6">
+      <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
         <div className="relative group">
           <Avatar
             src={user?.avatarUrl}
@@ -170,23 +170,23 @@ export const ClientProfilePage: React.FC = () => {
         </div>
 
         <div className="space-y-1 text-center sm:text-left flex-1 min-w-0">
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+            <h2 className="text-xl font-bold text-slate-900 truncate">
               {displayName}
             </h2>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#186644]/10 text-emerald-700 dark:text-sky-400">
+            <span className="px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-500/20">
               CLIENT
             </span>
           </div>
 
-          <p className="text-xs text-slate-500 flex items-center justify-center sm:justify-start gap-3">
+          <p className="text-xs text-slate-500 flex items-center justify-center sm:justify-start gap-3 font-medium">
             <span>{user?.email}</span>
             <span>•</span>
             <span>{user?.phoneNumber}</span>
           </p>
 
-          <div className="flex items-center justify-center sm:justify-start gap-2 pt-2">
-            <label className="text-xs font-bold text-emerald-700 hover:underline cursor-pointer">
+          <div className="flex items-center justify-center sm:justify-start gap-3 pt-2">
+            <label className="text-xs font-bold text-emerald-800 hover:text-emerald-700 cursor-pointer transition-colors">
               Upload New Photo
               <input type="file" onChange={handleAvatarUpload} accept="image/*" className="hidden" />
             </label>
@@ -204,54 +204,54 @@ export const ClientProfilePage: React.FC = () => {
             )}
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Main Details Form */}
-      <Card className="p-6 sm:p-8 border-slate-200 space-y-6">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+      <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6">
+        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
           Personal &amp; Company Details
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">First Name</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">First Name</label>
             <input
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm focus:ring-2 focus:ring-emerald-700 focus:border-emerald-700 text-slate-900 outline-none transition-all"
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Last Name</label>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Last Name</label>
             <input
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm focus:ring-2 focus:ring-emerald-700 focus:border-emerald-700 text-slate-900 outline-none transition-all"
             />
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Company Name (Optional)</label>
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Company Name (Optional)</label>
           <input
             type="text"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             placeholder="e.g. Apex Property Holdings Ltd"
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm focus:ring-2 focus:ring-emerald-700 focus:border-emerald-700 text-slate-900 outline-none transition-all"
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">State</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">State</label>
             <select
               value={state}
               onChange={(e) => setState(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm focus:ring-2 focus:ring-emerald-700 focus:border-emerald-700 text-slate-900 outline-none transition-all"
             >
               <option value="Lagos">Lagos</option>
               <option value="Abuja">Abuja (FCT)</option>
@@ -267,51 +267,52 @@ export const ClientProfilePage: React.FC = () => {
             </select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">City / LGA</label>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">City / LGA</label>
             <input
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm focus:ring-2 focus:ring-emerald-700 focus:border-emerald-700 text-slate-900 outline-none transition-all"
             />
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Default Site Address</label>
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Default Site Address</label>
           <input
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm focus:ring-2 focus:ring-emerald-700 focus:border-emerald-700 text-slate-900 outline-none transition-all"
           />
         </div>
 
-        <div className="flex justify-end pt-2">
-          <Button
-            size="sm"
+        <div className="flex justify-end pt-4 border-t border-slate-100">
+          <button
+            type="button"
             disabled={updateProfileMutation.isPending}
             onClick={() => updateProfileMutation.mutate()}
+            className="px-7 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-sm font-semibold shadow-md shadow-emerald-900/10 transition-all disabled:opacity-50"
           >
             {updateProfileMutation.isPending ? 'Saving...' : 'Save Profile Changes'}
-          </Button>
+          </button>
         </div>
-      </Card>
+      </div>
 
       {/* Monad Web3 Integration Card */}
-      <Card className="p-6 sm:p-8 border-slate-200 space-y-4">
-        <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+      <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-5">
+        <div className="flex items-center gap-2.5 text-purple-700">
           <Sparkles className="w-5 h-5" />
-          <h3 className="text-sm font-bold">Monad Blockchain Integration</h3>
+          <h3 className="text-base font-bold">Monad Blockchain Integration</h3>
         </div>
 
-        <p className="text-xs text-slate-500 leading-relaxed">
+        <p className="text-xs text-slate-500 leading-relaxed font-normal">
           Connect your Monad Testnet EVM wallet address to execute on-chain escrow deposits and instant smart contract authorizations.
         </p>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
             EVM Wallet Address (0x...)
           </label>
           <input
@@ -319,21 +320,21 @@ export const ClientProfilePage: React.FC = () => {
             value={walletAddress}
             onChange={(e) => setWalletAddress(e.target.value)}
             placeholder="0x1234567890abcdef1234567890abcdef12345678"
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:ring-2 focus:ring-purple-500 text-slate-900 dark:text-slate-100"
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm font-mono focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-slate-900 outline-none transition-all"
           />
         </div>
 
-        <div className="flex justify-end pt-2">
-          <Button
-            size="sm"
+        <div className="flex justify-end pt-3 border-t border-slate-100">
+          <button
+            type="button"
             disabled={updateWalletMutation.isPending}
             onClick={() => updateWalletMutation.mutate()}
-            className="bg-purple-600 hover:bg-purple-500 text-white font-bold"
+            className="px-7 py-2.5 rounded-full bg-purple-700 hover:bg-purple-600 text-white text-sm font-semibold shadow-md shadow-purple-900/10 transition-all disabled:opacity-50"
           >
             {updateWalletMutation.isPending ? 'Binding...' : 'Update Wallet Address'}
-          </Button>
+          </button>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

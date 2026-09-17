@@ -2,9 +2,24 @@
 pragma solidity ^0.8.20;
 
 /**
+ * @dev Interface of the ERC20 standard as defined in the EIP.
+ */
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address to, uint256 value) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 value) external returns (bool);
+    function transferFrom(address from, address to, uint256 value) external returns (bool);
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+/**
  * @title ArtisanEscrow
- * @dev Monad Blitz Hackathon - Artisan Escrow Platform
- * @notice Trust and settlement infrastructure for local artisan service transactions on Monad.
+ * @dev Fixmate Marketplace - Stablecoin Escrow Platform on Monad EVM
+ * @notice Trust and settlement infrastructure for local artisan service transactions using ERC-20 Stablecoins (USDC).
  */
 contract ArtisanEscrow {
     // =========================================================================
@@ -23,8 +38,8 @@ contract ArtisanEscrow {
     struct Escrow {
         uint256 id;
         string contractCode;
-        address payable client;
-        address payable artisan;
+        address client;
+        address artisan;
         uint256 amount;
         uint256 platformFeeBps; // 100 bps = 1.00%, 500 bps = 5.00%
         EscrowState state;
@@ -38,7 +53,8 @@ contract ArtisanEscrow {
 
     address public owner;
     address public arbiter;
-    address payable public feeRecipient;
+    address public feeRecipient;
+    IERC20 public immutable paymentToken;
     uint256 public nextEscrowId;
 
     mapping(uint256 => Escrow) public escrows;
@@ -144,43 +160,52 @@ contract ArtisanEscrow {
     // CONSTRUCTOR
     // =========================================================================
 
-    constructor(address _arbiter, address payable _feeRecipient) {
-        if (_arbiter == address(0) || _feeRecipient == address(0)) revert InvalidAddress();
+    constructor(address _arbiter, address _feeRecipient, address _paymentToken) {
+        if (_arbiter == address(0) || _feeRecipient == address(0) || _paymentToken == address(0)) {
+            revert InvalidAddress();
+        }
         owner = msg.sender;
         arbiter = _arbiter;
         feeRecipient = _feeRecipient;
+        paymentToken = IERC20(_paymentToken);
         _status = _NOT_ENTERED;
         paused = false;
         nextEscrowId = 1;
     }
 
     // =========================================================================
-    // CORE ESCROW LOGIC
+    // CORE ESCROW LOGIC (STABLECOIN / ERC-20)
     // =========================================================================
 
     /**
-     * @notice Creates a new escrow and locks native MON funds in a single transaction.
+     * @notice Creates a new escrow and transfers ERC-20 stablecoins from client into this contract.
      * @param contractCode Unique backend contract code (e.g., CTR-2026-10492)
      * @param artisan Address of the artisan performing the work
+     * @param amount Amount of stablecoin (in token base units, e.g. 6 decimals for USDC)
      * @param feeBps Platform fee in basis points (e.g. 500 for 5%)
      */
     function createAndFundEscrow(
         string calldata contractCode,
-        address payable artisan,
+        address artisan,
+        uint256 amount,
         uint256 feeBps
-    ) external payable nonReentrant whenNotPaused returns (uint256) {
-        if (msg.value == 0) revert InvalidAmount();
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        if (amount == 0) revert InvalidAmount();
         if (artisan == address(0) || artisan == msg.sender) revert InvalidAddress();
         if (feeBps > 2000) revert InvalidAmount(); // Max 20% platform fee protection
+
+        // Transfer stablecoin from client to this contract
+        bool success = paymentToken.transferFrom(msg.sender, address(this), amount);
+        if (!success) revert TransferFailed();
 
         uint256 escrowId = nextEscrowId++;
 
         escrows[escrowId] = Escrow({
             id: escrowId,
             contractCode: contractCode,
-            client: payable(msg.sender),
+            client: msg.sender,
             artisan: artisan,
-            amount: msg.value,
+            amount: amount,
             platformFeeBps: feeBps,
             state: EscrowState.FUNDED,
             createdAt: block.timestamp,
@@ -194,7 +219,7 @@ contract ArtisanEscrow {
             contractCode,
             msg.sender,
             artisan,
-            msg.value,
+            amount,
             feeBps
         );
 
@@ -217,7 +242,7 @@ contract ArtisanEscrow {
     }
 
     /**
-     * @notice Customer approves the completed work and triggers fund release.
+     * @notice Customer approves the completed work and triggers fund release in stablecoins.
      * @param escrowId The ID of the escrow.
      */
     function approveAndRelease(uint256 escrowId) external nonReentrant {
@@ -234,13 +259,13 @@ contract ArtisanEscrow {
         escrow.state = EscrowState.RELEASED;
         escrow.completedAt = block.timestamp;
 
-        // Transfers
+        // Transfers in stablecoin
         if (platformFee > 0) {
-            (bool feeSuccess, ) = feeRecipient.call{value: platformFee}("");
+            bool feeSuccess = paymentToken.transfer(feeRecipient, platformFee);
             if (!feeSuccess) revert TransferFailed();
         }
 
-        (bool artisanSuccess, ) = escrow.artisan.call{value: artisanAmount}("");
+        bool artisanSuccess = paymentToken.transfer(escrow.artisan, artisanAmount);
         if (!artisanSuccess) revert TransferFailed();
 
         emit EscrowReleased(escrowId, escrow.artisan, artisanAmount, platformFee);
@@ -266,10 +291,10 @@ contract ArtisanEscrow {
     }
 
     /**
-     * @notice Admin / Arbiter resolves the dispute with an agreed split or full resolution.
+     * @notice Admin / Arbiter resolves the dispute with an agreed split or full resolution in stablecoins.
      * @param escrowId The ID of the escrow.
-     * @param artisanAmount Amount allocated to the artisan (in wei).
-     * @param clientRefund Amount refunded back to the customer (in wei).
+     * @param artisanAmount Amount allocated to the artisan (in token base units).
+     * @param clientRefund Amount refunded back to the customer (in token base units).
      */
     function resolveDispute(
         uint256 escrowId,
@@ -303,19 +328,19 @@ contract ArtisanEscrow {
         escrow.state = EscrowState.RESOLVED;
         escrow.completedAt = block.timestamp;
 
-        // Execute distributions
+        // Execute stablecoin distributions
         if (platformFee > 0) {
-            (bool feeSuccess, ) = feeRecipient.call{value: platformFee}("");
+            bool feeSuccess = paymentToken.transfer(feeRecipient, platformFee);
             if (!feeSuccess) revert TransferFailed();
         }
 
         if (netArtisanAmount > 0) {
-            (bool artisanSuccess, ) = escrow.artisan.call{value: netArtisanAmount}("");
+            bool artisanSuccess = paymentToken.transfer(escrow.artisan, netArtisanAmount);
             if (!artisanSuccess) revert TransferFailed();
         }
 
         if (effectiveClientRefund > 0) {
-            (bool clientSuccess, ) = escrow.client.call{value: effectiveClientRefund}("");
+            bool clientSuccess = paymentToken.transfer(escrow.client, effectiveClientRefund);
             if (!clientSuccess) revert TransferFailed();
         }
 
@@ -328,7 +353,7 @@ contract ArtisanEscrow {
     }
 
     /**
-     * @notice Mutual or Admin refund directly to client if contract is cancelled.
+     * @notice Mutual or Admin refund in stablecoins directly to client if contract is cancelled.
      * @param escrowId The ID of the escrow.
      */
     function refundClient(uint256 escrowId) external nonReentrant {
@@ -348,7 +373,7 @@ contract ArtisanEscrow {
         escrow.state = EscrowState.REFUNDED;
         escrow.completedAt = block.timestamp;
 
-        (bool success, ) = escrow.client.call{value: refundAmount}("");
+        bool success = paymentToken.transfer(escrow.client, refundAmount);
         if (!success) revert TransferFailed();
 
         emit EscrowRefunded(escrowId, escrow.client, refundAmount);
@@ -364,7 +389,7 @@ contract ArtisanEscrow {
         arbiter = _newArbiter;
     }
 
-    function setFeeRecipient(address payable _newRecipient) external onlyOwner {
+    function setFeeRecipient(address _newRecipient) external onlyOwner {
         if (_newRecipient == address(0)) revert InvalidAddress();
         emit FeeRecipientUpdated(feeRecipient, _newRecipient);
         feeRecipient = _newRecipient;

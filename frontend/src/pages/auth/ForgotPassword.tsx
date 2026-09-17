@@ -80,7 +80,7 @@ export const ForgotPassword: React.FC = () => {
               <Input
                 label="Email Address or Phone Number"
                 type="text"
-                placeholder="artisan@fixmate.ng"
+                placeholder="artisan@artifix.ng"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 leftIcon={<Mail className="w-4 h-4" />}

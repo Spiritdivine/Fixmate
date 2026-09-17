@@ -274,10 +274,16 @@ export const DisputeWorkspacePage: React.FC = () => {
               <span className="font-bold text-emerald-400">{formatCurrency(dispute.contract?.escrowFundedAmount || 0)}</span>
             </div>
             {dispute.contract?.onChainEscrowId && (
-              <div className="flex items-center justify-between pt-2 border-t border-slate-800 font-mono text-[11px]">
-                <span className="text-slate-400">Monad Escrow ID:</span>
-                <span className="text-purple-400 font-bold">#{dispute.contract.onChainEscrowId}</span>
-              </div>
+              <>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800 font-mono text-[11px]">
+                  <span className="text-slate-400">Monad Escrow ID:</span>
+                  <span className="text-purple-400 font-bold">#{dispute.contract.onChainEscrowId}</span>
+                </div>
+                <div className="flex items-center justify-between font-mono text-[11px]">
+                  <span className="text-slate-400">Settlement Asset:</span>
+                  <span className="text-emerald-400 font-bold">USDC (Monad EVM)</span>
+                </div>
+              </>
             )}
           </div>
         </div>

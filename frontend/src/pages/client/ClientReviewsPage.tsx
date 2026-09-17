@@ -83,32 +83,32 @@ export const ClientReviewsPage: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-8 pb-16 font-dashboard">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-          <span>Reviews Given &amp; Artisan Feedback</span>
+      <div className="space-y-1">
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+          <Star className="w-7 h-7 text-amber-500 fill-amber-500" />
+          <span>Reviews &amp; Testimonials</span>
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+        <p className="text-sm text-slate-500">
           View and manage ratings, testimonials, and feedback left for artisans on completed contracts.
         </p>
       </div>
 
       {/* Pending Reviews Reminder Banner */}
       {pendingContracts.length > 0 && (
-        <div className="p-4 rounded-[24px] bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <h3 className="text-xs font-bold">
+        <div className="p-6 rounded-[24px] bg-amber-50/80 border border-amber-200 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-amber-900">
               Pending Reviews ({pendingContracts.length} Completed Projects)
             </h3>
-            <p className="text-[11px] text-amber-800 dark:text-amber-300">
-              You have completed contracts awaiting feedback. Rating artisans helps build community trust.
+            <p className="text-xs text-amber-800">
+              You have completed contracts awaiting feedback. Rating artisans helps build community trust on Artifix.
             </p>
           </div>
           <Link
             to={`/client/contracts/${pendingContracts[0].id}`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shrink-0 transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shrink-0 shadow-md shadow-amber-600/20 transition-all self-start sm:self-auto"
           >
             <span>Rate Now</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -120,19 +120,21 @@ export const ClientReviewsPage: React.FC = () => {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2].map((n) => (
-            <Card key={n} className="p-6 border-slate-200 animate-pulse h-36" />
+            <div key={n} className="p-6 bg-white rounded-[24px] border border-slate-200/80 animate-pulse h-36 shadow-sm" />
           ))}
         </div>
       ) : reviewsGiven.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-slate-200 ">
-          <Star className="w-12 h-12 mx-auto text-slate-400 mb-3" />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
+        <div className="p-16 text-center border border-dashed border-slate-200 rounded-[24px] bg-white">
+          <div className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center mx-auto text-slate-400 mb-4">
+            <Star className="w-7 h-7" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900">
             No reviews left yet
           </h3>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
             Once you complete a contract with an artisan, you will be invited to leave a review and testimonial here.
           </p>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-4">
           {reviewsGiven.map(({ review, contract }) => {
@@ -141,30 +143,30 @@ export const ClientReviewsPage: React.FC = () => {
               artisan?.artisanProfile?.businessName || artisan?.email?.split('@')[0] || 'Artisan';
 
             return (
-              <Card
+              <div
                 key={review.id}
-                className="p-5 sm:p-6 border-slate-200 space-y-4"
+                className="p-6 sm:p-7 bg-white rounded-[24px] border border-slate-200/80 shadow-sm space-y-5"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3.5">
                     <Avatar
                       src={artisan?.avatarUrl}
                       name={artisanName}
                       size="md"
                     />
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    <div className="space-y-0.5">
+                      <h3 className="text-base font-bold text-slate-900">
                         {artisanName}
                       </h3>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 font-medium">
                         Project: {contract.job?.title || 'Contract Agreement'}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 text-amber-500 font-bold text-sm">
-                      <Star className="w-4 h-4 fill-amber-500" />
+                    <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200 text-amber-700 font-extrabold text-sm">
+                      <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
                       <span>{review.overallRating}.0</span>
                     </div>
 
@@ -178,42 +180,42 @@ export const ClientReviewsPage: React.FC = () => {
                           setCommVal(review.communicationRating || 5);
                           setPunctVal(review.punctualityRating || 5);
                         }}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700"
+                        className="p-2 rounded-full text-slate-400 hover:text-emerald-700 hover:bg-slate-50 transition-colors"
                         title="Edit Review"
                       >
-                        <Edit className="w-3.5 h-3.5" />
+                        <Edit className="w-4 h-4" />
                       </button>
 
                       <button
                         onClick={() => deleteReviewMutation.mutate(review.id)}
                         disabled={deleteReviewMutation.isPending}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600"
+                        className="p-2 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                         title="Delete Review"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                 </div>
 
                 {review.comment && (
-                  <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-100 ">
+                  <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100 font-normal">
                     &quot;{review.comment}&quot;
                   </p>
                 )}
 
                 {review.artisanReply && (
-                  <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-sky-950/20 border-l-2 border-emerald-600 text-xs space-y-1">
-                    <p className="font-bold text-sky-900 dark:text-sky-300 flex items-center gap-1">
-                      <MessageSquare className="w-3.5 h-3.5" />
+                  <div className="p-4 rounded-2xl bg-emerald-50/50 border-l-4 border-emerald-700 text-xs space-y-1">
+                    <p className="font-bold text-emerald-900 flex items-center gap-1.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-emerald-700" />
                       <span>Artisan Reply:</span>
                     </p>
-                    <p className="text-slate-600 dark:text-slate-400">
+                    <p className="text-slate-600 leading-relaxed font-normal">
                       {review.artisanReply}
                     </p>
                   </div>
                 )}
-              </Card>
+              </div>
             );
           })}
         </div>

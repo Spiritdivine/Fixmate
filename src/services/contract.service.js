@@ -2,6 +2,7 @@ import prisma from '../config/db.js';
 import { ApiError } from '../utils/api-error.js';
 import { env } from '../config/env.js';
 import { NotificationService } from './notification.service.js';
+import { NavigationUtils } from '../utils/navigation.utils.js';
 
 export class ContractService {
   static async acceptProposalAndCreateContract(clientId, proposalId) {
@@ -215,8 +216,8 @@ export class ContractService {
       include: {
         job: true,
         milestones: { orderBy: { stepOrder: 'asc' } },
-        artisan: { select: { id: true, email: true, artisanProfile: true, avatarUrl: true } },
-        client: { select: { id: true, email: true, clientProfile: true, avatarUrl: true } },
+        artisan: { select: { id: true, email: true, phoneNumber: true, artisanProfile: true, avatarUrl: true } },
+        client: { select: { id: true, email: true, phoneNumber: true, clientProfile: true, avatarUrl: true } },
         disputes: true,
         reviews: true,
       },
@@ -225,6 +226,21 @@ export class ContractService {
     if (!contract) throw ApiError.notFound('Contract not found');
     if (contract.clientId !== userId && contract.artisanId !== userId) {
       throw ApiError.forbidden('Unauthorized access to contract');
+    }
+
+    const isFunded = contract.status === 'IN_PROGRESS' || contract.status === 'COMPLETED';
+    const artisanProfile = contract.artisan?.artisanProfile;
+
+    // Attach verified navigation deep links for funded escrow engagements
+    if (isFunded && artisanProfile?.latitude && artisanProfile?.longitude) {
+      contract.navigationSuite = NavigationUtils.getNavigationSuite(
+        artisanProfile.latitude,
+        artisanProfile.longitude,
+        artisanProfile.businessName || 'Artisan Workshop'
+      );
+      contract.isLocationRevealed = true;
+    } else {
+      contract.isLocationRevealed = false;
     }
 
     return contract;

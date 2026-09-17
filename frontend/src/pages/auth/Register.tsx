@@ -86,7 +86,7 @@ export const Register: React.FC = () => {
       <div className="w-full max-w-lg space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Join Fixmate</h2>
+          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Join Artifix</h2>
           <p className="text-sm text-slate-500">
             {role === 'CLIENT'
               ? 'Hire verified artisans with smart escrow milestone protection'

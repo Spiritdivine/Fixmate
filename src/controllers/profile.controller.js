@@ -20,6 +20,16 @@ export class ProfileController {
     }
   }
 
+  static async getNearbyArtisans(req, res, next) {
+    try {
+      const query = req.validatedQuery || req.query;
+      const result = await ProfileService.getNearbyArtisans(query);
+      res.status(200).json(new ApiResponse(200, result, 'Nearby artisans fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async listArtisans(req, res, next) {
     try {
       const result = await ProfileService.getArtisans(req.query);
@@ -142,8 +152,12 @@ export class ProfileController {
 
   static async updateLocation(req, res, next) {
     try {
-      const { latitude, longitude } = req.body;
-      const result = await ProfileService.updateLocation(req.user.id, latitude, longitude);
+      const { latitude, longitude, address, state, lgaCity } = req.body;
+      const result = await ProfileService.updateLocation(req.user.id, latitude, longitude, {
+        address,
+        state,
+        lgaCity,
+      });
       res.status(200).json(new ApiResponse(200, result, 'Location coordinates updated'));
     } catch (error) {
       next(error);

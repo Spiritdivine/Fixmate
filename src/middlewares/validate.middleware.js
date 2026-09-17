@@ -10,24 +10,23 @@ export const validate = (schema) => (req, res, next) => {
     // Attach sanitized data safely for Express 5
     if (parsed.body !== undefined) req.body = parsed.body;
 
-    if (parsed.query && req.query) {
+    if (parsed.query) {
+      req.validatedQuery = parsed.query;
       try {
         Object.assign(req.query, parsed.query);
-      } catch {
-        req.validatedQuery = parsed.query;
-      }
+      } catch {}
     }
-    if (parsed.params && req.params) {
+    if (parsed.params) {
+      req.validatedParams = parsed.params;
       try {
         Object.assign(req.params, parsed.params);
-      } catch {
-        req.validatedParams = parsed.params;
-      }
+      } catch {}
     }
     next();
   } catch (error) {
-    if (error.errors) {
-      const formattedErrors = error.errors.map((err) => ({
+    const issues = error.issues || error.errors;
+    if (issues && Array.isArray(issues)) {
+      const formattedErrors = issues.map((err) => ({
         field: err.path.join('.').replace(/^(body|query|params)\./, ''),
         message: err.message,
       }));

@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Award,
   Sparkles,
+  Compass,
 } from 'lucide-react';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import {
@@ -25,14 +26,9 @@ import {
   Review,
   Job,
   ApiResponse,
-  ArtisanPortfolio,
-  ArtisanService,
 } from '../../types';
 import { formatCurrency, formatDate } from '../../lib/formatters';
-import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
-import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 
 export const ArtisanPublicProfilePage: React.FC = () => {
@@ -130,24 +126,24 @@ export const ArtisanPublicProfilePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      <div className="font-dashboard flex items-center justify-center min-h-[400px]">
+        <div className="w-10 h-10 border-4 border-emerald-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error || !artisan) {
     return (
-      <div className="text-center py-12 space-y-4">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+      <div className="font-dashboard text-center py-16 space-y-4">
+        <h2 className="text-xl font-bold text-slate-900">
           Artisan Not Found
         </h2>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs sm:text-sm text-slate-500">
           {error ? getErrorMessage(error) : 'The requested artisan profile does not exist.'}
         </p>
         <Link
           to="/client/artisans"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-semibold"
+          className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md shadow-emerald-900/10 transition-all"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>Back to Directory</span>
@@ -160,12 +156,12 @@ export const ArtisanPublicProfilePage: React.FC = () => {
   const openJobs = clientJobs || [];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="font-dashboard space-y-8 animate-in fade-in duration-300 pb-16">
       {/* Back Button */}
       <div>
         <Link
           to="/client/artisans"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-emerald-800 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>Back to Artisan Directory</span>
@@ -173,38 +169,38 @@ export const ArtisanPublicProfilePage: React.FC = () => {
       </div>
 
       {/* Hero Profile Card */}
-      <Card className="p-6 sm:p-8 border-slate-200 relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
+      <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
             <Avatar
               src={artisan.user?.avatarUrl}
               name={displayName}
               size="lg"
               isOnline={artisan.isAvailable}
-              className="w-20 h-20 sm:w-24 sm:h-24 text-2xl"
+              className="w-24 h-24 text-3xl shadow-sm border-2 border-emerald-800/10"
             />
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                   {displayName}
                 </h1>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#186644]/10 text-emerald-700 dark:text-sky-400 border border-emerald-600/20">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
                   <span>Verified Artisan</span>
                 </span>
                 {artisan.isAvailable ? (
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
                     Available for Hire
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500 dark:bg-slate-800">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500">
                     Currently Busy
                   </span>
                 )}
               </div>
 
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium max-w-xl">
-                {artisan.tagline || 'Professional tradesman dedicated to excellence and precision.'}
+              <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-xl">
+                {artisan.tagline || 'Professional tradesman dedicated to excellence, precision, and reliable service.'}
               </p>
 
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-slate-500 pt-1">
@@ -235,7 +231,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
           <div className="flex flex-wrap sm:flex-col items-center justify-center sm:items-end gap-3 shrink-0">
             <button
               onClick={() => setInviteModalOpen(true)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold shadow-lg shadow-sky-600/20 transition-all active:scale-95"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md shadow-emerald-900/10 transition-all active:scale-95"
             >
               <Send className="w-4 h-4" />
               <span>Invite to Job</span>
@@ -245,46 +241,54 @@ export const ArtisanPublicProfilePage: React.FC = () => {
               <button
                 onClick={() => startChatMutation.mutate()}
                 disabled={startChatMutation.isPending}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-sm transition-all"
               >
-                <MessageSquare className="w-3.5 h-3.5" />
+                <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
                 <span>Message</span>
               </button>
 
               <button
                 onClick={() => bookmarkMutation.mutate()}
                 disabled={bookmarkMutation.isPending}
-                className={`p-2 rounded-xl border transition-colors ${
+                className={`p-2.5 rounded-full border transition-all ${
                   isSaved
-                    ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/40 dark:border-rose-900'
-                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-800 dark:bg-slate-800 dark:text-slate-400'
+                    ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-400 hover:text-slate-700 shadow-sm'
                 }`}
                 title={isSaved ? 'Remove Bookmark' : 'Save Artisan'}
               >
                 <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-rose-600' : ''}`} />
               </button>
+
+              <Link
+                to={`/client/artisans/find?focusId=${artisan.id}`}
+                className="p-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-400 hover:text-emerald-700 shadow-sm transition-all"
+                title="View on Discovery Map"
+              >
+                <Compass className="w-4 h-4" />
+              </Link>
             </div>
 
             {artisan.hourlyRate && (
               <div className="text-right hidden sm:block pt-1">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold">Starting Rate</span>
-                <p className="text-sm font-black text-slate-900 dark:text-slate-100">
+                <p className="text-base font-black text-slate-900">
                   {formatCurrency(artisan.hourlyRate)} / hr
                 </p>
               </div>
             )}
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Tabs Header */}
-      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1">
+      <div className="p-1.5 bg-slate-100/80 rounded-2xl w-fit flex items-center gap-1">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
             activeTab === 'overview'
-              ? 'bg-sky-600 text-white shadow-sm shadow-sky-600/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-emerald-800 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           Overview &amp; Bio
@@ -292,42 +296,48 @@ export const ArtisanPublicProfilePage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('portfolio')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === 'portfolio'
-              ? 'bg-sky-600 text-white shadow-sm shadow-sky-600/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-emerald-800 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <span>Portfolio</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+            activeTab === 'portfolio' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+          }`}>
             {artisan.portfolios?.length || 0}
           </span>
         </button>
 
         <button
           onClick={() => setActiveTab('services')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === 'services'
-              ? 'bg-sky-600 text-white shadow-sm shadow-sky-600/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-emerald-800 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <span>Services Catalog</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+            activeTab === 'services' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+          }`}>
             {artisan.services?.length || 0}
           </span>
         </button>
 
         <button
           onClick={() => setActiveTab('reviews')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === 'reviews'
-              ? 'bg-sky-600 text-white shadow-sm shadow-sky-600/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-emerald-800 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <span>Client Reviews</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+            activeTab === 'reviews' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+          }`}>
             {reviews?.length || 0}
           </span>
         </button>
@@ -340,18 +350,18 @@ export const ArtisanPublicProfilePage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               {/* About / Bio */}
-              <Card className="p-6 border-slate-200 space-y-3">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-3">
+                <h3 className="text-base font-bold text-slate-900">
                   About the Artisan
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
                   {artisan.bio || 'No detailed biography provided yet.'}
                 </p>
-              </Card>
+              </div>
 
               {/* Skills & Expertise */}
-              <Card className="p-6 border-slate-200 space-y-3">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-3">
+                <h3 className="text-base font-bold text-slate-900">
                   Skills &amp; Expertise
                 </h3>
                 {artisan.skills && artisan.skills.length > 0 ? (
@@ -359,7 +369,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                     {artisan.skills.map((s) => (
                       <span
                         key={s.skill.id}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-xs font-semibold"
+                        className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold"
                       >
                         {s.skill.name}
                       </span>
@@ -368,22 +378,22 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                 ) : (
                   <p className="text-xs text-slate-500">No specific skills tagged.</p>
                 )}
-              </Card>
+              </div>
             </div>
 
             {/* Right sidebar info */}
             <div className="space-y-6">
-              <Card className="p-6 border-slate-200 space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 space-y-4">
+                <h3 className="text-base font-bold text-slate-900">
                   Verification &amp; Badges
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
-                      <ShieldCheck className="w-4 h-4" />
+                    <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-800 shrink-0">
+                      <ShieldCheck className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      <p className="text-xs font-bold text-slate-900">
                         Identity Verified
                       </p>
                       <p className="text-[11px] text-slate-500">Government ID &amp; KYC Approved</p>
@@ -391,18 +401,18 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-[#186644]/10 text-emerald-700">
-                      <Sparkles className="w-4 h-4" />
+                    <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-800 shrink-0">
+                      <Sparkles className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      <p className="text-xs font-bold text-slate-900">
                         Monad Escrow Ready
                       </p>
-                      <p className="text-[11px] text-slate-500">Accepts smart contract payments</p>
+                      <p className="text-[11px] text-slate-500">Accepts Artifix smart contract payments</p>
                     </div>
                   </div>
                 </div>
-              </Card>
+              </div>
             </div>
           </div>
         )}
@@ -411,26 +421,26 @@ export const ArtisanPublicProfilePage: React.FC = () => {
         {activeTab === 'portfolio' && (
           <div className="space-y-6">
             {(!artisan.portfolios || artisan.portfolios.length === 0) ? (
-              <Card className="p-12 text-center border-dashed border-slate-200 ">
-                <Layers className="w-12 h-12 mx-auto text-slate-400 mb-3" />
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              <div className="bg-white rounded-[24px] border border-dashed border-slate-200 p-12 text-center">
+                <Layers className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                <h3 className="text-sm font-bold text-slate-800">
                   No portfolio items uploaded yet
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   This artisan hasn&apos;t added visual project case studies yet.
                 </p>
-              </Card>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {artisan.portfolios.map((item) => (
-                  <Card
+                  <div
                     key={item.id}
-                    className="overflow-hidden border-slate-200 flex flex-col justify-between"
+                    className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm overflow-hidden flex flex-col justify-between"
                   >
                     {item.mediaUrls && item.mediaUrls.length > 0 ? (
                       <div
                         onClick={() => setLightboxImage(item.mediaUrls[0])}
-                        className="relative h-48 bg-slate-100 dark:bg-slate-800 cursor-pointer group overflow-hidden"
+                        className="relative h-48 bg-slate-100 cursor-pointer group overflow-hidden"
                       >
                         <img
                           src={item.mediaUrls[0]}
@@ -443,27 +453,27 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="h-40 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 text-xs">
+                      <div className="h-40 bg-slate-100 flex items-center justify-center text-slate-400 text-xs">
                         No image preview
                       </div>
                     )}
-                    <div className="p-4 space-y-2">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    <div className="p-5 space-y-2">
+                      <h4 className="text-sm font-bold text-slate-900">
                         {item.title}
                       </h4>
                       {item.description && (
-                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3">
+                        <p className="text-xs text-slate-600 line-clamp-3">
                           {item.description}
                         </p>
                       )}
                       {item.completionDate && (
-                        <p className="text-[10px] text-slate-400 flex items-center gap-1 pt-2">
-                          <Calendar className="w-3 h-3" />
+                        <p className="text-[11px] text-slate-400 flex items-center gap-1 pt-2">
+                          <Calendar className="w-3.5 h-3.5" />
                           <span>Completed {formatDate(item.completionDate)}</span>
                         </p>
                       )}
                     </div>
-                  </Card>
+                  </div>
                 ))}
               </div>
             )}
@@ -474,46 +484,46 @@ export const ArtisanPublicProfilePage: React.FC = () => {
         {activeTab === 'services' && (
           <div className="space-y-6">
             {(!artisan.services || artisan.services.length === 0) ? (
-              <Card className="p-12 text-center border-dashed border-slate-200 ">
-                <Briefcase className="w-12 h-12 mx-auto text-slate-400 mb-3" />
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              <div className="bg-white rounded-[24px] border border-dashed border-slate-200 p-12 text-center">
+                <Briefcase className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                <h3 className="text-sm font-bold text-slate-800">
                   No packaged services listed
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   You can post a custom job and invite this artisan directly.
                 </p>
-              </Card>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {artisan.services.map((service) => (
-                  <Card
+                  <div
                     key={service.id}
-                    className="p-5 border-slate-200 flex flex-col justify-between space-y-4"
+                    className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 flex flex-col justify-between space-y-4"
                   >
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-500">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
                           {service.deliveryDays} Days Turnaround
                         </span>
-                        <span className="text-sm font-extrabold text-emerald-700 dark:text-sky-400">
+                        <span className="text-base font-black text-emerald-800">
                           {formatCurrency(service.price)}
                         </span>
                       </div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      <h4 className="text-sm font-bold text-slate-900">
                         {service.title}
                       </h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      <p className="text-xs text-slate-600 leading-relaxed">
                         {service.description}
                       </p>
                     </div>
 
                     <button
                       onClick={() => setInviteModalOpen(true)}
-                      className="w-full py-2 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-[#124d33] dark:hover:bg-[#186644] text-white dark:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors"
+                      className="w-full py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all"
                     >
                       Book / Request This Service
                     </button>
-                  </Card>
+                  </div>
                 ))}
               </div>
             )}
@@ -524,21 +534,21 @@ export const ArtisanPublicProfilePage: React.FC = () => {
         {activeTab === 'reviews' && (
           <div className="space-y-6">
             {(!reviews || reviews.length === 0) ? (
-              <Card className="p-12 text-center border-dashed border-slate-200 ">
-                <Star className="w-12 h-12 mx-auto text-slate-400 mb-3" />
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              <div className="bg-white rounded-[24px] border border-dashed border-slate-200 p-12 text-center">
+                <Star className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                <h3 className="text-sm font-bold text-slate-800">
                   No reviews yet
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   Be the first client to hire this artisan and share your experience!
                 </p>
-              </Card>
+              </div>
             ) : (
               <div className="space-y-4">
                 {reviews.map((rev) => (
-                  <Card
+                  <div
                     key={rev.id}
-                    className="p-5 border-slate-200 space-y-3"
+                    className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 space-y-3"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -548,7 +558,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                           size="sm"
                         />
                         <div>
-                          <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                          <p className="text-xs font-bold text-slate-900">
                             {rev.reviewer?.clientProfile?.firstName
                               ? `${rev.reviewer.clientProfile.firstName} ${rev.reviewer.clientProfile.lastName || ''}`
                               : 'Verified Client'}
@@ -564,7 +574,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                     </div>
 
                     {rev.comment && (
-                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                      <p className="text-xs text-slate-700 leading-relaxed">
                         &quot;{rev.comment}&quot;
                       </p>
                     )}
@@ -578,16 +588,16 @@ export const ArtisanPublicProfilePage: React.FC = () => {
 
                     {/* Artisan reply thread */}
                     {rev.artisanReply && (
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border-l-2 border-emerald-600 text-xs space-y-1">
-                        <p className="font-bold text-slate-800 dark:text-slate-200">
+                      <div className="p-3.5 rounded-2xl bg-emerald-50/50 border-l-4 border-emerald-700 text-xs space-y-1">
+                        <p className="font-bold text-slate-900">
                           Artisan Response:
                         </p>
-                        <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                        <p className="text-slate-600 leading-relaxed">
                           {rev.artisanReply}
                         </p>
                       </div>
                     )}
-                  </Card>
+                  </div>
                 ))}
               </div>
             )}
@@ -602,36 +612,36 @@ export const ArtisanPublicProfilePage: React.FC = () => {
           onClose={() => setInviteModalOpen(false)}
           title={`Invite ${displayName} to a Job`}
         >
-          <div className="space-y-4">
+          <div className="font-dashboard space-y-4">
             <p className="text-xs text-slate-500">
-              Select one of your open job postings to invite this artisan directly. They will receive an instant notification to submit their bid.
+              Select one of your open job postings to invite this artisan directly. They will receive an instant notification to submit their bid on Artifix.
             </p>
 
             {openJobs.length === 0 ? (
-              <div className="p-4 rounded-xl bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs space-y-2">
+              <div className="p-4 rounded-2xl bg-amber-50 text-amber-900 text-xs space-y-2 border border-amber-200">
                 <p className="font-bold">You have no open job postings.</p>
                 <p>Create a new job posting first so you can invite this artisan.</p>
                 <Link
                   to="/client/jobs/post"
-                  className="inline-flex items-center gap-1 font-bold text-emerald-700 underline"
+                  className="inline-flex items-center gap-1 font-bold text-emerald-800 underline"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
                   <span>Post a New Job</span>
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3 max-h-60 overflow-y-auto">
+              <div className="space-y-2.5 max-h-60 overflow-y-auto">
                 {openJobs.map((job) => (
                   <label
                     key={job.id}
-                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                    className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ${
                       selectedJobId === job.id
-                        ? 'border-emerald-600 bg-emerald-50/50 dark:bg-sky-950/30 ring-1 ring-emerald-600'
-                        : 'border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
+                        ? 'border-emerald-800 bg-emerald-50/60 ring-2 ring-emerald-800'
+                        : 'border-slate-200 hover:bg-slate-50'
                     }`}
                   >
                     <div className="space-y-1">
-                      <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      <p className="text-xs font-bold text-slate-900">
                         {job.title}
                       </p>
                       <p className="text-[11px] text-slate-500">
@@ -644,24 +654,29 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                       value={job.id}
                       checked={selectedJobId === job.id}
                       onChange={(e) => setSelectedJobId(e.target.value)}
-                      className="text-emerald-700 focus:ring-emerald-600"
+                      className="w-4 h-4 text-emerald-800 focus:ring-emerald-700"
                     />
                   </label>
                 ))}
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 ">
-              <Button variant="outline" size="sm" onClick={() => setInviteModalOpen(false)}>
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                className="px-5 py-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-sm transition-all"
+                onClick={() => setInviteModalOpen(false)}
+              >
                 Cancel
-              </Button>
-              <Button
-                size="sm"
+              </button>
+              <button
+                type="button"
+                className="px-6 py-2 rounded-full bg-emerald-800 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold shadow-md shadow-emerald-900/10 transition-all active:scale-95"
                 disabled={!selectedJobId || inviteMutation.isPending}
                 onClick={() => inviteMutation.mutate()}
               >
                 {inviteMutation.isPending ? 'Sending...' : 'Send Invitation'}
-              </Button>
+              </button>
             </div>
           </div>
         </Modal>

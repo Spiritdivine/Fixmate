@@ -6,23 +6,28 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const contractPath = path.resolve(__dirname, '../contracts/ArtisanEscrow.sol');
+const contractsDir = path.resolve(__dirname, '../contracts');
 const outputDir = path.resolve(__dirname, '../src/config/contracts');
 
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
 
-console.log(`🔨 Compiling contract from: ${contractPath}...`);
-const source = fs.readFileSync(contractPath, 'utf8');
+console.log('🔨 Compiling smart contracts...');
+
+const contractFiles = ['ArtisanEscrow.sol', 'MockUSDC.sol'];
+const sources = {};
+
+for (const file of contractFiles) {
+  const filePath = path.join(contractsDir, file);
+  if (fs.existsSync(filePath)) {
+    sources[file] = { content: fs.readFileSync(filePath, 'utf8') };
+  }
+}
 
 const input = {
   language: 'Solidity',
-  sources: {
-    'ArtisanEscrow.sol': {
-      content: source,
-    },
-  },
+  sources,
   settings: {
     optimizer: {
       enabled: true,
@@ -54,16 +59,28 @@ if (output.errors) {
   }
 }
 
-const contract = output.contracts['ArtisanEscrow.sol']['ArtisanEscrow'];
-const artifact = {
+// Save ArtisanEscrow
+const escrowContract = output.contracts['ArtisanEscrow.sol']['ArtisanEscrow'];
+const escrowArtifact = {
   contractName: 'ArtisanEscrow',
-  abi: contract.abi,
-  bytecode: contract.evm.bytecode.object,
+  abi: escrowContract.abi,
+  bytecode: escrowContract.evm.bytecode.object,
   compiledAt: new Date().toISOString(),
 };
+fs.writeFileSync(path.join(outputDir, 'ArtisanEscrow.json'), JSON.stringify(escrowArtifact, null, 2));
 
-const outputPath = path.join(outputDir, 'ArtisanEscrow.json');
-fs.writeFileSync(outputPath, JSON.stringify(artifact, null, 2));
+// Save MockUSDC
+if (output.contracts['MockUSDC.sol'] && output.contracts['MockUSDC.sol']['MockUSDC']) {
+  const usdcContract = output.contracts['MockUSDC.sol']['MockUSDC'];
+  const usdcArtifact = {
+    contractName: 'MockUSDC',
+    abi: usdcContract.abi,
+    bytecode: usdcContract.evm.bytecode.object,
+    compiledAt: new Date().toISOString(),
+  };
+  fs.writeFileSync(path.join(outputDir, 'MockUSDC.json'), JSON.stringify(usdcArtifact, null, 2));
+  console.log(`✅ Successfully compiled MockUSDC.sol!`);
+}
 
 console.log(`✅ Successfully compiled ArtisanEscrow.sol!`);
-console.log(`📦 Artifact saved to: ${outputPath}`);
+console.log(`📦 Artifacts saved to: ${outputDir}`);

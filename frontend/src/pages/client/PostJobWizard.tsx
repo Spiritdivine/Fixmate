@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Briefcase,
-  Layers,
   MapPin,
   Calendar,
   DollarSign,
@@ -98,35 +97,27 @@ export const PostJobWizard: React.FC = () => {
         ]);
       }
     } catch (err) {
-      setErrorMessage(`Upload error: ${getErrorMessage(err)}`);
+      setErrorMessage(getErrorMessage(err));
     } finally {
       setIsUploading(false);
     }
   };
 
-  const removeAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // 3. Create Job Mutation
+  // 3. Submit Mutation
   const createJobMutation = useMutation({
     mutationFn: async (status: 'OPEN' | 'DRAFT') => {
-      if (!title || !categoryId || !description || !budgetMin || !budgetMax || !lgaCity) {
-        throw new Error('Please fill in all required fields before submitting.');
-      }
-
       const payload = {
         title,
         categoryId: Number(categoryId),
         description,
-        budgetType,
-        budgetMin: Number(budgetMin),
-        budgetMax: Number(budgetMax),
+        expectedOutcome: expectedOutcome || undefined,
+        materialsProvidedBy,
         state,
         lgaCity,
         address: address || undefined,
-        expectedOutcome: expectedOutcome || undefined,
-        materialsProvidedBy,
+        budgetType,
+        budgetMin: Number(budgetMin),
+        budgetMax: Number(budgetMax),
         completionProofReq: completionProofReq || undefined,
         deadlineDate: deadlineDate || undefined,
         status,
@@ -165,23 +156,23 @@ export const PostJobWizard: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300 font-dashboard pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-2">
             <Link
               to="/client/jobs"
-              className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 flex items-center gap-1"
+              className="text-xs font-semibold text-slate-500 hover:text-emerald-800 flex items-center gap-1 transition-colors"
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-4 h-4" />
               <span>Back to My Jobs</span>
             </Link>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-dashboard">
             Post a New Job
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-500 mt-1">
             Describe your project, define the budget, and receive competitive bids from verified artisans.
           </p>
         </div>
@@ -189,7 +180,7 @@ export const PostJobWizard: React.FC = () => {
         <button
           onClick={() => createJobMutation.mutate('DRAFT')}
           disabled={createJobMutation.isPending}
-          className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline"
+          className="text-xs font-semibold text-slate-600 hover:text-slate-900 underline cursor-pointer"
         >
           Save as Draft
         </button>
@@ -202,16 +193,16 @@ export const PostJobWizard: React.FC = () => {
 
       {/* Role Alert if logged in as Artisan */}
       {user && user.role !== 'CLIENT' && user.role !== 'ADMIN' && (
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 rounded-[20px] bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
+            <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
             <span>
               You are currently signed in as an <strong>Artisan</strong> ({user.email}). Only <strong>Client</strong> accounts can post jobs.
             </span>
           </div>
           <Link
             to="/login"
-            className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shrink-0 inline-block text-center"
+            className="px-4 py-2 rounded-full bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shrink-0 inline-block text-center shadow-xs"
           >
             Switch to Client
           </Link>
@@ -220,19 +211,19 @@ export const PostJobWizard: React.FC = () => {
 
       {/* Error Alert */}
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+        <div className="p-4 rounded-[20px] bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2 shadow-xs">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {/* Wizard Form Card */}
-      <Card className="p-6 sm:p-8 border-slate-200 space-y-6">
+      <div className="p-8 rounded-[24px] bg-white border border-slate-100 shadow-xs space-y-6">
         {/* STEP 1: BASICS & CATEGORY */}
         {currentStep === 1 && (
           <div className="space-y-5 animate-in fade-in duration-200">
             <div className="space-y-1">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-base font-bold text-slate-900 font-dashboard">
                 Step 1: Job Title &amp; Category
               </h2>
               <p className="text-xs text-slate-500">
@@ -241,7 +232,7 @@ export const PostJobWizard: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-700">
                 Job Title <span className="text-rose-500">*</span>
               </label>
               <input
@@ -249,12 +240,12 @@ export const PostJobWizard: React.FC = () => {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Complete Re-piping for 3-Bedroom Flat or Inverter Solar Installation"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-700">
                 Job Category <span className="text-rose-500">*</span>
               </label>
               <select
@@ -263,7 +254,7 @@ export const PostJobWizard: React.FC = () => {
                   setCategoryId(Number(e.target.value));
                   setSelectedSkillIds([]);
                 }}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900 cursor-pointer"
               >
                 <option value="">Select a category...</option>
                 {categories?.map((cat) => (
@@ -276,7 +267,7 @@ export const PostJobWizard: React.FC = () => {
 
             {availableSkills.length > 0 && (
               <div className="space-y-2 pt-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-bold text-slate-700">
                   Required Skills &amp; Specialties (Select all that apply)
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -287,10 +278,10 @@ export const PostJobWizard: React.FC = () => {
                         type="button"
                         key={skill.id}
                         onClick={() => toggleSkill(skill.id)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-sky-600 border-sky-600 text-white shadow-sm'
-                            : 'bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-700 dark:text-slate-300 hover:border-emerald-600'
+                            ? 'bg-emerald-800 border-emerald-800 text-white shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-emerald-600'
                         }`}
                       >
                         {skill.name}
@@ -307,7 +298,7 @@ export const PostJobWizard: React.FC = () => {
         {currentStep === 2 && (
           <div className="space-y-5 animate-in fade-in duration-200">
             <div className="space-y-1">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-base font-bold text-slate-900 font-dashboard">
                 Step 2: Project Scope &amp; Detailed Requirements
               </h2>
               <p className="text-xs text-slate-500">
@@ -316,7 +307,7 @@ export const PostJobWizard: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-700">
                 Detailed Job Description <span className="text-rose-500">*</span>
               </label>
               <textarea
@@ -324,12 +315,12 @@ export const PostJobWizard: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Explain the exact issue, current condition of the site, special requirements, and any constraints..."
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100 leading-relaxed"
+                className="w-full p-4 rounded-2xl bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900 leading-relaxed placeholder:text-slate-400"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-700">
                 Expected Deliverables / Outcome
               </label>
               <input
@@ -337,19 +328,19 @@ export const PostJobWizard: React.FC = () => {
                 value={expectedOutcome}
                 onChange={(e) => setExpectedOutcome(e.target.value)}
                 placeholder="e.g. Zero leakages tested under pressure, fully functional inverter powering all lights..."
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-bold text-slate-700">
                   Materials &amp; Supplies Responsibility
                 </label>
                 <select
                   value={materialsProvidedBy}
                   onChange={(e) => setMaterialsProvidedBy(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900 cursor-pointer"
                 >
                   <option value="CLIENT_PROVIDES">I (Client) will provide all materials</option>
                   <option value="ARTISAN_PROVIDES">Artisan must supply all materials</option>
@@ -358,7 +349,7 @@ export const PostJobWizard: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-bold text-slate-700">
                   Proof of Work Verification
                 </label>
                 <input
@@ -366,7 +357,7 @@ export const PostJobWizard: React.FC = () => {
                   value={completionProofReq}
                   onChange={(e) => setCompletionProofReq(e.target.value)}
                   placeholder="e.g. High-res before/after photos and on-site testing"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -377,7 +368,7 @@ export const PostJobWizard: React.FC = () => {
         {currentStep === 3 && (
           <div className="space-y-5 animate-in fade-in duration-200">
             <div className="space-y-1">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-base font-bold text-slate-900 font-dashboard">
                 Step 3: Location &amp; Completion Target
               </h2>
               <p className="text-xs text-slate-500">
@@ -387,13 +378,13 @@ export const PostJobWizard: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-bold text-slate-700">
                   State <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={state}
                   onChange={(e) => setState(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900 cursor-pointer"
                 >
                   <option value="Lagos">Lagos</option>
                   <option value="Abuja">Abuja (FCT)</option>
@@ -410,7 +401,7 @@ export const PostJobWizard: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-bold text-slate-700">
                   LGA / City / Area <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -418,13 +409,13 @@ export const PostJobWizard: React.FC = () => {
                   value={lgaCity}
                   onChange={(e) => setLgaCity(e.target.value)}
                   placeholder="e.g. Lekki Phase 1, Ikeja, Maitama, Wuse 2"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-700">
                 Street Address (Visible only to hired artisan)
               </label>
               <input
@@ -432,19 +423,19 @@ export const PostJobWizard: React.FC = () => {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="e.g. Plot 14, Admiralty Way, Lekki"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-700">
                 Target Deadline Date
               </label>
               <input
                 type="date"
                 value={deadlineDate}
                 onChange={(e) => setDeadlineDate(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+                className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900 cursor-pointer"
               />
             </div>
           </div>
@@ -454,7 +445,7 @@ export const PostJobWizard: React.FC = () => {
         {currentStep === 4 && (
           <div className="space-y-5 animate-in fade-in duration-200">
             <div className="space-y-1">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-base font-bold text-slate-900 font-dashboard">
                 Step 4: Budget &amp; Escrow Structure
               </h2>
               <p className="text-xs text-slate-500">
@@ -463,7 +454,7 @@ export const PostJobWizard: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-700">
                 Payment Type
               </label>
               <div className="grid grid-cols-3 gap-3">
@@ -476,13 +467,13 @@ export const PostJobWizard: React.FC = () => {
                     type="button"
                     key={item.type}
                     onClick={() => setBudgetType(item.type as any)}
-                    className={`p-3 rounded-xl border text-left transition-all ${
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       budgetType === item.type
-                        ? 'border-emerald-600 bg-emerald-50 dark:bg-sky-950/40 text-sky-900 dark:text-sky-100 ring-1 ring-emerald-600'
-                        : 'border-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
+                        ? 'border-emerald-800 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-800'
+                        : 'border-slate-200 hover:bg-slate-50'
                     }`}
                   >
-                    <p className="text-xs font-bold">{item.title}</p>
+                    <p className="text-xs font-bold font-dashboard">{item.title}</p>
                     <p className="text-[10px] text-slate-500 mt-0.5">{item.desc}</p>
                   </button>
                 ))}
@@ -491,7 +482,7 @@ export const PostJobWizard: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-bold text-slate-700">
                   Minimum Estimated Budget (NGN) <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -501,12 +492,12 @@ export const PostJobWizard: React.FC = () => {
                   value={budgetMin}
                   onChange={(e) => setBudgetMin(e.target.value)}
                   placeholder="e.g. 50000"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100 font-mono"
+                  className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-bold text-slate-700">
                   Maximum Estimated Budget (NGN) <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -515,83 +506,59 @@ export const PostJobWizard: React.FC = () => {
                   step="1000"
                   value={budgetMax}
                   onChange={(e) => setBudgetMax(e.target.value)}
-                  placeholder="e.g. 150000"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100 font-mono"
+                  placeholder="e.g. 100000"
+                  className="w-full px-4 py-2.5 rounded-full bg-slate-50 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white border border-slate-200 text-slate-900"
                 />
               </div>
             </div>
-
-            {budgetMin && budgetMax && (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-xs">
-                <span className="text-slate-500 font-medium">Estimated Range:</span>
-                <span className="font-bold text-emerald-700 dark:text-sky-400">
-                  {formatCurrency(budgetMin)} – {formatCurrency(budgetMax)}
-                </span>
-              </div>
-            )}
           </div>
         )}
 
-        {/* STEP 5: ATTACHMENTS & MEDIA */}
+        {/* STEP 5: ATTACHMENTS & PHOTOS */}
         {currentStep === 5 && (
           <div className="space-y-5 animate-in fade-in duration-200">
             <div className="space-y-1">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Step 5: Project Photos, Blueprints &amp; Specs
+              <h2 className="text-base font-bold text-slate-900 font-dashboard">
+                Step 5: Photos, Plans &amp; Schematics
               </h2>
               <p className="text-xs text-slate-500">
-                Upload photos of the current damage, floor plans, or equipment specifications.
+                Upload clear pictures or blueprints of the work area to help artisans quote accurately.
               </p>
             </div>
 
-            <div className="border-2 border-dashed border-slate-300 rounded-[24px] p-8 text-center hover:border-emerald-600 transition-colors">
+            <div className="border-2 border-dashed border-slate-200 rounded-[20px] p-8 text-center hover:border-emerald-500 transition-colors bg-slate-50/50">
+              <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-800">
+                {isUploading ? 'Uploading files...' : 'Click to browse or drag and drop images'}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">PNG, JPG, PDF up to 10MB</p>
               <input
                 type="file"
                 multiple
-                id="file-upload"
+                accept="image/*,.pdf"
                 onChange={handleFileUpload}
-                className="hidden"
-                accept="image/*,.pdf,.doc,.docx"
+                disabled={isUploading}
+                className="mt-4 text-xs mx-auto cursor-pointer block text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-800 hover:file:bg-emerald-100"
               />
-              <label htmlFor="file-upload" className="cursor-pointer space-y-3 block">
-                <div className="w-12 h-12 rounded-full bg-[#186644]/10 text-emerald-700 mx-auto flex items-center justify-center">
-                  <Upload className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    {isUploading ? 'Uploading files...' : 'Click to browse or drag and drop files'}
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    PNG, JPG, PDF up to 15MB each
-                  </p>
-                </div>
-              </label>
             </div>
 
             {attachments.length > 0 && (
               <div className="space-y-2">
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Attached Files ({attachments.length})
-                </h4>
+                <label className="text-xs font-bold text-slate-700">Uploaded Files</label>
                 <div className="space-y-2">
-                  {attachments.map((att, idx) => (
+                  {attachments.map((att, index) => (
                     <div
-                      key={idx}
-                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs"
+                      key={index}
+                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                          {att.fileName}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          ({(att.fileSizeBytes / 1024).toFixed(0)} KB)
-                        </span>
+                      <div className="flex items-center gap-2 truncate">
+                        <FileText className="w-4 h-4 text-emerald-800 shrink-0" />
+                        <span className="truncate font-medium text-slate-800">{att.fileName}</span>
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeAttachment(idx)}
-                        className="text-rose-500 hover:text-rose-700 p-1"
+                        onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== index))}
+                        className="p-1 hover:text-rose-600 text-slate-400 cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -607,7 +574,7 @@ export const PostJobWizard: React.FC = () => {
         {currentStep === 6 && (
           <div className="space-y-6 animate-in fade-in duration-200">
             <div className="space-y-1">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-base font-bold text-slate-900 font-dashboard">
                 Step 6: Review &amp; Post Job
               </h2>
               <p className="text-xs text-slate-500">
@@ -615,13 +582,13 @@ export const PostJobWizard: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-5 rounded-[24px] bg-slate-50 dark:bg-slate-900 space-y-4 text-xs">
-              <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-200 ">
+            <div className="p-6 rounded-[20px] bg-slate-50 border border-slate-200/80 space-y-4 text-xs">
+              <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-200">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-sky-400">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
                     {selectedCategoryObj?.name || 'Category'}
                   </span>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                  <h3 className="text-base font-bold text-slate-900 mt-0.5 font-dashboard">
                     {title}
                   </h3>
                   <p className="text-slate-500 mt-1 flex items-center gap-2">
@@ -633,29 +600,29 @@ export const PostJobWizard: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-slate-400 uppercase font-semibold">Budget</span>
-                  <p className="text-sm font-black text-slate-900 dark:text-slate-100">
+                  <p className="text-base font-black text-slate-900 font-dashboard">
                     {formatCurrency(budgetMin)} – {formatCurrency(budgetMax)}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <span className="font-bold text-slate-700 dark:text-slate-300">Description:</span>
-                <p className="text-slate-600 dark:text-slate-400 whitespace-pre-line leading-relaxed">
+                <span className="font-bold text-slate-700">Description:</span>
+                <p className="text-slate-600 whitespace-pre-line leading-relaxed">
                   {description}
                 </p>
               </div>
 
               {selectedSkillIds.length > 0 && (
                 <div className="space-y-1">
-                  <span className="font-bold text-slate-700 dark:text-slate-300">Selected Skills:</span>
+                  <span className="font-bold text-slate-700">Selected Skills:</span>
                   <div className="flex flex-wrap gap-1.5">
                     {availableSkills
                       .filter((s) => selectedSkillIds.includes(s.id))
                       .map((s) => (
                         <span
                           key={s.id}
-                          className="px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-[10px] font-semibold text-slate-700 dark:text-slate-300"
+                          className="px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-[10px] font-semibold text-slate-700"
                         >
                           {s.name}
                         </span>
@@ -666,14 +633,14 @@ export const PostJobWizard: React.FC = () => {
 
               {attachments.length > 0 && (
                 <div className="space-y-1">
-                  <span className="font-bold text-slate-700 dark:text-slate-300">
+                  <span className="font-bold text-slate-700">
                     Attachments ({attachments.length}):
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {attachments.map((att, i) => (
                       <span
                         key={i}
-                        className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-[11px] text-slate-700 dark:text-slate-300"
+                        className="px-3 py-1 rounded-full bg-white border border-slate-200 text-[11px] text-slate-700"
                       >
                         {att.fileName}
                       </span>
@@ -686,28 +653,26 @@ export const PostJobWizard: React.FC = () => {
         )}
 
         {/* Wizard Controls */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100 ">
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
           {currentStep > 1 ? (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={() => {
                 setErrorMessage('');
                 setCurrentStep((prev) => prev - 1);
               }}
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer shadow-xs"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
               <span>Previous</span>
-            </Button>
+            </button>
           ) : (
             <div />
           )}
 
           {currentStep < 6 ? (
-            <Button
+            <button
               type="button"
-              size="sm"
               onClick={() => {
                 setErrorMessage('');
                 if (currentStep === 1 && (!title || !categoryId)) {
@@ -728,23 +693,23 @@ export const PostJobWizard: React.FC = () => {
                 }
                 setCurrentStep((prev) => prev + 1);
               }}
+              className="flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-xs transition-colors"
             >
               <span>Continue</span>
               <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
+            </button>
           ) : (
-            <Button
+            <button
               type="button"
-              size="sm"
               disabled={createJobMutation.isPending}
               onClick={() => createJobMutation.mutate('OPEN')}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6"
+              className="bg-emerald-800 hover:bg-emerald-700 text-white font-bold px-8 py-2.5 rounded-full text-xs shadow-xs transition-colors cursor-pointer"
             >
               {createJobMutation.isPending ? 'Publishing...' : 'Publish Job Live'}
-            </Button>
+            </button>
           )}
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

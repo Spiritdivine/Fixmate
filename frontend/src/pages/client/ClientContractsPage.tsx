@@ -4,19 +4,12 @@ import { Link } from 'react-router-dom';
 import {
   FileCheck,
   Search,
-  Filter,
-  ShieldCheck,
-  Clock,
-  CheckCircle2,
-  ChevronRight,
-  Eye,
-  AlertTriangle,
   Sparkles,
+  Eye,
 } from 'lucide-react';
 import { apiClient } from '../../lib/api-client';
-import { Contract, ContractStatus, ApiResponse } from '../../types';
+import { Contract, ApiResponse } from '../../types';
 import { formatCurrency, formatDate } from '../../lib/formatters';
-import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 
@@ -55,28 +48,36 @@ export const ClientContractsPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300 font-dashboard">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
-          Contracts &amp; Escrow Hub
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-          Fund milestone escrows, inspect submitted work proofs, approve payouts, and leave feedback.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-dashboard">
+            Contracts & Escrow Hub
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Fund milestone escrows, inspect submitted work proofs, approve payouts, and leave feedback.
+          </p>
+        </div>
+        <Link to="/client/jobs/post">
+          <button className="flex items-center gap-2 bg-emerald-800 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-colors shadow-sm cursor-pointer">
+            <Sparkles className="w-4 h-4" />
+            <span>Post a New Job</span>
+          </button>
+        </Link>
       </div>
 
       {/* Filter Tabs & Search */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
           {statusFilters.map((tab) => (
             <button
               key={tab.value}
               onClick={() => setSelectedStatus(tab.value)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedStatus === tab.value
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                  ? 'bg-emerald-800 text-white shadow-sm'
+                  : 'text-slate-600 bg-white hover:bg-slate-50 shadow-xs border border-slate-100'
               }`}
             >
               {tab.label}
@@ -84,14 +85,14 @@ export const ClientContractsPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <div className="relative max-w-xl">
+          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search contracts by code, job title, or artisan name..."
-            className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-emerald-600 text-slate-900 dark:text-slate-100"
+            className="w-full pl-11 pr-4 py-2.5 rounded-full bg-white text-sm font-medium border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none shadow-xs text-slate-900 placeholder:text-slate-400"
           />
         </div>
       </div>
@@ -100,13 +101,13 @@ export const ClientContractsPage: React.FC = () => {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((n) => (
-            <Card key={n} className="p-6 border-slate-200 animate-pulse h-40" />
+            <div key={n} className="p-6 bg-white rounded-[24px] border border-slate-100 animate-pulse h-40 shadow-xs" />
           ))}
         </div>
       ) : contracts.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-slate-200 ">
-          <FileCheck className="w-12 h-12 mx-auto text-slate-400 mb-3" />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
+        <div className="p-12 text-center bg-white rounded-[24px] border border-dashed border-slate-200 shadow-xs">
+          <FileCheck className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+          <h3 className="text-base font-bold text-slate-800">
             No contracts found
           </h3>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
@@ -114,7 +115,7 @@ export const ClientContractsPage: React.FC = () => {
               ? 'When you accept an artisan’s proposal, an escrow contract will be generated here.'
               : `No contracts matching "${selectedStatus}".`}
           </p>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-4">
           {contracts.map((contract) => {
@@ -142,9 +143,9 @@ export const ClientContractsPage: React.FC = () => {
                 : 'muted';
 
             return (
-              <Card
+              <div
                 key={contract.id}
-                className="p-5 sm:p-6 hover:border-emerald-600/40 transition-all border-slate-200 space-y-4"
+                className="p-6 rounded-[24px] bg-white border border-slate-100 hover:border-emerald-500/30 transition-all shadow-xs space-y-4"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1.5 flex-1 min-w-0">
@@ -156,7 +157,7 @@ export const ClientContractsPage: React.FC = () => {
                         {contract.contractCode}
                       </span>
                       {hasSubmittedWork && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 animate-pulse">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
                           Work Submitted for Review
                         </span>
                       )}
@@ -164,7 +165,7 @@ export const ClientContractsPage: React.FC = () => {
 
                     <Link
                       to={`/client/contracts/${contract.id}`}
-                      className="text-base font-bold text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-sky-400 transition-colors block truncate"
+                      className="text-base font-bold text-slate-900 hover:text-emerald-800 transition-colors block truncate"
                     >
                       {contract.job?.title || 'Contract Agreement'}
                     </Link>
@@ -176,7 +177,7 @@ export const ClientContractsPage: React.FC = () => {
                           name={artisanName}
                           size="xs"
                         />
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        <span className="font-semibold text-slate-700">
                           {artisanName}
                         </span>
                       </div>
@@ -191,17 +192,17 @@ export const ClientContractsPage: React.FC = () => {
                       <span className="text-[10px] text-slate-400 uppercase font-semibold">
                         Total Amount
                       </span>
-                      <p className="text-base font-black text-slate-900 dark:text-slate-100">
+                      <p className="text-lg font-black text-slate-900">
                         {formatCurrency(contract.totalAmount)}
                       </p>
-                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <p className="text-[11px] text-emerald-700 font-semibold">
                         Funded: {formatCurrency(contract.escrowFundedAmount)}
                       </p>
                     </div>
 
                     <Link
                       to={`/client/contracts/${contract.id}`}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-[#124d33] dark:hover:bg-[#186644] text-white dark:text-slate-900 dark:hover:text-white text-xs font-bold transition-colors"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors shadow-xs"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Open Workspace</span>
@@ -210,19 +211,19 @@ export const ClientContractsPage: React.FC = () => {
                 </div>
 
                 {/* Progress bar */}
-                <div className="space-y-1 pt-2">
+                <div className="space-y-1.5 pt-2">
                   <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
                     <span>Milestones: {completedMilestones} of {totalMilestones} Completed</span>
-                    <span className="font-bold text-emerald-700 dark:text-sky-400">{progressPct}%</span>
+                    <span className="font-bold text-emerald-700">{progressPct}%</span>
                   </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                     <div
-                      className="bg-[#186644] h-full rounded-full transition-all duration-500"
+                      className="bg-emerald-600 h-full rounded-full transition-all duration-500"
                       style={{ width: `${progressPct}%` }}
                     />
                   </div>
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>

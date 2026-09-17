@@ -64,7 +64,29 @@ export interface ArtisanProfile {
   portfolios?: ArtisanPortfolio[];
   services?: ArtisanService[];
   user?: User;
+  distanceKm?: number;
+  displayLatitude?: number | null;
+  displayLongitude?: number | null;
+  isLocationObfuscated?: boolean;
 }
+
+export interface NearbyArtisansMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  searchCenter: {
+    lat: number;
+    lng: number;
+  };
+  radiusKm: number;
+}
+
+export interface NearbyArtisansResponse {
+  artisans: ArtisanProfile[];
+  meta: NearbyArtisansMeta;
+}
+
 
 export interface ClientProfile {
   id: string;
@@ -239,6 +261,7 @@ export interface Contract {
   artisan?: {
     id: string;
     email: string;
+    walletAddress?: string | null;
     avatarUrl?: string | null;
     artisanProfile?: ArtisanProfile | null;
   };
@@ -274,6 +297,14 @@ export interface Wallet {
   escrowLockedBalance: number | string;
   currency: string;
   transactions?: Transaction[];
+  payoutRequests?: PayoutRequest[];
+  tierLimits?: {
+    isKycVerified: boolean;
+    dailyLimitNgn: number;
+    totalWithdrawn24hNgn: number;
+    remainingLimitNgn: number;
+    dailyLimitUsdc: number;
+  };
 }
 
 export interface Transaction {
@@ -291,6 +322,7 @@ export interface Transaction {
   balanceBefore: number | string;
   balanceAfter: number | string;
   description: string;
+  metadata?: Record<string, any> | null;
   createdAt: string;
 }
 

@@ -112,19 +112,28 @@ async function main() {
 
   const milestone = contract.milestones[0];
 
-  // Step 4: Client Funds Escrow on Monad
-  console.log('📌 Step 4: Customer deposits funds into Monad Smart Contract Escrow...');
+  // Step 4: Client Funds Escrow on Monad with USDC Stablecoin
+  console.log('📌 Step 4: Customer deposits funds into Monad Smart Contract Escrow (USDC)...');
   const mockTxHash = `SIM-TX-${Date.now()}-0x${Array(32).fill('e').join('')}`;
   const fundedResult = await EscrowService.fundMilestone(client.id, milestone.id, {
     fundingTxHash: mockTxHash,
-    cryptoAmount: 0.05,
-    cryptoCurrency: 'MON',
+    cryptoAmount: 50.0,
+    cryptoCurrency: 'USDC',
   });
   console.log(`✅ Escrow Funded!`);
   console.log(`   Status: ${fundedResult.status}`);
   console.log(`   Blockchain Network: ${fundedResult.blockchain?.network || 'Monad'}`);
+  console.log(`   Currency: ${fundedResult.blockchain?.currency || 'USDC'}`);
   console.log(`   On-Chain Escrow ID: #${fundedResult.blockchain?.onChainEscrowId}`);
   console.log(`   Tx Hash: ${fundedResult.blockchain?.txHash}\n`);
+
+  // Step 4b: Test Reconcile On-Chain State endpoint functionality
+  console.log('📌 Step 4b: Reconciling on-chain state...');
+  const reconcileResult = await EscrowService.reconcileOnChainState(contract.id);
+  console.log(`✅ Reconcile Success!`);
+  console.log(`   Contract ID: ${reconcileResult.contractId}`);
+  console.log(`   On-Chain State: ${reconcileResult.onChainState?.stateName || reconcileResult.onChainState?.state}`);
+  console.log(`   Database Status: ${reconcileResult.databaseStatus}\n`);
 
   // Step 5: Artisan Submits Completed Work with Before & After Proof
   console.log('📌 Step 5: Artisan performs repair and submits Before & After photos...');

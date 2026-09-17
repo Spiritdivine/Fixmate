@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
+import { PrivyProviderWrapper } from './lib/privy-provider';
 
 // Landing & Auth Pages
 import { LandingPage } from './pages/LandingPage';
@@ -102,92 +103,94 @@ export function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-otp" element={<VerifyOtp />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+      <PrivyProviderWrapper>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify-otp" element={<VerifyOtp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          {/* Protected Artisan Dashboard Module */}
-          <Route path="/artisan" element={<ArtisanLayout />}>
-            <Route index element={<Navigate to="/artisan/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardOverview />} />
-            <Route path="jobs" element={<JobsMarketplace />} />
-            <Route path="jobs/:jobId" element={<JobDetails />} />
-            <Route path="jobs/:jobId/propose" element={<SubmitProposal />} />
-            <Route path="jobs/saved" element={<SavedJobs />} />
-            <Route path="jobs/invitations" element={<JobInvitations />} />
-            <Route path="proposals" element={<ProposalsTracker />} />
-            <Route path="contracts" element={<ContractsList />} />
-            <Route path="contracts/:contractId" element={<ContractWorkspace />} />
-            <Route path="wallet" element={<WalletPage />} />
-            <Route path="messages" element={<ChatPage />} />
-            <Route path="disputes" element={<DisputesPage />} />
-            <Route path="disputes/:disputeId" element={<DisputeWorkspace />} />
-            <Route path="reviews" element={<ReviewsPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route path="profile/portfolio" element={<PortfolioPage />} />
-            <Route path="profile/services" element={<ServicesCatalogPage />} />
-            <Route path="kyc" element={<ArtisanKycPage />} />
-            <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
+            {/* Protected Artisan Dashboard Module */}
+            <Route path="/artisan" element={<ArtisanLayout />}>
+              <Route index element={<Navigate to="/artisan/dashboard" replace />} />
+              <Route path="dashboard" element={<DashboardOverview />} />
+              <Route path="jobs" element={<JobsMarketplace />} />
+              <Route path="jobs/:jobId" element={<JobDetails />} />
+              <Route path="jobs/:jobId/propose" element={<SubmitProposal />} />
+              <Route path="jobs/saved" element={<SavedJobs />} />
+              <Route path="jobs/invitations" element={<JobInvitations />} />
+              <Route path="proposals" element={<ProposalsTracker />} />
+              <Route path="contracts" element={<ContractsList />} />
+              <Route path="contracts/:contractId" element={<ContractWorkspace />} />
+              <Route path="wallet" element={<WalletPage />} />
+              <Route path="messages" element={<ChatPage />} />
+              <Route path="disputes" element={<DisputesPage />} />
+              <Route path="disputes/:disputeId" element={<DisputeWorkspace />} />
+              <Route path="reviews" element={<ReviewsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+              <Route path="profile/portfolio" element={<PortfolioPage />} />
+              <Route path="profile/services" element={<ServicesCatalogPage />} />
+              <Route path="kyc" element={<ArtisanKycPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
 
-          {/* Protected Client Dashboard Module */}
-          <Route path="/client" element={<ClientLayout />}>
-            <Route index element={<Navigate to="/client/dashboard" replace />} />
-            <Route path="dashboard" element={<ClientDashboardOverview />} />
-            <Route path="artisans" element={<FindArtisansPage />} />
-            <Route path="artisans/:artisanId" element={<ArtisanPublicProfilePage />} />
-            <Route path="saved-artisans" element={<SavedArtisansPage />} />
-            <Route path="jobs/post" element={<PostJobWizard />} />
-            <Route path="jobs" element={<MyJobsPage />} />
-            <Route path="jobs/:jobId" element={<JobDetailsAndProposalsPage />} />
-            <Route path="jobs/:jobId/edit" element={<EditJobPage />} />
-            <Route path="proposals/:proposalId" element={<ProposalReviewPage />} />
-            <Route path="proposals/:proposalId/accept" element={<AcceptProposalWizard />} />
-            <Route path="contracts" element={<ClientContractsPage />} />
-            <Route path="contracts/:contractId" element={<ClientContractWorkspace />} />
-            <Route path="wallet" element={<ClientWalletPage />} />
-            <Route path="messages" element={<ClientChatPage />} />
-            <Route path="disputes" element={<ClientDisputesPage />} />
-            <Route path="disputes/:disputeId" element={<ClientDisputeWorkspace />} />
-            <Route path="reviews" element={<ClientReviewsPage />} />
-            <Route path="profile" element={<ClientProfilePage />} />
-            <Route path="notifications" element={<ClientNotificationsPage />} />
-            <Route path="settings" element={<ClientSettingsPage />} />
-          </Route>
+            {/* Protected Client Dashboard Module */}
+            <Route path="/client" element={<ClientLayout />}>
+              <Route index element={<Navigate to="/client/dashboard" replace />} />
+              <Route path="dashboard" element={<ClientDashboardOverview />} />
+              <Route path="artisans" element={<FindArtisansPage />} />
+              <Route path="artisans/:artisanId" element={<ArtisanPublicProfilePage />} />
+              <Route path="saved-artisans" element={<SavedArtisansPage />} />
+              <Route path="jobs/post" element={<PostJobWizard />} />
+              <Route path="jobs" element={<MyJobsPage />} />
+              <Route path="jobs/:jobId" element={<JobDetailsAndProposalsPage />} />
+              <Route path="jobs/:jobId/edit" element={<EditJobPage />} />
+              <Route path="proposals/:proposalId" element={<ProposalReviewPage />} />
+              <Route path="proposals/:proposalId/accept" element={<AcceptProposalWizard />} />
+              <Route path="contracts" element={<ClientContractsPage />} />
+              <Route path="contracts/:contractId" element={<ClientContractWorkspace />} />
+              <Route path="wallet" element={<ClientWalletPage />} />
+              <Route path="messages" element={<ClientChatPage />} />
+              <Route path="disputes" element={<ClientDisputesPage />} />
+              <Route path="disputes/:disputeId" element={<ClientDisputeWorkspace />} />
+              <Route path="reviews" element={<ClientReviewsPage />} />
+              <Route path="profile" element={<ClientProfilePage />} />
+              <Route path="notifications" element={<ClientNotificationsPage />} />
+              <Route path="settings" element={<ClientSettingsPage />} />
+            </Route>
 
-          {/* Protected Admin Dashboard Module */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboardOverview />} />
-            <Route path="users" element={<UserManagementPage />} />
-            <Route path="users/:id" element={<UserDetailPage />} />
-            <Route path="kyc" element={<KycVerificationPage />} />
-            <Route path="disputes" element={<DisputeCenterPage />} />
-            <Route path="disputes/:disputeId" element={<DisputeWorkspacePage />} />
-            <Route path="categories" element={<CategoriesManagerPage />} />
-            <Route path="skills" element={<SkillsManagerPage />} />
-            <Route path="contracts" element={<ContractsOversightPage />} />
-            <Route path="contracts/:contractId" element={<ContractDetailPage />} />
-            <Route path="transactions" element={<FinancialLedgerPage />} />
-            <Route path="payouts" element={<PayoutsModerationPage />} />
-            <Route path="monad-escrow" element={<MonadEscrowExplorerPage />} />
-            <Route path="reviews" element={<ReviewModerationPage />} />
-            <Route path="audit-logs" element={<AuditLogsPage />} />
-            <Route path="settings" element={<SystemSettingsPage />} />
-            <Route path="health" element={<SystemHealthPage />} />
-          </Route>
+            {/* Protected Admin Dashboard Module */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<AdminDashboardOverview />} />
+              <Route path="users" element={<UserManagementPage />} />
+              <Route path="users/:id" element={<UserDetailPage />} />
+              <Route path="kyc" element={<KycVerificationPage />} />
+              <Route path="disputes" element={<DisputeCenterPage />} />
+              <Route path="disputes/:disputeId" element={<DisputeWorkspacePage />} />
+              <Route path="categories" element={<CategoriesManagerPage />} />
+              <Route path="skills" element={<SkillsManagerPage />} />
+              <Route path="contracts" element={<ContractsOversightPage />} />
+              <Route path="contracts/:contractId" element={<ContractDetailPage />} />
+              <Route path="transactions" element={<FinancialLedgerPage />} />
+              <Route path="payouts" element={<PayoutsModerationPage />} />
+              <Route path="monad-escrow" element={<MonadEscrowExplorerPage />} />
+              <Route path="reviews" element={<ReviewModerationPage />} />
+              <Route path="audit-logs" element={<AuditLogsPage />} />
+              <Route path="settings" element={<SystemSettingsPage />} />
+              <Route path="health" element={<SystemHealthPage />} />
+            </Route>
 
-          {/* Root & Fallback */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Root & Fallback */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </PrivyProviderWrapper>
     </QueryClientProvider>
   );
 }

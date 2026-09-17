@@ -10,13 +10,15 @@ const __dirname = path.dirname(__filename);
 
 /**
  * Service responsible strictly for Monad EVM blockchain interaction,
- * contract query/execution, and transaction verification. (Single Responsibility)
+ * ERC-20 stablecoin escrow queries/executions, and transaction verification.
  */
 export class MonadEscrowService {
   static provider = null;
   static contractInterface = null;
   static contractAddress = null;
+  static paymentTokenAddress = null;
   static artifact = null;
+  static tokenDecimals = 6; // Standard USDC operates with 6 decimals
 
   /**
    * Lazy-initializes and caches the JsonRpcProvider
@@ -33,7 +35,11 @@ export class MonadEscrowService {
    */
   static loadArtifact() {
     if (this.artifact && this.contractAddress) {
-      return { artifact: this.artifact, address: this.contractAddress };
+      return {
+        artifact: this.artifact,
+        address: this.contractAddress,
+        paymentTokenAddress: this.paymentTokenAddress,
+      };
     }
 
     const artifactPath = path.resolve(__dirname, '../config/contracts/ArtisanEscrow.json');
@@ -47,17 +53,32 @@ export class MonadEscrowService {
     // Resolve address: check env first, then deployment.json
     if (env.ESCROW_CONTRACT_ADDRESS && ethers.isAddress(env.ESCROW_CONTRACT_ADDRESS)) {
       this.contractAddress = env.ESCROW_CONTRACT_ADDRESS;
-    } else {
-      const deploymentPath = path.resolve(__dirname, '../config/contracts/deployment.json');
-      if (fs.existsSync(deploymentPath)) {
+    }
+
+    if (env.STABLECOIN_CONTRACT_ADDRESS && ethers.isAddress(env.STABLECOIN_CONTRACT_ADDRESS)) {
+      this.paymentTokenAddress = env.STABLECOIN_CONTRACT_ADDRESS;
+    }
+
+    const deploymentPath = path.resolve(__dirname, '../config/contracts/deployment.json');
+    if (fs.existsSync(deploymentPath)) {
+      try {
         const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
-        if (deployment.contractAddress && ethers.isAddress(deployment.contractAddress)) {
+        if (!this.contractAddress && deployment.contractAddress && ethers.isAddress(deployment.contractAddress)) {
           this.contractAddress = deployment.contractAddress;
         }
+        if (!this.paymentTokenAddress && deployment.paymentTokenAddress && ethers.isAddress(deployment.paymentTokenAddress)) {
+          this.paymentTokenAddress = deployment.paymentTokenAddress;
+        }
+      } catch {
+        // ignore deployment.json read error
       }
     }
 
-    return { artifact: this.artifact, address: this.contractAddress };
+    return {
+      artifact: this.artifact,
+      address: this.contractAddress,
+      paymentTokenAddress: this.paymentTokenAddress,
+    };
   }
 
   /**
@@ -88,22 +109,34 @@ export class MonadEscrowService {
    * Verifies an on-chain funding transaction on Monad RPC and extracts escrow parameters.
    * @param {string} txHash - The transaction hash submitted by the client
    * @param {string} expectedContractCode - Contract code expected to match the event
-   * @returns {Promise<{ onChainEscrowId: number, client: string, artisan: string, amountWei: string, amountMon: string, feeBps: number, txHash: string }>}
+   * @returns {Promise<{ onChainEscrowId: number, client: string, artisan: string, amountRaw: string, amountUsdc: string, feeBps: number, txHash: string }>}
    */
   static async verifyFundingTransaction(txHash, expectedContractCode) {
-    if (!txHash || !ethers.isHexString(txHash, 32)) {
-      // If simulated or test mode without strict 32-byte hex
-      if (process.env.NODE_ENV === 'test' || txHash.startsWith('SIM-')) {
-        return {
-          onChainEscrowId: Math.floor(1000 + Math.random() * 9000),
-          client: '0x' + Array(40).fill('1').join(''),
-          artisan: '0x' + Array(40).fill('2').join(''),
-          amountWei: ethers.parseEther('0.05').toString(),
-          amountMon: '0.05',
-          feeBps: 500,
-          txHash,
-        };
-      }
+    if (!txHash) {
+      throw ApiError.badRequest('Transaction hash is required');
+    }
+
+    // Harden security: reject simulated hashes in production
+    const isSimulated = txHash.startsWith('SIM-') || process.env.NODE_ENV === 'test';
+    if (txHash.startsWith('SIM-') && process.env.NODE_ENV === 'production') {
+      throw ApiError.badRequest('Simulated transaction hashes are disallowed in production.');
+    }
+
+    if (isSimulated && (!ethers.isHexString(txHash, 32) || txHash.startsWith('SIM-'))) {
+      return {
+        onChainEscrowId: Math.floor(1000 + Math.random() * 9000),
+        contractCode: expectedContractCode || 'CTR-2026-DEMO',
+        client: '0x1A2B3C4D5E6F70819201A2B3C4D5E6F70819201A',
+        artisan: '0x9F8E7D6C5B4A312091829F8E7D6C5B4A31209182',
+        amountRaw: ethers.parseUnits('50', this.tokenDecimals).toString(),
+        amountUsdc: '50.00',
+        amountMon: '50.00', // backward compatibility alias
+        feeBps: 500,
+        txHash,
+      };
+    }
+
+    if (!ethers.isHexString(txHash, 32)) {
       throw ApiError.badRequest('Invalid transaction hash format');
     }
 
@@ -116,14 +149,15 @@ export class MonadEscrowService {
     }
 
     if (!receipt) {
-      if (process.env.NODE_ENV !== 'production' || txHash.startsWith('SIM-')) {
+      if (process.env.NODE_ENV !== 'production') {
         return {
           onChainEscrowId: Math.floor(1000 + Math.random() * 9000),
           contractCode: expectedContractCode || 'CTR-2026-DEMO',
           client: '0x1A2B3C4D5E6F70819201A2B3C4D5E6F70819201A',
           artisan: '0x9F8E7D6C5B4A312091829F8E7D6C5B4A31209182',
-          amountWei: ethers.parseEther('0.05').toString(),
-          amountMon: '0.05',
+          amountRaw: ethers.parseUnits('50', this.tokenDecimals).toString(),
+          amountUsdc: '50.00',
+          amountMon: '50.00',
           feeBps: 500,
           txHash,
         };
@@ -163,13 +197,16 @@ export class MonadEscrowService {
       );
     }
 
+    const formattedUsdc = ethers.formatUnits(amount, this.tokenDecimals);
+
     return {
       onChainEscrowId: Number(escrowId),
       contractCode,
       client,
       artisan,
-      amountWei: amount.toString(),
-      amountMon: ethers.formatEther(amount),
+      amountRaw: amount.toString(),
+      amountUsdc: formattedUsdc,
+      amountMon: formattedUsdc, // backward compatibility alias
       feeBps: Number(feeBps),
       txHash: receipt.hash,
     };
@@ -184,36 +221,55 @@ export class MonadEscrowService {
 
     const contract = this.getContract();
     const escrow = await contract.getEscrow(escrowId);
+    const formattedUsdc = ethers.formatUnits(escrow.amount, this.tokenDecimals);
 
     return {
       id: Number(escrow.id),
       contractCode: escrow.contractCode,
       client: escrow.client,
       artisan: escrow.artisan,
-      amountWei: escrow.amount.toString(),
-      amountMon: ethers.formatEther(escrow.amount),
+      amountRaw: escrow.amount.toString(),
+      amountUsdc: formattedUsdc,
+      amountMon: formattedUsdc, // backward compatibility
       platformFeeBps: Number(escrow.platformFeeBps),
       state: Number(escrow.state), // 0: FUNDED, 1: WORK_SUBMITTED, 2: RELEASED, 3: DISPUTED, 4: RESOLVED, 5: REFUNDED
+      stateName: ['FUNDED', 'WORK_SUBMITTED', 'RELEASED', 'DISPUTED', 'RESOLVED', 'REFUNDED'][Number(escrow.state)],
       createdAt: Number(escrow.createdAt),
       completedAt: Number(escrow.completedAt),
     };
   }
 
   /**
-   * Executes dispute resolution on Monad as the platform Arbiter
-   * @param {number} escrowId
-   * @param {string|number} artisanAmountWei
-   * @param {string|number} clientRefundWei
+   * Backward-compatible alias for getOnChainEscrow
    */
-  static async executeAdminDisputeResolution(escrowId, artisanAmountWei, clientRefundWei) {
+  static async getEscrow(escrowId) {
+    return this.getOnChainEscrow(escrowId);
+  }
+
+  /**
+   * Executes dispute resolution on Monad as the platform Arbiter using stablecoins
+   * @param {number} escrowId
+   * @param {string|number} artisanAmountUsdc - Amount in USDC
+   * @param {string|number} clientRefundUsdc - Amount in USDC
+   */
+  static async executeAdminDisputeResolution(escrowId, artisanAmountUsdc, clientRefundUsdc) {
     if (process.env.NODE_ENV === 'test') {
-      return { txHash: '0x_simulated_resolution_hash_' + Date.now() };
+      return { txHash: '0x_simulated_resolution_hash_' + Date.now(), status: 'SUCCESS' };
     }
 
     const arbiterSigner = this.getArbiterSigner();
     const contract = this.getContract(arbiterSigner);
 
-    const tx = await contract.resolveDispute(escrowId, artisanAmountWei, clientRefundWei);
+    // Convert decimal USDC to token units (6 decimals)
+    const artisanAmountUnits = typeof artisanAmountUsdc === 'string' && artisanAmountUsdc.length > 10
+      ? BigInt(artisanAmountUsdc)
+      : ethers.parseUnits(Number(artisanAmountUsdc || 0).toFixed(6), this.tokenDecimals);
+
+    const clientRefundUnits = typeof clientRefundUsdc === 'string' && clientRefundUsdc.length > 10
+      ? BigInt(clientRefundUsdc)
+      : ethers.parseUnits(Number(clientRefundUsdc || 0).toFixed(6), this.tokenDecimals);
+
+    const tx = await contract.resolveDispute(escrowId, artisanAmountUnits, clientRefundUnits);
     const receipt = await tx.wait();
 
     return {
@@ -223,12 +279,12 @@ export class MonadEscrowService {
   }
 
   /**
-   * Executes mutual or admin cancellation/refund on Monad
+   * Executes mutual or admin cancellation/refund on Monad in stablecoins
    * @param {number} escrowId
    */
   static async executeAdminRefund(escrowId) {
     if (process.env.NODE_ENV === 'test') {
-      return { txHash: '0x_simulated_refund_hash_' + Date.now() };
+      return { txHash: '0x_simulated_refund_hash_' + Date.now(), status: 'SUCCESS' };
     }
 
     const arbiterSigner = this.getArbiterSigner();

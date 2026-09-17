@@ -2,6 +2,7 @@ import prisma from '../config/db.js';
 import { ApiError } from '../utils/api-error.js';
 import { MonadEscrowService } from './monad-escrow.service.js';
 import { NotificationService } from './notification.service.js';
+import { TreasuryService } from './treasury.service.js';
 import crypto from 'crypto';
 
 /**
@@ -25,7 +26,7 @@ export class EscrowService {
     }
 
     const milestoneAmount = Number(milestone.amount);
-    const { fundingTxHash, cryptoAmount, cryptoCurrency = 'MON' } = fundingData;
+    const { fundingTxHash, cryptoAmount, cryptoCurrency = 'USDC' } = fundingData;
 
     // -------------------------------------------------------------
     // Path A: Monad On-Chain Escrow Funding (Web3 Verification)
@@ -56,7 +57,7 @@ export class EscrowService {
             onChainEscrowId: verifiedOnChain.onChainEscrowId,
             smartContractAddr: MonadEscrowService.contractAddress,
             fundingTxHash: verifiedOnChain.txHash,
-            cryptoAmount: cryptoAmount ? cryptoAmount : parseFloat(verifiedOnChain.amountMon),
+            cryptoAmount: cryptoAmount ? cryptoAmount : parseFloat(verifiedOnChain.amountUsdc || verifiedOnChain.amountMon),
             cryptoCurrency,
           },
         });
@@ -78,16 +79,16 @@ export class EscrowService {
               status: 'SUCCESS',
               balanceBefore: Number(clientWallet.availableBalance),
               balanceAfter: Number(clientWallet.availableBalance),
-              description: `Monad On-Chain Escrow Lock (Escrow #${verifiedOnChain.onChainEscrowId}, Tx: ${verifiedOnChain.txHash.slice(0, 10)}...)`,
-              metadata: { onChainEscrowId: verifiedOnChain.onChainEscrowId, txHash: verifiedOnChain.txHash },
+              description: `Monad Escrow Lock (${verifiedOnChain.amountUsdc} USDC, Escrow #${verifiedOnChain.onChainEscrowId})`,
+              metadata: { onChainEscrowId: verifiedOnChain.onChainEscrowId, txHash: verifiedOnChain.txHash, currency: 'USDC' },
             },
           });
         }
 
         await NotificationService.createNotification(
           milestone.contract.artisanId,
-          'Milestone Funded (Monad Web3)',
-          `Milestone "${milestone.title}" has been funded on-chain! You can begin work now.`,
+          'Milestone Funded (Monad USDC Escrow)',
+          `Milestone "${milestone.title}" has been funded on-chain with ${verifiedOnChain.amountUsdc} USDC! You can begin work now.`,
           `/contracts/${milestone.contractId}`
         );
 
@@ -97,7 +98,9 @@ export class EscrowService {
             network: 'Monad',
             onChainEscrowId: verifiedOnChain.onChainEscrowId,
             txHash: verifiedOnChain.txHash,
-            amountMon: verifiedOnChain.amountMon,
+            amountUsdc: verifiedOnChain.amountUsdc,
+            amountMon: verifiedOnChain.amountUsdc,
+            currency: 'USDC',
           },
         };
       });
@@ -107,20 +110,32 @@ export class EscrowService {
     // Path B: In-App Wallet Atomic Lock (Web2 / Simulated Mode)
     // -------------------------------------------------------------
     return prisma.$transaction(async (tx) => {
-      const wallet = await tx.wallet.findUnique({ where: { userId: clientId } });
-      if (!wallet) throw ApiError.notFound('Wallet not found');
+      // Pessimistic row-level lock: serialize concurrent wallet deductions
+      const lockedWallets = await tx.$queryRaw`
+        SELECT id, available_balance, escrow_locked_balance 
+        FROM wallets 
+        WHERE user_id = ${clientId}::uuid 
+        FOR UPDATE
+      `;
 
-      if (Number(wallet.availableBalance) < milestoneAmount) {
+      if (!lockedWallets || lockedWallets.length === 0) {
+        throw ApiError.notFound('Wallet not found');
+      }
+
+      const lockedWallet = lockedWallets[0];
+      const availableBalance = Number(lockedWallet.available_balance);
+
+      if (availableBalance < milestoneAmount) {
         throw ApiError.badRequest(
-          `Insufficient available balance. Required: ₦${milestoneAmount.toLocaleString()}, Available: ₦${Number(wallet.availableBalance).toLocaleString()}`
+          `Insufficient available balance. Required: ₦${milestoneAmount.toLocaleString()}, Available: ₦${availableBalance.toLocaleString()}`
         );
       }
 
-      const balanceBefore = Number(wallet.availableBalance);
+      const balanceBefore = availableBalance;
       const balanceAfter = balanceBefore - milestoneAmount;
 
       await tx.wallet.update({
-        where: { id: wallet.id },
+        where: { id: lockedWallet.id },
         data: {
           availableBalance: { decrement: milestoneAmount },
           escrowLockedBalance: { increment: milestoneAmount },
@@ -147,7 +162,7 @@ export class EscrowService {
       const ref = `ESC-LOCK-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
       await tx.transaction.create({
         data: {
-          walletId: wallet.id,
+          walletId: lockedWallet.id,
           contractId: milestone.contractId,
           milestoneId: milestone.id,
           reference: ref,
@@ -266,6 +281,13 @@ export class EscrowService {
     const netPayout = grossAmount - feeAmount;
     const { releaseTxHash } = releaseData;
 
+    const isOnChain = Boolean(
+      milestone.contract.onChainEscrowId ||
+      milestone.contract.cryptoCurrency === 'USDC' ||
+      milestone.contract.fundingTxHash ||
+      releaseTxHash
+    );
+
     return prisma.$transaction(async (tx) => {
       // 1. Client Wallet: Deduct from Escrow Locked Balance if locked in-app
       const clientWallet = await tx.wallet.findUnique({ where: { userId: clientId } });
@@ -278,21 +300,24 @@ export class EscrowService {
         });
       }
 
-      // 2. Artisan Wallet: Credit Net Payout to Available Balance
+      // 2. Artisan Wallet: Credit Net Payout to Available Balance ONLY if not on-chain
       const artisanWallet = await tx.wallet.findUnique({ where: { userId: milestone.contract.artisanId } });
       let artisanBefore = 0;
       let artisanAfter = 0;
 
       if (artisanWallet) {
         artisanBefore = Number(artisanWallet.availableBalance);
-        artisanAfter = artisanBefore + netPayout;
-
-        await tx.wallet.update({
-          where: { id: artisanWallet.id },
-          data: {
-            availableBalance: { increment: netPayout },
-          },
-        });
+        if (!isOnChain) {
+          artisanAfter = artisanBefore + netPayout;
+          await tx.wallet.update({
+            where: { id: artisanWallet.id },
+            data: {
+              availableBalance: { increment: netPayout },
+            },
+          });
+        } else {
+          artisanAfter = artisanBefore; // Crypto received directly into Web3 wallet on Monad
+        }
       }
 
       // 3. Mark Milestone as RELEASED
@@ -343,23 +368,49 @@ export class EscrowService {
             contractId: contract.id,
             milestoneId: milestone.id,
             reference: releaseRef,
-            paymentGatewayRef: releaseTxHash || null,
+            paymentGatewayRef: releaseTxHash || milestone.contract.fundingTxHash || null,
             type: 'ESCROW_RELEASE',
             amount: grossAmount,
             fee: feeAmount,
-            netAmount: netPayout,
+            netAmount: isOnChain ? 0 : netPayout,
             status: 'SUCCESS',
             balanceBefore: artisanBefore,
             balanceAfter: artisanAfter,
-            description: `Escrow Payout for "${milestone.title}" (Platform fee ${feePercent}% deducted)`,
+            description: isOnChain
+              ? `Monad Escrow Release for "${milestone.title}" (Paid directly in USDC on-chain)`
+              : `Escrow Payout for "${milestone.title}" (Platform fee ${feePercent}% deducted)`,
+            metadata: {
+              onChain: isOnChain,
+              releaseTxHash: releaseTxHash || null,
+              cryptoCurrency: milestone.contract.cryptoCurrency || (isOnChain ? 'USDC' : null),
+              cryptoAmount: milestone.contract.cryptoAmount || null,
+            },
+          },
+        });
+      }
+
+      // 6. Record Platform Fee to Company Treasury
+      if (!isOnChain && feeAmount > 0) {
+        await TreasuryService.recordFee(tx, {
+          amount: feeAmount,
+          contractId: contract.id,
+          milestoneId: milestone.id,
+          reference: `FEE-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+          description: `Platform Fee (${feePercent}%) for "${milestone.title}" (Contract #${contract.contractCode})`,
+          metadata: {
+            contractCode: contract.contractCode,
+            grossAmount,
+            feePercent,
           },
         });
       }
 
       await NotificationService.createNotification(
         milestone.contract.artisanId,
-        'Escrow Funds Released! 💰',
-        `₦${netPayout.toLocaleString()} has been credited to your available balance for "${milestone.title}".`,
+        isOnChain ? 'Monad Escrow Released! ⚡' : 'Escrow Funds Released! 💰',
+        isOnChain
+          ? `Milestone "${milestone.title}" escrow funds have been released to your Monad Web3 wallet.`
+          : `₦${netPayout.toLocaleString()} has been credited to your available balance for "${milestone.title}".`,
         `/wallets/my-wallet`
       );
 
@@ -370,7 +421,8 @@ export class EscrowService {
         payoutSummary: {
           grossAmount,
           feeDeducted: feeAmount,
-          netCredited: netPayout,
+          netCredited: isOnChain ? 0 : netPayout,
+          settlementType: isOnChain ? 'ON_CHAIN_USDC' : 'FIAT_NGN',
         },
       };
     });
@@ -482,6 +534,7 @@ export class EscrowService {
   static async reconcileOnChainState(contractId) {
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
+      include: { milestones: { orderBy: { stepOrder: 'asc' } } },
     });
 
     if (!contract) throw ApiError.notFound('Contract not found');
@@ -489,13 +542,48 @@ export class EscrowService {
       return { message: 'Contract has no associated on-chain escrow ID', contract };
     }
 
-    const onChainEscrow = await MonadEscrowService.getEscrow(contract.onChainEscrowId);
+    const onChainEscrow = await MonadEscrowService.getOnChainEscrow(contract.onChainEscrowId);
+
+    // If on-chain state has reached RELEASED (state 2) and DB is not yet COMPLETED, reconcile DB
+    if (onChainEscrow.state === 2 && contract.status !== 'COMPLETED') {
+      await prisma.$transaction(async (tx) => {
+        await tx.contract.update({
+          where: { id: contract.id },
+          data: {
+            status: 'COMPLETED',
+            completedAt: new Date(),
+          },
+        });
+
+        if (contract.milestones.length > 0) {
+          await tx.milestone.update({
+            where: { id: contract.milestones[0].id },
+            data: {
+              status: 'RELEASED',
+              approvedAt: new Date(),
+              releasedAt: new Date(),
+            },
+          });
+        }
+
+        await tx.job.update({
+          where: { id: contract.jobId },
+          data: { status: 'COMPLETED' },
+        });
+
+        await tx.artisanProfile.update({
+          where: { userId: contract.artisanId },
+          data: { completedJobsCount: { increment: 1 } },
+        });
+      });
+    }
 
     return {
       contractId: contract.id,
       onChainEscrowId: contract.onChainEscrowId,
       onChainState: onChainEscrow,
       databaseStatus: contract.status,
+      currency: 'USDC',
     };
   }
 }

@@ -46,31 +46,33 @@ export const SavedArtisansPage: React.FC = () => {
   const list = savedArtisans || [];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-8 pb-16 font-dashboard">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 mb-2">
             <Link
               to="/client/artisans"
-              className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 flex items-center gap-1"
+              className="text-xs font-semibold text-slate-500 hover:text-emerald-700 flex items-center gap-1 transition-colors"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
-              <span>Artisan Directory</span>
+              <span>Back to Directory</span>
             </Link>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Bookmark className="w-5 h-5 text-emerald-600 fill-sky-500/20" />
-            <span>Saved Artisans ({list.length})</span>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+            <span>Saved Artisans</span>
+            <span className="text-sm font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-500/20">
+              {list.length}
+            </span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-500">
             Quickly access your bookmarked artisans, invite them to projects, or initiate direct messages.
           </p>
         </div>
 
         <Link
           to="/client/artisans"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold transition-colors self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md shadow-emerald-900/10 transition-all self-start sm:self-auto"
         >
           <Search className="w-3.5 h-3.5" />
           <span>Browse More Artisans</span>
@@ -81,13 +83,15 @@ export const SavedArtisansPage: React.FC = () => {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((n) => (
-            <Card key={n} className="p-6 border-slate-200 animate-pulse h-48" />
+            <div key={n} className="p-6 bg-white rounded-[24px] border border-slate-200/80 animate-pulse h-52 shadow-sm" />
           ))}
         </div>
       ) : list.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-slate-200 ">
-          <Bookmark className="w-12 h-12 mx-auto text-slate-400 mb-3" />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
+        <div className="p-16 text-center border border-dashed border-slate-200 rounded-[24px] bg-white">
+          <div className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center mx-auto text-slate-400 mb-4">
+            <Bookmark className="w-6 h-6" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900">
             No saved artisans yet
           </h3>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
@@ -95,12 +99,12 @@ export const SavedArtisansPage: React.FC = () => {
           </p>
           <Link
             to="/client/artisans"
-            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-semibold"
+            className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md transition-all"
           >
             <Search className="w-3.5 h-3.5" />
             <span>Explore Artisan Directory</span>
           </Link>
-        </Card>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {list.map((item) => {
@@ -109,13 +113,13 @@ export const SavedArtisansPage: React.FC = () => {
               artisan?.businessName || artisan?.user?.email?.split('@')[0] || 'Artisan';
 
             return (
-              <Card
+              <div
                 key={item.id}
-                className="p-5 flex flex-col justify-between hover:border-emerald-600/40 transition-all border-slate-200 space-y-4"
+                className="p-6 bg-white rounded-[24px] border border-slate-200/80 hover:border-emerald-600/40 hover:shadow-md transition-all flex flex-col justify-between space-y-5"
               >
                 <div>
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3.5 min-w-0">
                       <Avatar
                         src={artisan?.user?.avatarUrl}
                         name={displayName}
@@ -123,13 +127,13 @@ export const SavedArtisansPage: React.FC = () => {
                         isOnline={artisan?.isAvailable}
                       />
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1">
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="text-sm font-bold text-slate-900 truncate">
                             {displayName}
                           </h3>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
                         </div>
-                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 font-medium">
                           <MapPin className="w-3 h-3 text-slate-400" />
                           <span>
                             {artisan?.lgaCity}, {artisan?.state}
@@ -141,19 +145,19 @@ export const SavedArtisansPage: React.FC = () => {
                     <button
                       onClick={() => removeBookmarkMutation.mutate(artisan.id)}
                       disabled={removeBookmarkMutation.isPending}
-                      className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                      className="p-2 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                       title="Remove Bookmark"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-3 leading-relaxed">
+                  <p className="text-xs text-slate-600 line-clamp-2 mt-3.5 leading-relaxed font-normal">
                     {artisan?.tagline || artisan?.bio || 'Professional artisan services.'}
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 space-y-3">
+                <div className="pt-4 border-t border-slate-100 space-y-3.5">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1 text-amber-500 font-bold">
                       <Star className="w-3.5 h-3.5 fill-amber-500" />
@@ -163,29 +167,29 @@ export const SavedArtisansPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="font-bold text-slate-900 dark:text-slate-100">
+                    <div className="font-extrabold text-slate-900">
                       {artisan?.hourlyRate ? `${formatCurrency(artisan.hourlyRate)}/hr` : 'Custom Quote'}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <Link
                       to={`/client/artisans/${artisan?.id}`}
-                      className="flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors"
+                      className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-sm"
                     >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>View Profile</span>
+                      <Eye className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Profile</span>
                     </Link>
                     <Link
                       to={`/client/artisans/${artisan?.id}?action=invite`}
-                      className="flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-sky-600 hover:bg-[#186644] text-white text-xs font-bold transition-colors"
+                      className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-900/10 transition-all"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>Invite</span>
                     </Link>
                   </div>
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>

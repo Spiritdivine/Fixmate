@@ -47,14 +47,14 @@ export const ArtisanLayout: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-[#f4f7f6] text-slate-900">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Loading Fixmate...</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 font-dashboard">Loading Artifix...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-[#f9fafb] text-slate-900 font-sans overflow-hidden antialiased">
+    <div className="flex h-screen bg-[#f9fafb] text-slate-900 font-dashboard overflow-hidden antialiased">
       {/* Toast Notification Popup */}
       {toastNotification && (
         <div

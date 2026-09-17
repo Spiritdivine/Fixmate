@@ -1,5 +1,8 @@
 import prisma from '../config/db.js';
 import { ApiError } from '../utils/api-error.js';
+import { ArtisanSpatialRepository } from '../repositories/artisan-spatial.repository.js';
+import { GeoUtils } from '../utils/geo.utils.js';
+import { spatialCache } from '../utils/spatial-cache.js';
 
 export class ProfileService {
   static async updateArtisanProfile(userId, data) {
@@ -40,6 +43,7 @@ export class ProfileService {
       });
     });
 
+    spatialCache.invalidateAll();
     return updated;
   }
 
@@ -56,6 +60,108 @@ export class ProfileService {
       where: { id: profile.id },
       data,
     });
+  }
+
+  static async getNearbyArtisans(query = {}) {
+    const isBBoxMode =
+      query.minLat !== undefined &&
+      query.maxLat !== undefined &&
+      query.minLng !== undefined &&
+      query.maxLng !== undefined;
+
+    // 1. Check Spatial Cache
+    const cacheKey = spatialCache.generateKey(
+      query.lat,
+      query.lng,
+      query.radius,
+      query
+    );
+
+    const cached = spatialCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const repository = new ArtisanSpatialRepository();
+    let candidates = [];
+    let total = 0;
+
+    if (isBBoxMode) {
+      const result = await repository.findArtisansInBoundingBox({
+        minLat: query.minLat,
+        maxLat: query.maxLat,
+        minLng: query.minLng,
+        maxLng: query.maxLng,
+        centerLat: query.lat,
+        centerLng: query.lng,
+        categoryId: query.categoryId,
+        skillId: query.skillId,
+        minRating: query.minRating,
+        search: query.search,
+        isAvailable: query.isAvailable,
+        page: query.page,
+        limit: query.limit,
+      });
+      candidates = result.candidates;
+      total = result.total;
+    } else {
+      const result = await repository.findNearbyArtisans(query);
+      candidates = result.candidates;
+      total = result.total;
+    }
+
+    // Apply deterministic coordinate fuzzing for client map rendering
+    const fuzzedArtisans = candidates.map((artisan) => {
+      const rawLat = artisan.latitude != null ? Number(artisan.latitude) : null;
+      const rawLng = artisan.longitude != null ? Number(artisan.longitude) : null;
+
+      const { fuzzedLat, fuzzedLng, isFuzzed } = GeoUtils.fuzzCoordinates(
+        rawLat,
+        rawLng,
+        artisan.id
+      );
+
+      return {
+        ...artisan,
+        displayLatitude: fuzzedLat,
+        displayLongitude: fuzzedLng,
+        isLocationObfuscated: isFuzzed,
+        // Suppress exact raw coordinates from public discovery responses
+        latitude: undefined,
+        longitude: undefined,
+      };
+    });
+
+    const page = Number(query.page || 1);
+    const limit = Number(query.limit || 20);
+
+    const searchCenter = isBBoxMode
+      ? {
+          lat: query.lat !== undefined ? Number(query.lat) : (Number(query.minLat) + Number(query.maxLat)) / 2,
+          lng: query.lng !== undefined ? Number(query.lng) : (Number(query.minLng) + Number(query.maxLng)) / 2,
+        }
+      : {
+          lat: Number(query.lat),
+          lng: Number(query.lng),
+        };
+
+    const response = {
+      artisans: fuzzedArtisans,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        searchCenter,
+        radiusKm: isBBoxMode ? null : Number(query.radius || 15),
+        isViewportSearch: isBBoxMode,
+      },
+    };
+
+    // Cache the result for subsequent requests
+    spatialCache.set(cacheKey, response);
+
+    return response;
   }
 
   static async getArtisans(filters = {}) {
@@ -259,20 +365,31 @@ export class ProfileService {
     const profile = await prisma.artisanProfile.findUnique({ where: { userId } });
     if (!profile) throw ApiError.notFound('Artisan profile not found');
 
-    return prisma.artisanProfile.update({
+    const updated = await prisma.artisanProfile.update({
       where: { id: profile.id },
       data: { isAvailable },
     });
+
+    spatialCache.invalidateAll();
+    return updated;
   }
 
-  static async updateLocation(userId, latitude, longitude) {
+  static async updateLocation(userId, latitude, longitude, addressDetails = {}) {
     const profile = await prisma.artisanProfile.findUnique({ where: { userId } });
     if (!profile) throw ApiError.notFound('Artisan profile not found');
 
-    return prisma.artisanProfile.update({
+    const updateData = { latitude, longitude };
+    if (addressDetails?.address) updateData.address = addressDetails.address;
+    if (addressDetails?.state) updateData.state = addressDetails.state;
+    if (addressDetails?.lgaCity) updateData.lgaCity = addressDetails.lgaCity;
+
+    const updated = await prisma.artisanProfile.update({
       where: { id: profile.id },
-      data: { latitude, longitude },
+      data: updateData,
     });
+
+    spatialCache.invalidateAll();
+    return updated;
   }
 
   /**
@@ -340,20 +457,22 @@ export class ProfileService {
   }
 
   static async updateWalletAddress(userId, walletAddress) {
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        walletAddress: { equals: walletAddress, mode: 'insensitive' },
-        id: { not: userId },
-      },
-    });
+    if (walletAddress) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          walletAddress: { equals: walletAddress, mode: 'insensitive' },
+          id: { not: userId },
+        },
+      });
 
-    if (existingUser) {
-      throw ApiError.conflict('This wallet address is already linked to another account');
+      if (existingUser) {
+        throw ApiError.conflict('This wallet address is already linked to another account');
+      }
     }
 
     return prisma.user.update({
       where: { id: userId },
-      data: { walletAddress },
+      data: { walletAddress: walletAddress || null },
       select: {
         id: true,
         email: true,

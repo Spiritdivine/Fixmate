@@ -1,4 +1,5 @@
 import { WalletService } from '../services/wallet.service.js';
+import { PaystackService } from '../services/paystack.service.js';
 import { ApiResponse } from '../utils/api-response.js';
 
 export class WalletController {
@@ -51,6 +52,16 @@ export class WalletController {
     }
   }
 
+  static async resolveBank(req, res, next) {
+    try {
+      const { accountNumber, bankCode } = req.query;
+      const result = await PaystackService.resolveBankAccount(accountNumber, bankCode);
+      res.status(200).json(new ApiResponse(200, result, 'Bank account resolved successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async setDefaultBank(req, res, next) {
     try {
       const result = await WalletService.setDefaultBankAccount(req.user.id, req.params.id);
@@ -76,6 +87,15 @@ export class WalletController {
     try {
       const result = await WalletService.cancelPayoutRequest(req.user.id, req.params.id);
       res.status(200).json(new ApiResponse(200, result, 'Withdrawal request cancelled'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getPayoutRequests(req, res, next) {
+    try {
+      const result = await WalletService.getPayoutRequests(req.user.id);
+      res.status(200).json(new ApiResponse(200, result, 'Payout requests fetched'));
     } catch (error) {
       next(error);
     }

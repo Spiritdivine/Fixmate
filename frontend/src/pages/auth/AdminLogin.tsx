@@ -34,7 +34,7 @@ export const AdminLogin: React.FC = () => {
       });
 
       if (data.data.user.role !== 'ADMIN' && data.data.user.role !== 'SUPPORT') {
-        setError('Unauthorized: This portal is strictly restricted to Fixmate Administrators.');
+        setError('Unauthorized: This portal is strictly restricted to Artifix Administrators.');
         return;
       }
 
@@ -58,7 +58,7 @@ export const AdminLogin: React.FC = () => {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-[24px] bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-xl shadow-purple-500/20 font-bold mb-2">
             <ShieldCheck className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-white">Fixmate Admin Console</h2>
+          <h2 className="text-2xl font-extrabold tracking-tight text-white">Artifix Admin Console</h2>
           <p className="text-xs text-purple-400 font-semibold uppercase tracking-wider">
             Superuser & Compliance Authorization
           </p>

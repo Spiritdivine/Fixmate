@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import { ApiError } from '../utils/api-error.js';
 import { NotificationService } from './notification.service.js';
+import { PaystackService } from './paystack.service.js';
 
 
 export class AdminService {
@@ -659,10 +660,36 @@ export class AdminService {
   static async updatePayoutStatus(adminId, payoutId, { status, gatewayTransferCode, failureReason }) {
     const payout = await prisma.payoutRequest.findUnique({
       where: { id: payoutId },
-      include: { wallet: true, user: true },
+      include: { wallet: true, user: true, bankAccount: true },
     });
 
     if (!payout) throw ApiError.notFound('Payout request not found');
+
+    let transferCode = gatewayTransferCode || payout.gatewayTransferCode;
+
+    // If approving a PENDING Paystack payout and transferCode is missing, initiate Paystack transfer
+    if ((status === 'PROCESSING' || status === 'COMPLETED') && payout.gateway === 'PAYSTACK' && !transferCode && payout.bankAccount) {
+      try {
+        const recipientCode = payout.bankAccount.recipientCode || await PaystackService.createTransferRecipient({
+          name: payout.bankAccount.accountName,
+          accountNumber: payout.bankAccount.accountNumber,
+          bankCode: payout.bankAccount.bankCode,
+        });
+
+        const transferResult = await PaystackService.initiateTransfer({
+          amountKobo: Math.round(Number(payout.amount) * 100),
+          recipientCode,
+          reference: payout.reference,
+          reason: `Fixmate Payout to ${payout.bankAccount.accountName}`,
+        });
+
+        if (transferResult?.transferCode) {
+          transferCode = transferResult.transferCode;
+        }
+      } catch (err) {
+        console.warn(`⚠️ Admin payout transfer trigger notice: ${err.message}`);
+      }
+    }
 
     return prisma.$transaction(async (tx) => {
       // If status is changed to REJECTED, refund the money back to the wallet
@@ -673,13 +700,23 @@ export class AdminService {
             availableBalance: { increment: Number(payout.amount) },
           },
         });
+
+        await tx.transaction.updateMany({
+          where: { reference: payout.reference },
+          data: { status: 'FAILED' },
+        });
+      } else if (status === 'COMPLETED') {
+        await tx.transaction.updateMany({
+          where: { reference: payout.reference },
+          data: { status: 'SUCCESS' },
+        });
       }
 
       const updatedPayout = await tx.payoutRequest.update({
         where: { id: payoutId },
         data: {
           status,
-          gatewayTransferCode: gatewayTransferCode || payout.gatewayTransferCode,
+          gatewayTransferCode: transferCode,
           failureReason: failureReason || (status === 'REJECTED' ? 'Rejected by administrator' : null),
           processedAt: status === 'COMPLETED' || status === 'REJECTED' ? new Date() : payout.processedAt,
         },
@@ -692,7 +729,7 @@ export class AdminService {
           entityType: 'PayoutRequest',
           entityId: payoutId,
           oldState: { status: payout.status },
-          newState: { status, gatewayTransferCode, failureReason },
+          newState: { status, gatewayTransferCode: transferCode, failureReason },
         },
       });
 

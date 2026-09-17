@@ -47,13 +47,23 @@
 
 @theme {
   --font-display: 'Clash Display', 'Cabinet Grotesk', 'Hijo', system-ui, sans-serif;
-  --font-sans: 'Satoshi', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-poppins: 'Poppins', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-dashboard: 'Poppins', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Poppins', 'Plus Jakarta Sans', 'Inter', 'Satoshi', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-hijo: 'Hijo', sans-serif;
 }
 
 .font-display {
   font-family: var(--font-display);
+}
+
+.font-dashboard {
+  font-family: var(--font-dashboard);
+}
+
+.font-poppins {
+  font-family: var(--font-poppins);
 }
 
 @layer base {
@@ -290,3 +300,43 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #2E382E !important;
   color: #FEF3C7 !important;
 }
+
+/* ============================================================ */
+/* LEAFLET MAP & CUSTOM PIN STYLING                            */
+/* ============================================================ */
+.custom-artisan-pin-container,
+.user-location-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-artisan-leaflet-popup .leaflet-popup-content-wrapper {
+  background: #ffffff;
+  color: #1e293b;
+  border-radius: 20px;
+  padding: 0;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.custom-artisan-leaflet-popup .leaflet-popup-content {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.custom-artisan-leaflet-popup .leaflet-popup-tip {
+  background: #ffffff;
+}
+
+.custom-artisan-leaflet-popup a.leaflet-popup-close-button {
+  top: 8px;
+  right: 8px;
+  color: #94a3b8;
+  font-size: 16px;
+  padding: 4px;
+}
+
+.custom-artisan-leaflet-popup a.leaflet-popup-close-button:hover {
+  color: #0f172a;
+}
+

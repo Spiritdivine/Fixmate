@@ -99,21 +99,29 @@ export const ProposalReviewPage: React.FC = () => {
   const artisanName = artisanProfile?.businessName || artisan?.email?.split('@')[0] || 'Artisan';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
+    <div className="max-w-4xl mx-auto space-y-8 pb-16 font-dashboard">
       {/* Back Link */}
-      <div>
+      <div className="space-y-3">
         <Link
           to={`/client/jobs/${proposal.jobId}`}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-emerald-700 transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>Back to Job &amp; All Proposals</span>
         </Link>
+        <div className="space-y-1">
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            Proposal Evaluation
+          </h1>
+          <p className="text-sm text-slate-500">
+            Review detailed terms, milestone timeline, and pricing submitted by this artisan.
+          </p>
+        </div>
       </div>
 
-      {/* Hero Header */}
-      <Card className="p-6 sm:p-8 border-slate-200 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 ">
+      {/* Hero Header Card */}
+      <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-100">
           <div className="flex items-center gap-4">
             <Avatar
               src={artisan?.avatarUrl}
@@ -121,17 +129,21 @@ export const ProposalReviewPage: React.FC = () => {
               size="lg"
               isOnline={artisanProfile?.isAvailable}
             />
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-xl font-bold text-slate-900">
                   {artisanName}
-                </h1>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <Badge variant={proposal.status === 'ACCEPTED' ? 'emerald' : 'blue'}>
+                </h2>
+                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border ${
+                  proposal.status === 'ACCEPTED'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-500/20'
+                    : 'bg-blue-50 text-blue-800 border-blue-500/20'
+                }`}>
                   {proposal.status}
-                </Badge>
+                </span>
               </div>
-              <p className="text-xs text-slate-500 flex items-center gap-3">
+              <div className="text-xs text-slate-500 font-medium flex items-center gap-3">
                 <span className="flex items-center gap-1 text-amber-500 font-bold">
                   <Star className="w-3.5 h-3.5 fill-amber-500" />
                   {Number(artisanProfile?.ratingAvg || 0).toFixed(1)}
@@ -140,15 +152,15 @@ export const ProposalReviewPage: React.FC = () => {
                 <span>{artisanProfile?.lgaCity}, {artisanProfile?.state}</span>
                 <span>•</span>
                 <span>{artisanProfile?.yearsOfExperience || 0} yrs experience</span>
-              </p>
+              </div>
             </div>
           </div>
 
-          <div className="text-left sm:text-right shrink-0">
-            <span className="text-[10px] text-slate-400 uppercase font-semibold">
+          <div className="text-left sm:text-right shrink-0 bg-slate-50/80 px-5 py-3 rounded-2xl border border-slate-100">
+            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
               Total Proposed Bid
             </span>
-            <p className="text-2xl font-black text-slate-900 dark:text-slate-100">
+            <p className="text-2xl font-black text-slate-900">
               {formatCurrency(proposal.bidAmount)}
             </p>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -159,39 +171,39 @@ export const ProposalReviewPage: React.FC = () => {
 
         {/* Cover Letter */}
         <div className="space-y-2">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
             Proposal Statement / Cover Letter
-          </h2>
-          <div className="p-5 rounded-[24px] bg-slate-50 dark:bg-slate-900 text-xs sm:text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+          </h3>
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/60 text-sm text-slate-700 whitespace-pre-line leading-relaxed">
             {proposal.coverLetter}
           </div>
         </div>
 
         {/* Milestones Breakdown */}
         {proposal.milestones && proposal.milestones.length > 0 && (
-          <div className="space-y-3 pt-4 border-t border-slate-100 ">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="space-y-3 pt-4 border-t border-slate-100">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
               Proposed Milestones ({proposal.milestones.length})
-            </h2>
-            <div className="space-y-2">
+            </h3>
+            <div className="space-y-2.5">
               {proposal.milestones.map((m, idx) => (
                 <div
                   key={m.id || idx}
-                  className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-between text-xs"
+                  className="p-4 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-between text-xs"
                 >
                   <div className="space-y-0.5">
-                    <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-sky-400">
+                    <span className="text-[10px] font-bold uppercase text-emerald-800 tracking-wide">
                       Step {idx + 1}
                     </span>
-                    <h3 className="font-bold text-slate-900 dark:text-slate-100">
+                    <h4 className="font-bold text-slate-900 text-sm">
                       {m.title}
-                    </h3>
+                    </h4>
                   </div>
                   <div className="text-right">
-                    <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">
+                    <span className="font-extrabold text-emerald-800 text-base">
                       {formatCurrency(m.amount)}
                     </span>
-                    <p className="text-[10px] text-slate-400">{m.estimatedDays} days</p>
+                    <p className="text-[11px] text-slate-400 font-medium">{m.estimatedDays} days</p>
                   </div>
                 </div>
               ))}
@@ -200,28 +212,28 @@ export const ProposalReviewPage: React.FC = () => {
         )}
 
         {/* Actions Bottom Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-100 ">
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-100">
           <div className="flex items-center gap-2">
             <button
               onClick={() => updateStatusMutation.mutate('SHORTLISTED')}
               disabled={updateStatusMutation.isPending || proposal.status === 'SHORTLISTED'}
-              className="px-4 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-xs font-bold hover:bg-purple-100 transition-colors"
+              className="px-5 py-2.5 rounded-full bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 text-xs font-bold transition-colors disabled:opacity-50"
             >
               Shortlist
             </button>
             <button
               onClick={() => updateStatusMutation.mutate('REJECTED')}
               disabled={updateStatusMutation.isPending || proposal.status === 'REJECTED'}
-              className="px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold hover:bg-rose-100 transition-colors"
+              className="px-5 py-2.5 rounded-full bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition-colors disabled:opacity-50"
             >
               Decline
             </button>
             <button
               onClick={() => startChatMutation.mutate()}
               disabled={startChatMutation.isPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-sm"
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
               <span>Discuss via Chat</span>
             </button>
           </div>
@@ -229,14 +241,14 @@ export const ProposalReviewPage: React.FC = () => {
           {proposal.status !== 'ACCEPTED' && (
             <Link
               to={`/client/proposals/${proposal.id}/accept`}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
+              className="inline-flex items-center gap-2 px-7 py-2.5 rounded-full bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-900/15 transition-all active:scale-95"
             >
               <FileCheck className="w-4 h-4" />
               <span>Accept &amp; Establish Escrow Contract</span>
             </Link>
           )}
         </div>
-      </Card>
+      </div>
     </div>
   );
 };
