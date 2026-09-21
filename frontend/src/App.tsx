@@ -6,6 +6,7 @@ import { PrivyProviderWrapper } from './lib/privy-provider';
 
 // Landing & Auth Pages
 import { LandingPage } from './pages/LandingPage';
+import { LandingPageV2 } from './pages/LandingPageV2';
 import { Login } from './pages/auth/Login';
 import { AdminLogin } from './pages/auth/AdminLogin';
 import { Register } from './pages/auth/Register';
@@ -186,6 +187,7 @@ export function App() {
             </Route>
 
             {/* Root & Fallback */}
+            <Route path="/v2" element={<LandingPageV2 />} />
             <Route path="/" element={<LandingPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

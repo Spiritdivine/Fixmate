@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search,
   MapPin,
@@ -28,9 +28,12 @@ import { useMapSync } from '../../hooks/useMapSync';
 export const FindArtisansPage: React.FC = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const categoryParam = searchParams.get('category') || '';
+  const searchParam = searchParams.get('q') || '';
 
   // Search & Filter State
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchParam);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedState, setSelectedState] = useState<string>('');
   const [minRating, setMinRating] = useState<string>('');
@@ -93,6 +96,18 @@ export const FindArtisansPage: React.FC = () => {
       return (Array.isArray(data.data) ? data.data : (data.data as any)?.categories) || [];
     },
   });
+
+  // Automatically select category from URL param when categories are loaded
+  useEffect(() => {
+    if (categoryParam && categories.length > 0) {
+      const match = categories.find(
+        (c) => c.slug === categoryParam || String(c.id) === categoryParam || c.name.toLowerCase().includes(categoryParam.toLowerCase())
+      );
+      if (match) {
+        setSelectedCategory(String(match.id));
+      }
+    }
+  }, [categoryParam, categories]);
 
   // 3. Spatial Query: Fetch Nearby Artisans using our Phase 1 Spatial API
   const {

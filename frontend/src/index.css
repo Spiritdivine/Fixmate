@@ -340,3 +340,34 @@ h1, h2, h3, h4, h5, h6 {
   color: #0f172a;
 }
 
+/* ============================================================ */
+/* CONTINUOUS AUTO-MOVING SLIDER / MARQUEE ANIMATIONS           */
+/* ============================================================ */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 24s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-slow {
+  display: flex;
+  width: max-content;
+  animation: marquee 32s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover,
+.animate-marquee-slow:hover {
+  animation-play-state: paused;
+}
+

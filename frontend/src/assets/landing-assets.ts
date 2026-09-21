@@ -10,6 +10,12 @@ export const LANDING_IMAGES = {
   // Solar technician installing panels outdoors
   solarTech: 'https://images.unsplash.com/photo-1590402494682-cd3fb53b1f70?auto=format&fit=crop&w=600&q=80',
   
+  // Smart display / tech board presentation (matching Card 1 in reference)
+  techDisplay: 'https://images.unsplash.com/photo-1576267423445-b2e0074d68a4?auto=format&fit=crop&w=600&q=80',
+  
+  // Specialized plumbing / mechanical toolset (matching Card 2 in reference)
+  plumbingTools: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80',
+  
   // Plumber working with pipe wrench
   plumber: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?auto=format&fit=crop&w=600&q=80',
   
@@ -21,6 +27,12 @@ export const LANDING_IMAGES = {
   
   // Construction worker on roof in orange vest
   roofer: 'https://images.unsplash.com/photo-1517581177682-a085bb7ffb15?auto=format&fit=crop&w=600&q=80',
+  
+  // Luxury living room interior with recessed ceiling lights & POP finishes
+  interiorRoofing: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=700&q=80',
+  
+  // Luxury modern kitchen cabinetry & joinery
+  kitchenCabinetry: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=700&q=80',
   
   // Proof of Work: Before (empty utility wall)
   proofBefore: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
