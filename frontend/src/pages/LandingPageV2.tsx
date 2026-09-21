@@ -461,7 +461,7 @@ export function LandingPageV2() {
                 {/* ==================================================== */}
                 {/* FLOATING BADGE: "Verified Artisan" (Top Right)      */}
                 {/* ==================================================== */}
-                <div className="absolute top-12 right-[170px] z-30 bg-white rounded-xl shadow-[0_8px_22px_rgba(0,0,0,0.14)] px-3.5 py-2 flex items-center gap-2 border border-stone-100/90">
+                <div className="absolute top-12 right-[170px] z-30 bg-white rounded-xl shadow-[0_8px_22px_rgba(0,0,0,0.14)] px-3.5 py-2 flex items-center gap-2">
                   <div className="w-5 h-5 rounded-md bg-[#1C5839] text-white flex items-center justify-center shadow-sm">
                     <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -475,7 +475,7 @@ export function LandingPageV2() {
                 {/* ==================================================== */}
                 {/* FLOATING CARD: "Bathroom Renovation" ESCROW STEPPER */}
                 {/* ==================================================== */}
-                <div className="absolute top-[215px] left-[10px] z-30 bg-white rounded-2xl shadow-[0_16px_36px_rgba(0,0,0,0.14)] p-4 w-[210px] border border-stone-100/90 backdrop-blur-sm">
+                <div className="absolute top-[215px] left-[10px] z-30 bg-white rounded-2xl shadow-[0_16px_36px_rgba(0,0,0,0.14)] p-4 w-[210px] backdrop-blur-sm">
                   
                   {/* Header: Thumbnail + Price */}
                   <div className="flex items-center gap-2.5 mb-2.5 pb-2 border-b border-stone-100">
@@ -534,7 +534,7 @@ export function LandingPageV2() {
                 {/* ==================================================== */}
                 {/* FLOATING DARK CARD: "Secure Escrow" Dual Payment     */}
                 {/* ==================================================== */}
-                <div className="absolute bottom-4 right-6 z-30 bg-[#0D1815] text-white rounded-2xl p-4 shadow-[0_20px_40px_rgba(0,0,0,0.35)] border border-white/10 w-[290px] backdrop-blur-md">
+                <div className="absolute bottom-4 right-6 z-30 bg-[#0D1815] text-white rounded-2xl p-4 shadow-[0_20px_40px_rgba(0,0,0,0.35)] w-[290px] backdrop-blur-md">
                   
                   <div className="text-[13px] font-bold tracking-tight text-white mb-0.5">
                     Secure Escrow
@@ -545,7 +545,7 @@ export function LandingPageV2() {
 
                   <div className="grid grid-cols-2 gap-2">
                     {/* NGN Rail */}
-                    <div className="bg-[#182622] rounded-xl p-2 flex items-center gap-2 border border-white/5 hover:bg-[#20322d] transition-colors">
+                    <div className="bg-[#182622] rounded-xl p-2 flex items-center gap-2 hover:bg-[#20322d] transition-colors">
                       <div className="w-6 h-6 rounded-full bg-white text-stone-950 font-black flex items-center justify-center text-[10px] shrink-0">
                         ₦
                       </div>
@@ -556,7 +556,7 @@ export function LandingPageV2() {
                     </div>
 
                     {/* MON Rail */}
-                    <div className="bg-[#182622] rounded-xl p-2 flex items-center gap-2 border border-white/5 hover:bg-[#20322d] transition-colors">
+                    <div className="bg-[#182622] rounded-xl p-2 flex items-center gap-2 hover:bg-[#20322d] transition-colors">
                       <div className="w-6 h-6 rounded-full bg-[#836EF9] text-white font-black flex items-center justify-center text-[10px] shrink-0">
                         <span className="w-1.5 h-1.5 rounded-full border border-white" />
                       </div>

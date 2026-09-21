@@ -51,7 +51,7 @@ export const SocialProofSection: React.FC = () => {
           {metrics.map((item, idx) => (
             <div 
               key={idx}
-              className="bg-white rounded-2xl p-5 sm:p-6 border border-stone-200/80 shadow-sm text-center flex flex-col justify-center"
+              className="bg-white rounded-2xl p-5 sm:p-6 shadow-[0_2px_12px_rgba(20,26,22,0.04)] hover:shadow-md transition-all text-center flex flex-col justify-center"
             >
               <div 
                 className="text-3xl sm:text-4xl font-extrabold text-[#123E2A] mb-1 tracking-tight"
@@ -99,7 +99,7 @@ export const SocialProofSection: React.FC = () => {
           {stories.map((story, idx) => (
             <div 
               key={idx}
-              className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-[0_8px_24px_rgba(20,26,22,0.04)] hover:shadow-lg transition-all flex flex-col justify-between"
+              className="bg-white rounded-3xl p-6 sm:p-7 shadow-[0_4px_24px_rgba(20,26,22,0.05)] hover:shadow-xl transition-all flex flex-col justify-between"
             >
               <div>
                 {/* Header: Avatar, Name, Role */}
@@ -107,7 +107,7 @@ export const SocialProofSection: React.FC = () => {
                   <img
                     src={story.avatar}
                     alt={story.name}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-[#123E2A]/20 shrink-0"
+                    className="w-12 h-12 rounded-full object-cover shrink-0"
                   />
                   <div>
                     <h3 className="text-sm sm:text-base font-bold text-[#141A16]">

@@ -42,7 +42,7 @@ export const TrustInfrastructureSection: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-7 mb-12 sm:mb-16">
           
           {/* Pillar 1: Local Fiat Rails */}
-          <div className="bg-[#14221D] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-xl flex flex-col justify-between hover:border-emerald-500/40 transition-colors">
+          <div className="bg-[#14221D] rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col justify-between hover:bg-[#182a24] transition-colors">
             <div>
               <div className="w-12 h-12 rounded-2xl bg-white text-stone-900 flex items-center justify-center font-extrabold text-lg mb-6 shadow-sm">
                 ₦
@@ -58,7 +58,7 @@ export const TrustInfrastructureSection: React.FC = () => {
               </p>
             </div>
 
-            <div className="space-y-2 pt-4 border-t border-white/10 text-xs text-stone-400">
+            <div className="space-y-2 pt-4 border-t border-white/5 text-xs text-stone-400">
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
                 <span>Zero crypto or wallet required</span>
@@ -75,7 +75,7 @@ export const TrustInfrastructureSection: React.FC = () => {
           </div>
 
           {/* Pillar 2: Monad Web3 Rails */}
-          <div className="bg-[#14221D] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-xl flex flex-col justify-between hover:border-[#836EF9]/50 transition-colors relative overflow-hidden">
+          <div className="bg-[#14221D] rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col justify-between hover:bg-[#182a24] transition-colors relative overflow-hidden">
             <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-[#836EF9]/10 rounded-full blur-xl pointer-events-none" />
             
             <div>
@@ -93,7 +93,7 @@ export const TrustInfrastructureSection: React.FC = () => {
               </p>
             </div>
 
-            <div className="space-y-2 pt-4 border-t border-white/10 text-xs text-stone-400">
+            <div className="space-y-2 pt-4 border-t border-white/5 text-xs text-stone-400">
               <div className="flex items-center gap-2">
                 <span className="text-[#836EF9] font-bold">✓</span>
                 <span>Sub-second settlement speed (0.8s)</span>
@@ -110,9 +110,9 @@ export const TrustInfrastructureSection: React.FC = () => {
           </div>
 
           {/* Pillar 3: Proof-of-Work Vault */}
-          <div className="bg-[#14221D] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-xl flex flex-col justify-between hover:border-emerald-500/40 transition-colors">
+          <div className="bg-[#14221D] rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col justify-between hover:bg-[#182a24] transition-colors">
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-6 shadow-sm border border-emerald-500/30">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-6 shadow-sm">
                 <svg className="w-6 h-6 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.25-8.25-3.286zm0 13.036h.008v.008H12v-.008z" />
                 </svg>
@@ -128,7 +128,7 @@ export const TrustInfrastructureSection: React.FC = () => {
               </p>
             </div>
 
-            <div className="space-y-2 pt-4 border-t border-white/10 text-xs text-stone-400">
+            <div className="space-y-2 pt-4 border-t border-white/5 text-xs text-stone-400">
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">✓</span>
                 <span>Geotagged &amp; timestamped inspection</span>
@@ -147,7 +147,7 @@ export const TrustInfrastructureSection: React.FC = () => {
         </div>
 
         {/* Live Network Telemetry Bar */}
-        <div className="bg-[#182622] rounded-2xl p-4 sm:p-5 border border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+        <div className="bg-[#182622] rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-mono text-stone-300">

@@ -109,12 +109,12 @@ export const HowItWorksSection: React.FC = () => {
             {steps.map((item, idx) => (
               <div 
                 key={idx}
-                className="bg-white rounded-2xl p-6 sm:p-7 border border-stone-200/80 shadow-[0_8px_24px_rgba(20,26,22,0.04)] hover:shadow-[0_16px_36px_rgba(20,26,22,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group"
+                className="bg-white rounded-2xl p-6 sm:p-7 shadow-[0_4px_20px_rgba(20,26,22,0.04)] hover:shadow-[0_16px_36px_rgba(20,26,22,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group"
               >
                 <div>
                   {/* Top Header: Step Number + Icon */}
                   <div className="flex items-center justify-between mb-5">
-                    <div className="w-12 h-12 rounded-xl bg-[#FAF7F0] border border-stone-200/80 text-[#123E2A] flex items-center justify-center group-hover:scale-105 group-hover:bg-[#123E2A] group-hover:text-white transition-all shadow-sm">
+                    <div className="w-12 h-12 rounded-xl bg-[#FAF7F0] text-[#123E2A] flex items-center justify-center group-hover:scale-105 group-hover:bg-[#123E2A] group-hover:text-white transition-all shadow-sm">
                       {item.icon}
                     </div>
                     <span 

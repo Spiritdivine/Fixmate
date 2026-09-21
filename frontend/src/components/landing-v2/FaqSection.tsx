@@ -70,7 +70,7 @@ export const FaqSection: React.FC = () => {
             return (
               <div 
                 key={idx}
-                className="bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden transition-all duration-200"
+                className="bg-white rounded-2xl shadow-[0_2px_10px_rgba(20,26,22,0.03)] hover:shadow-md overflow-hidden transition-all duration-200"
               >
                 <button
                   type="button"
@@ -89,7 +89,7 @@ export const FaqSection: React.FC = () => {
                 </button>
 
                 {isOpen && (
-                  <div className="px-5 sm:px-6 pb-5 pt-1 text-xs sm:text-sm text-[#556259] leading-relaxed border-t border-stone-100">
+                  <div className="px-5 sm:px-6 pb-5 pt-1 text-xs sm:text-sm text-[#556259] leading-relaxed border-t border-stone-100/60">
                     {faq.a}
                   </div>
                 )}

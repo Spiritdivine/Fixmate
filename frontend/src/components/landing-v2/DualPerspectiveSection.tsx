@@ -92,7 +92,7 @@ export const DualPerspectiveSection: React.FC = () => {
               {activePerspective === 'artisan' ? (
                 <>
                   {/* Artisan Card 1: 100% Guaranteed Payment Payouts (Active / Highlighted) */}
-                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 border border-[#E5E0D4] shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-md transition-all relative overflow-hidden flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
+                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all relative overflow-hidden flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
                     {/* Left active green indicator bar */}
                     <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#0C2B22] rounded-l-[18px] sm:rounded-l-[22px]" />
 
@@ -128,7 +128,7 @@ export const DualPerspectiveSection: React.FC = () => {
                   </div>
 
                   {/* Artisan Card 2: Verifiable On-Chain Work History */}
-                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 border border-[#E5E0D4] shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:shadow-md transition-all flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
+                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
                     <div className="flex items-start gap-3.5 sm:gap-5">
                       {/* Document icon in sage square */}
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-[12px] sm:rounded-[14px] bg-[#E1ECE4] text-[#0C2B22] flex items-center justify-center shrink-0">
@@ -160,7 +160,7 @@ export const DualPerspectiveSection: React.FC = () => {
                   </div>
 
                   {/* Artisan Card 3: Direct High-Budget Commercial & Diaspora Clients */}
-                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 border border-[#E5E0D4] shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:shadow-md transition-all flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
+                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
                     <div className="flex items-start gap-3.5 sm:gap-5">
                       {/* Community / People icon in sage square */}
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-[12px] sm:rounded-[14px] bg-[#E1ECE4] text-[#0C2B22] flex items-center justify-center shrink-0">
@@ -194,7 +194,7 @@ export const DualPerspectiveSection: React.FC = () => {
               ) : (
                 <>
                   {/* Client Card 1: Rigorous Identity & Competence Vetting */}
-                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 border border-[#E5E0D4] shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-md transition-all relative overflow-hidden flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
+                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all relative overflow-hidden flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
                     <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#0C2B22] rounded-l-[18px] sm:rounded-l-[22px]" />
 
                     <div className="flex items-start gap-3.5 sm:gap-5 pl-1 sm:pl-1.5">
@@ -227,7 +227,7 @@ export const DualPerspectiveSection: React.FC = () => {
                   </div>
 
                   {/* Client Card 2: Fixed Milestone Escrow Protection */}
-                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 border border-[#E5E0D4] shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:shadow-md transition-all flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
+                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
                     <div className="flex items-start gap-3.5 sm:gap-5">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-[12px] sm:rounded-[14px] bg-[#E1ECE4] text-[#0C2B22] flex items-center justify-center shrink-0">
                         <svg className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +258,7 @@ export const DualPerspectiveSection: React.FC = () => {
                   </div>
 
                   {/* Client Card 3: Objective 48-Hour Dispute Tribunal */}
-                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 border border-[#E5E0D4] shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:shadow-md transition-all flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
+                  <div className="w-full bg-white rounded-[18px] sm:rounded-[22px] p-4 sm:p-5 md:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all flex items-start sm:items-center justify-between gap-3 sm:gap-4 group">
                     <div className="flex items-start gap-3.5 sm:gap-5">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-[12px] sm:rounded-[14px] bg-[#E1ECE4] text-[#0C2B22] flex items-center justify-center shrink-0">
                         <svg className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,7 +276,7 @@ export const DualPerspectiveSection: React.FC = () => {
                           className="text-xs sm:text-[13px] text-[#556259] leading-[1.55] sm:leading-[1.65]"
                           style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
                         >
-                          If an artisan delivers defective work or misses critical milestones, our dispute tribunal reviews the photo and video logs to authorize a full or partial refund with zero hassle.
+                          If workmanship falls short of stated milestones, funds remain safely protected while verified independent master craftsmen evaluate photographic evidence and arbitrate within 48 hours.
                         </p>
                       </div>
                     </div>
@@ -387,7 +387,7 @@ export const DualPerspectiveSection: React.FC = () => {
                   </div>
 
                   {/* 3. FLOATING BADGE: "Verified Artisan" (Overlapping the right edge of Photo 1 & 2) */}
-                  <div className="absolute top-[180px] sm:top-[190px] right-2 sm:right-4 z-25 bg-white rounded-2xl px-3.5 py-2.5 shadow-[0_10px_25px_rgba(0,0,0,0.08)] border border-stone-100 flex items-center gap-2.5">
+                  <div className="absolute top-[180px] sm:top-[190px] right-2 sm:right-4 z-25 bg-white rounded-2xl px-3.5 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.1)] flex items-center gap-2.5">
                     <div className="w-6 h-6 rounded-md bg-[#167848] text-white flex items-center justify-center shrink-0 shadow-xs">
                       <svg className="w-3.5 h-3.5 stroke-[2.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -412,12 +412,12 @@ export const DualPerspectiveSection: React.FC = () => {
                   </div>
 
                   {/* 5. MAIN CENTERPIECE: Dark Escrow Vault Mockup Card (Foreground) */}
-                  <div className="absolute top-8 left-0 w-[355px] sm:w-[380px] z-20 bg-gradient-to-b from-[#081B15] via-[#05140F] to-[#030D09] text-white rounded-[28px] p-5 sm:p-6 border border-[#1E4D38]/70 shadow-[0_25px_60px_-10px_rgba(2,12,8,0.65),0_0_0_1px_rgba(255,255,255,0.06)]">
+                  <div className="absolute top-8 left-0 w-[355px] sm:w-[380px] z-20 bg-gradient-to-b from-[#081B15] via-[#05140F] to-[#030D09] text-white rounded-[28px] p-5 sm:p-6 shadow-[0_25px_60px_-10px_rgba(2,12,8,0.65)]">
                     
                     {/* Header: Brand Identity & Active Escrow Pill */}
                     <div className="flex items-center justify-between pb-3.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-white">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center text-white">
                           <svg className="w-4 h-4 text-[#34D399]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <circle cx="9" cy="12" r="4.5" strokeLinecap="round" />
                             <circle cx="15" cy="12" r="4.5" strokeLinecap="round" />
@@ -432,7 +432,7 @@ export const DualPerspectiveSection: React.FC = () => {
                       </div>
 
                       {/* Active Escrow Badge */}
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0D3123] border border-[#1E5C3E]/70 text-[#34D399] text-[11px] font-semibold">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0D3123] text-[#34D399] text-[11px] font-semibold">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
                         <span>Escrow Vault Active</span>
                       </div>
@@ -467,7 +467,7 @@ export const DualPerspectiveSection: React.FC = () => {
                     <div className="space-y-2.5">
                       
                       {/* Item 1: Commercial Conduit Fitting */}
-                      <div className="bg-[#0E241E]/95 hover:bg-[#122E26] transition-colors rounded-2xl p-3 border border-white/[0.06] flex items-center justify-between gap-3">
+                      <div className="bg-[#0E241E]/95 hover:bg-[#122E26] transition-colors rounded-2xl p-3 flex items-center justify-between gap-3 shadow-sm">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-xl bg-[#143B2C] text-[#34D399] flex items-center justify-center shrink-0">
                             <svg className="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -496,14 +496,14 @@ export const DualPerspectiveSection: React.FC = () => {
                           >
                             ₦220,000
                           </div>
-                          <span className="inline-block text-[9px] font-medium text-[#34D399] bg-[#0A2E20] border border-[#1A5C3E]/50 px-2 py-0.5 rounded-full mt-0.5">
+                          <span className="inline-block text-[9px] font-medium text-[#34D399] bg-[#0A2E20] px-2 py-0.5 rounded-full mt-0.5">
                             Locked In Escrow
                           </span>
                         </div>
                       </div>
 
                       {/* Item 2: DB Panel Upgrade & Earthing */}
-                      <div className="bg-[#0E241E]/95 hover:bg-[#122E26] transition-colors rounded-2xl p-3 border border-white/[0.06] flex items-center justify-between gap-3">
+                      <div className="bg-[#0E241E]/95 hover:bg-[#122E26] transition-colors rounded-2xl p-3 flex items-center justify-between gap-3 shadow-sm">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-xl bg-[#143B2C] text-[#34D399] flex items-center justify-center shrink-0">
                             <svg className="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -532,14 +532,14 @@ export const DualPerspectiveSection: React.FC = () => {
                           >
                             ₦165,000
                           </div>
-                          <span className="inline-block text-[9px] font-medium text-[#34D399] bg-[#0A2E20] border border-[#1A5C3E]/50 px-2 py-0.5 rounded-full mt-0.5">
+                          <span className="inline-block text-[9px] font-medium text-[#34D399] bg-[#0A2E20] px-2 py-0.5 rounded-full mt-0.5">
                             Locked In Escrow
                           </span>
                         </div>
                       </div>
 
                       {/* Item 3: Instant Local Bank Credit */}
-                      <div className="bg-[#0E241E]/95 hover:bg-[#122E26] transition-colors rounded-2xl p-3 border border-white/[0.06] flex items-center justify-between gap-3">
+                      <div className="bg-[#0E241E]/95 hover:bg-[#122E26] transition-colors rounded-2xl p-3 flex items-center justify-between gap-3 shadow-sm">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-xl bg-[#143B2C] text-[#34D399] flex items-center justify-center shrink-0">
                             <svg className="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -562,14 +562,14 @@ export const DualPerspectiveSection: React.FC = () => {
                           </div>
                         </div>
                         <div className="shrink-0">
-                          <span className="inline-block text-[10px] font-semibold text-[#34D399] bg-[#0A2E20] border border-[#1A5C3E]/50 px-2.5 py-1 rounded-full">
+                          <span className="inline-block text-[10px] font-semibold text-[#34D399] bg-[#0A2E20] px-2.5 py-1 rounded-full">
                             &lt; 60s Settlement
                           </span>
                         </div>
                       </div>
 
                       {/* Item 4: NGN & MON Payments */}
-                      <div className="bg-[#0E241E]/95 hover:bg-[#122E26] transition-colors rounded-2xl p-3 border border-white/[0.06] flex items-center justify-between gap-3">
+                      <div className="bg-[#0E241E]/95 hover:bg-[#122E26] transition-colors rounded-2xl p-3 flex items-center justify-between gap-3 shadow-sm">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-xl bg-[#143B2C] text-[#34D399] flex items-center justify-center shrink-0">
                             <svg className="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -603,8 +603,8 @@ export const DualPerspectiveSection: React.FC = () => {
                   </div>
 
                   {/* 6. FLOATING CARD: "Secure Escrow" (Bottom Right, Below Photo 2) */}
-                  <div className="absolute top-[455px] sm:top-[475px] right-0 sm:right-2 z-25 bg-white rounded-[22px] p-4 shadow-[0_16px_36px_rgba(0,0,0,0.08)] border border-stone-200/90 w-[175px] sm:w-[185px]">
-                    <div className="w-8 h-8 rounded-xl bg-[#F0F5F2] border border-[#D5E2D9] text-[#143B2C] flex items-center justify-center mb-2.5 shadow-2xs">
+                  <div className="absolute top-[455px] sm:top-[475px] right-0 sm:right-2 z-25 bg-white rounded-[22px] p-4 shadow-[0_16px_36px_rgba(0,0,0,0.12)] w-[175px] sm:w-[185px]">
+                    <div className="w-8 h-8 rounded-xl bg-[#F0F5F2] text-[#143B2C] flex items-center justify-center mb-2.5 shadow-2xs">
                       {/* Safe / Vault / Stacked Coins Icon */}
                       <svg className="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
