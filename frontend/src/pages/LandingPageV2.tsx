@@ -301,7 +301,7 @@ export function LandingPageV2() {
             
             {/* Tagline / Eyebrow */}
             <div className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em] text-[#6A7B70] uppercase mb-2.5 sm:mb-4">
-              TRUSTED ARTISANS. SECURE PAYMENTS. REAL WORK.
+              TRUSTED ARTISANS • SECURE ESCROW • VERIFIED WORK
             </div>
 
             {/* Main Headline */}
@@ -309,12 +309,12 @@ export function LandingPageV2() {
               className="text-[32px] xs:text-[36px] sm:text-[42px] md:text-[38px] lg:text-[48px] xl:text-[56px] font-bold text-[#141A16] leading-[1.08] tracking-[-0.03em] mb-3.5 sm:mb-5"
               style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
             >
-              The <span className="font-serif italic font-normal text-[#121814]" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>safer</span> way to hire and get home services done.
+              Hire skilled artisans with <span className="font-serif italic font-normal text-[#121814]" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>confidence.</span>
             </h1>
 
             {/* Subparagraph */}
             <p className="text-[13px] sm:text-[14px] lg:text-[15px] text-[#556259] leading-[1.65] max-w-[500px] mb-6 sm:mb-8 font-normal">
-              Artifix is a decentralized trust and escrow infrastructure for Africa's informal service economy. We connect you with verified artisans and protect both sides of the transaction — with milestone-based escrow, verifiable work evidence, and fair dispute resolution.
+              Find verified professionals, secure payments through escrow, and release funds only when work is completed as agreed.
             </p>
 
             {/* Action Buttons */}
@@ -343,11 +343,11 @@ export function LandingPageV2() {
           <div className="md:col-span-6 relative w-full flex flex-col justify-center items-center select-none pt-2 pb-2">
             
             {/* Outer Responsive Wrapper: Reserves the exact scaled height */}
-            <div className="relative w-[320px] xs:w-[360px] sm:w-[440px] md:w-[390px] lg:w-[530px] xl:w-[560px] h-[315px] xs:h-[355px] sm:h-[435px] md:h-[385px] lg:h-[520px] xl:h-[550px] transition-all duration-300">
+            <div className="relative w-[320px] xs:w-[360px] sm:w-[440px] md:w-[390px] lg:w-[476px] xl:w-[504px] h-[315px] xs:h-[355px] sm:h-[435px] md:h-[385px] lg:h-[468px] xl:h-[495px] transition-all duration-300">
               
               {/* Inner Scaled Canvas (560px baseline scaled proportionally) */}
               <div 
-                className="absolute top-0 left-1/2 -translate-x-1/2 origin-top scale-[0.57] xs:scale-[0.64] sm:scale-[0.79] md:scale-[0.70] lg:scale-[0.95] xl:scale-100 w-[560px] h-[550px] pointer-events-auto"
+                className="absolute top-0 left-1/2 -translate-x-1/2 origin-top scale-[0.57] xs:scale-[0.64] sm:scale-[0.79] md:scale-[0.70] lg:scale-[0.85] xl:scale-[0.90] w-[560px] h-[550px] pointer-events-auto"
               >
 
                 {/* ==================================================== */}
