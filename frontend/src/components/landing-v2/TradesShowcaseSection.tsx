@@ -313,11 +313,6 @@ export const TradesShowcaseSection: React.FC = () => {
         {/* ============================================================ */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 sm:gap-6 mb-8 sm:mb-12 lg:mb-14">
           <div className="max-w-[720px]">
-            {/* Pill Tag */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#123E2A]/10 text-[#123E2A] text-[10px] sm:text-[11px] font-bold tracking-[0.16em] uppercase mb-2.5 sm:mb-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#123E2A]" />
-              LIVE POSTED JOBS • 100% ESCROW PROTECTED
-            </div>
 
             {/* Heading */}
             <h2 

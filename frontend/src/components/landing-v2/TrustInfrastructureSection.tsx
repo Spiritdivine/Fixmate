@@ -15,10 +15,7 @@ export const TrustInfrastructureSection: React.FC = () => {
         
         {/* Section Header */}
         <div className="max-w-[760px] mb-12 sm:mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-400 text-[11px] font-bold tracking-[0.18em] uppercase mb-3.5 border border-white/10">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            DUAL-RAIL TRUST &amp; ESCROW INFRASTRUCTURE
-          </div>
+          
 
           <h2 
             className="text-3xl sm:text-4xl lg:text-[44px] font-bold text-white leading-[1.12] tracking-[-0.02em] mb-4"

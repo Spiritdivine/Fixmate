@@ -23,13 +23,7 @@ export const EditorialFooter: React.FC = () => {
               Decentralized trust, escrow, and identity infrastructure for Africa’s informal service economy. Guaranteeing zero-dispute settlements for homeowners and verified craftsmen.
             </p>
 
-            {/* Monad Live Status Chip */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-stone-200 text-[11px] text-stone-600 shadow-sm font-medium">
-              <div className="w-3.5 h-3.5 rounded bg-[#836EF9] flex items-center justify-center text-white">
-                <span className="w-1.5 h-1.5 rounded-full bg-white" />
-              </div>
-              <span>Monad EVM: 100% Operational</span>
-            </div>
+            
           </div>
 
           {/* Col 2: Platform */}

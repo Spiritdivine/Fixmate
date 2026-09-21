@@ -66,10 +66,7 @@ export const HowItWorksSection: React.FC = () => {
         
         {/* Section Header */}
         <div className="flex flex-col items-center text-center max-w-[760px] mx-auto mb-14 sm:mb-18">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#123E2A]/10 text-[#123E2A] text-[11px] font-bold tracking-[0.18em] uppercase mb-3.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#123E2A]" />
-            HOW ARTIFIX WORKS
-          </div>
+          
 
           <h2 
             className="text-3xl sm:text-4xl lg:text-[44px] font-bold text-[#141A16] leading-[1.12] tracking-[-0.02em] mb-4"

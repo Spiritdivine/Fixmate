@@ -25,11 +25,6 @@ export const DualPerspectiveSection: React.FC = () => {
           {/* ========================================================= */}
           <div className="lg:col-span-6 xl:col-span-6 flex flex-col items-start w-full">
             
-            {/* Pill Tag */}
-            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-[#EAE5D8] border border-[#DDD6C5] text-[#243B2E] text-[10px] sm:text-[11px] font-bold tracking-[0.10em] sm:tracking-[0.14em] uppercase mb-4 sm:mb-5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#1B4D36]" />
-              BUILT FOR BOTH SIDES OF THE HANDSHAKE
-            </div>
 
             {/* Editorial Serif Heading */}
             <h2 

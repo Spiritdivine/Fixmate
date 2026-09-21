@@ -46,28 +46,28 @@ export const ClosingCtaSection: React.FC<ClosingCtaSectionProps> = ({
               muted
               playsInline
               preload="metadata"
-              poster={posterSrc || LANDING_IMAGES.welder}
-              className="absolute inset-0 w-full h-full object-cover scale-105 transition-opacity duration-700 opacity-65"
+              poster={posterSrc || '/images/hero/sewing-artisan-poster.jpg'}
+              className="absolute inset-0 w-full h-full object-cover scale-105 transition-opacity duration-700 opacity-80"
               aria-hidden="true"
             >
               {videoSrc ? (
                 <source src={videoSrc} type="video/mp4" />
               ) : (
                 <>
-                  <source src="/videos/artisan-loop.webm" type="video/webm" />
+                  <source src="/videos/sewing-artisan.mp4" type="video/mp4" />
                   <source src="/videos/artisan-loop.mp4" type="video/mp4" />
                 </>
               )}
             </video>
 
-            {/* Deep Brand Green Gradient Overlay (Ensures AAA Text Legibility) */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#123E2A]/90 via-[#123E2A]/80 to-[#123E2A]/92 mix-blend-multiply" />
-            <div className="absolute inset-0 bg-[#0F2D1F]/40 backdrop-blur-[0.5px]" />
+            {/* Balanced Brand Green & Neutral Dark Overlay (Rich Craftsmanship Visibility + AAA Contrast) */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0D2A1C]/65 via-[#0D2A1C]/50 to-[#0D2A1C]/70 mix-blend-multiply" />
+            <div className="absolute inset-0 bg-black/25 backdrop-blur-[0.5px]" />
           </div>
 
           {/* Subtle decorative glowing atmospheric polygons */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-[#1A5338] rounded-full blur-3xl opacity-50 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#C2653E]/20 rounded-full blur-3xl opacity-40 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-80 h-80 bg-[#1A5338] rounded-full blur-3xl opacity-30 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#C2653E]/20 rounded-full blur-3xl opacity-25 pointer-events-none" />
 
           {/* ============================================================ */}
           {/* FOREGROUND CONTENT LAYER                                     */}
