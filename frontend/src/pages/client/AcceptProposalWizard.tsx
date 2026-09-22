@@ -19,6 +19,7 @@ import { Proposal, Wallet, ApiResponse, Contract } from '../../types';
 import { formatCurrency } from '../../lib/formatters';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { trackEvent } from '../../lib/posthog';
 
 export const AcceptProposalWizard: React.FC = () => {
   const { proposalId } = useParams<{ proposalId: string }>();
@@ -58,6 +59,13 @@ export const AcceptProposalWizard: React.FC = () => {
       return createdContract;
     },
     onSuccess: (contract) => {
+      trackEvent('contract_created', {
+        contract_id: contract?.id,
+        proposal_id: proposalId,
+        funding_source: fundingSource,
+        contract_value: totalFunding,
+        milestone_count: proposal?.milestones?.length || 0,
+      });
       confetti({
         particleCount: 100,
         spread: 70,

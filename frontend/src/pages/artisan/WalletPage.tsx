@@ -32,6 +32,7 @@ import { formatNgn, formatDate, formatDateTime } from '../../lib/formatters';
 import { Wallet, BankAccount, Transaction, PayoutRequest } from '../../types';
 import { useUnifiedWallet } from '../../lib/privy-provider';
 import { getUsdcBalance, mintTestUsdc, transferUsdc, MONAD_EXPLORER_URL } from '../../lib/monad-web3';
+import { trackEvent } from '../../lib/posthog';
 
 export const WalletPage: React.FC = () => {
   const {
@@ -401,6 +402,10 @@ export const WalletPage: React.FC = () => {
         fetchUsdcBalance();
       }
 
+      trackEvent('withdrawal_initiated', {
+        amount: numericAmount,
+        source: withdrawSource,
+      });
       await fetchWalletData();
       setTimeout(() => {
         setIsWithdrawModalOpen(false);

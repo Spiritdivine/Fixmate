@@ -22,6 +22,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Stepper } from '../../components/ui/Stepper';
 import { useAuthStore } from '../../stores/authStore';
+import { trackEvent } from '../../lib/posthog';
 
 export const PostJobWizard: React.FC = () => {
   const navigate = useNavigate();
@@ -135,6 +136,16 @@ export const PostJobWizard: React.FC = () => {
       return createdJob;
     },
     onSuccess: (job) => {
+      trackEvent('job_created', {
+        job_id: job?.id,
+        status: job?.status,
+        category_id: Number(categoryId),
+        budget_type: budgetType,
+        budget_min: Number(budgetMin),
+        budget_max: Number(budgetMax),
+        skill_count: selectedSkillIds.length,
+        attachment_count: attachments.length,
+      });
       if (job?.id) {
         navigate(`/client/jobs/${job.id}`);
       } else {

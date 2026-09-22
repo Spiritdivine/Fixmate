@@ -78,6 +78,7 @@ import { ReviewModerationPage } from './pages/admin/ReviewModerationPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { SystemSettingsPage } from './pages/admin/SystemSettingsPage';
 import { SystemHealthPage } from './pages/admin/SystemHealthPage';
+import { PostHogPageViewTracker } from './components/analytics/PostHogPageViewTracker';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -106,6 +107,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <PrivyProviderWrapper>
         <BrowserRouter>
+          <PostHogPageViewTracker />
           <Routes>
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />

@@ -18,6 +18,7 @@ import { Textarea } from '../../components/ui/Textarea';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { formatNgn } from '../../lib/formatters';
 import { Job } from '../../types';
+import { trackEvent } from '../../lib/posthog';
 
 interface MilestoneInput {
  stepOrder: number;
@@ -121,6 +122,12 @@ export const SubmitProposal: React.FC = () => {
  })),
  });
 
+ trackEvent('proposal_submitted', {
+ job_id: jobId,
+ bid_amount: totalBidNumeric,
+ estimated_days: parseInt(estimatedDays, 10) || 7,
+ milestone_count: milestones.length,
+ });
  navigate('/artisan/proposals');
  } catch (err) {
  setError(getErrorMessage(err));

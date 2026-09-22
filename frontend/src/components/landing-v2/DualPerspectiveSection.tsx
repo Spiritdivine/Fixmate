@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { trackEvent } from '../../lib/posthog';
 
 export const DualPerspectiveSection: React.FC = () => {
   const [activePerspective, setActivePerspective] = useState<'artisan' | 'client'>('artisan');
@@ -47,7 +48,10 @@ export const DualPerspectiveSection: React.FC = () => {
             <div className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex p-1 rounded-full bg-[#EAE6DA] border border-[#DDD7C8] shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] mb-6 sm:mb-8">
               <button
                 type="button"
-                onClick={() => setActivePerspective('client')}
+                onClick={() => {
+                  setActivePerspective('client');
+                  trackEvent('landing_v2_perspective_switched', { perspective: 'client' });
+                }}
                 className={`inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-5 py-2 sm:py-2.5 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold transition-all duration-200 text-center ${
                   activePerspective === 'client'
                     ? 'bg-[#0C2B22] text-white shadow-md'
@@ -64,7 +68,10 @@ export const DualPerspectiveSection: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setActivePerspective('artisan')}
+                onClick={() => {
+                  setActivePerspective('artisan');
+                  trackEvent('landing_v2_perspective_switched', { perspective: 'artisan' });
+                }}
                 className={`inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-5 py-2 sm:py-2.5 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold transition-all duration-200 text-center ${
                   activePerspective === 'artisan'
                     ? 'bg-[#0C2B22] text-white shadow-md'

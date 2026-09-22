@@ -13,25 +13,20 @@ import {
   User,
   Mail,
   Wrench,
-  Loader2
+  Loader2,
+  Users,
+  ShieldCheck,
+  Shield,
+  MapPin,
+  Sparkles,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { trackEvent } from '../lib/posthog';
 import { LANDING_IMAGES } from '../assets/landing-assets';
+import { WAITLIST_HERO_ASSETS } from '../assets/waitlist-curated-assets';
 import { ArtisanDoodles } from '../components/ui/ArtisanDoodles';
 import {
-  SolarEnergyHugeIcon,
-  ElectricalHugeIcon,
-  PlumbingHugeIcon,
-  CarpentryHugeIcon,
-  MasonryHugeIcon,
-  WeldingHugeIcon,
-  IdentityAuditHugeIcon,
-  SmartContractVaultHugeIcon,
   ProofOfWorkAuditHugeIcon,
-  DisputeTribunalHugeIcon,
-  ScopeContractHugeIcon,
-  FundEscrowHugeIcon,
-  VisualInspectionHugeIcon,
   InstantSettlementHugeIcon,
   ShieldCheckHugeIcon,
   CertifiedBadgeHugeIcon,
@@ -45,6 +40,31 @@ import {
   SunHugeIcon,
   MoonHugeIcon,
 } from '../components/ui/HugeIcons';
+
+export const FixmateLogo: React.FC<{ light?: boolean; className?: string }> = ({ light = false, className = '' }) => (
+  <div className={`flex items-center gap-3 ${className}`}>
+    <div className="relative w-10 h-10 shrink-0">
+      <svg viewBox="0 0 44 44" fill="none" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M8 8C8 6.89543 8.89543 6 10 6H24C25.1046 6 26 6.89543 26 8V12.5C26 13.6046 25.1046 14.5 24 14.5H16.5V18.5H22C23.1046 18.5 24 19.3954 24 20.5V23.5C24 24.6046 23.1046 25.5 22 25.5H16.5V36C16.5 37.1046 15.6046 38 14.5 38H10C8.89543 38 8 37.1046 8 36V8Z"
+          fill={light ? "#00A86B" : "#0A2818"}
+        />
+        <path
+          d="M20 12C20 10.8954 20.8954 10 22 10H36C37.1046 10 38 10.8954 38 12V16.5C38 17.6046 37.1046 18.5 36 18.5H28.5V22.5H34C35.1046 22.5 36 23.3954 36 24.5V27.5C36 28.6046 35.1046 29.5 34 29.5H28.5V36C28.5 37.1046 27.6046 38 26.5 38H22C20.8954 38 20 37.1046 20 36V12Z"
+          fill={light ? "#FFFFFF" : "#00A86B"}
+        />
+      </svg>
+    </div>
+    <div className="flex flex-col">
+      <span className={`text-2xl font-black tracking-tight leading-none ${light ? 'text-white' : 'text-[#0A261B] dark:text-white'}`}>
+        Fixmate
+      </span>
+      <span className={`text-[10px] font-bold tracking-wider uppercase mt-1 ${light ? 'text-emerald-300' : 'text-[#0D6D4C] dark:text-emerald-400'}`}>
+        Find <span className="mx-1">•</span> Connect <span className="mx-1">•</span> Fix
+      </span>
+    </div>
+  </div>
+);
 
 export const LandingPage: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -61,8 +81,7 @@ export const LandingPage: React.FC = () => {
     craftOrSkill?: string;
   } | null>(null);
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
-  const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [waitlistCount, setWaitlistCount] = useState(12483);
   const [isScrolled, setIsScrolled] = useState(false);
 
   React.useEffect(() => {
@@ -90,25 +109,28 @@ export const LandingPage: React.FC = () => {
     }
   };
 
-  const scrollToWaitlist = (role?: 'client' | 'artisan') => {
+  const scrollToWaitlist = (role?: 'client' | 'artisan', sourceLocation: string = 'general') => {
+    trackEvent('waitlist_cta_clicked', {
+      role_target: role || 'unspecified',
+      source_location: sourceLocation,
+    });
     if (role) {
       setSelectedRole(role);
     }
-    setMobileMenuOpen(false);
-    document.getElementById('waitlist-hero')?.scrollIntoView({ behavior: 'smooth' });
-    const input = document.querySelector<HTMLInputElement>('#waitlist-name-input') || document.querySelector<HTMLInputElement>('#waitlist-hero input');
-    setTimeout(() => input?.focus(), 300);
+    document.getElementById('waitlist-name-input')?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      document.getElementById('waitlist-name-input')?.focus();
+    }, 300);
   };
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !email.includes('@') || !fullName.trim()) return;
-    if (selectedRole === 'artisan' && !craftOrSkill.trim()) return;
+    if (!email || !email.includes('@')) return;
 
     setIsSubmitting(true);
 
     const lead = {
-      name: fullName.trim(),
+      name: fullName.trim() || 'Waitlist Member',
       email: email.trim().toLowerCase(),
       role: selectedRole,
       craftOrSkill: selectedRole === 'artisan' ? craftOrSkill.trim() : undefined,
@@ -141,42 +163,45 @@ export const LandingPage: React.FC = () => {
       // Ignore local storage write errors
     }
 
-    // Small delay to feel authentic
-    await new Promise((r) => setTimeout(r, 600));
+    // Track waitlist submission success in PostHog
+    trackEvent('waitlist_submitted', {
+      role: selectedRole,
+      email: email.trim().toLowerCase(),
+    });
+
+    // Small delay for authentic feel
+    await new Promise((r) => setTimeout(r, 400));
 
     // Blast celebratory confetti
     confetti({
-      particleCount: 80,
+      particleCount: 90,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#BD5324', '#0284C7', '#10B981', '#F59E0B'],
+      colors: ['#00A86B', '#0A261B', '#10B981', '#34D399'],
     });
 
     setSubmittedLead(lead);
+    setWaitlistCount((prev) => prev + 1);
     setIsSubmitting(false);
     setWaitlistSubmitted(true);
   };
 
   return (
-    <div className={`min-h-screen font-sans selection:bg-amber-200 selection:text-stone-900 artifix-canvas overflow-x-clip ${isDarkMode ? 'dark' : ''}`}>
+    <div className={`min-h-screen font-sans selection:bg-amber-200 selection:text-stone-900 ${isDarkMode ? 'dark bg-[#0E1310] text-stone-100' : 'bg-[#F5EFEB] text-stone-900'} dark:bg-[#0E1310] dark:text-stone-100 overflow-x-clip transition-colors duration-200`}>
       
       {/* ============================================================ */}
-      {/* 1. TOP NAVIGATION (Sticky & Sleek)                           */}
+      {/* 1. TOP NAVIGATION (Streamlined — Focused Conversion)         */}
       {/* ============================================================ */}
       <header
         className={`sticky top-0 z-50 w-full transition-all duration-300 ${
           isScrolled
-            ? 'bg-[#F5EFEB]/95 dark:bg-[#0E1310]/95 backdrop-blur-md shadow-[0_4px_24px_-4px_rgba(0,0,0,0.07)] dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] border-b border-stone-300/80 dark:border-stone-800'
-            : 'bg-[#F5EFEB]/85 dark:bg-[#0E1310]/85 backdrop-blur-sm border-b border-stone-300/40 dark:border-stone-800/50'
+            ? 'bg-[#F5EFEB]/95 dark:bg-[#0E1310]/95 backdrop-blur-md shadow-sm border-b border-stone-300/80 dark:border-stone-800'
+            : 'bg-[#F5EFEB]/80 dark:bg-[#0E1310]/80 backdrop-blur-sm'
         }`}
       >
-        <div
-          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-all duration-300 ${
-            isScrolled ? 'h-16 sm:h-[68px]' : 'h-20'
-          }`}
-        >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
-          {/* Logo */}
+          {/* Main Brand Logo */}
           <Link to="/" className="flex items-center group shrink-0 focus:outline-none" aria-label="Artifix Home">
             <img
               src="/brand/logo1.png"
@@ -190,54 +215,15 @@ export const LandingPage: React.FC = () => {
             />
           </Link>
 
-          {/* Center Navigation Links (Desktop) */}
-          <nav className="hidden lg:flex items-center gap-7 text-[12px] font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300">
-            <a
-              href="#how-it-works"
-              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
-            >
-              How It Works
-            </a>
-            <a
-              href="#for-clients"
-              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
-            >
-              For Clients
-            </a>
-            <a
-              href="#for-artisans"
-              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
-            >
-              For Artisans
-            </a>
-            <a
-              href="#trades"
-              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
-            >
-              Trades
-            </a>
-            <a
-              href="#trust"
-              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
-            >
-              Trust
-            </a>
-            <a
-              href="#faq"
-              className="py-1 px-1.5 hover:text-stone-950 dark:hover:text-white transition-colors duration-150"
-            >
-              FAQ
-            </a>
-          </nav>
-
           {/* Right Action Items */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               type="button"
-              onClick={() => scrollToWaitlist()}
-              className="hidden sm:inline-flex px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-[#BD5324] hover:bg-[#A64319] text-white text-xs sm:text-sm font-semibold tracking-tight shadow-sm hover:shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
+              onClick={() => scrollToWaitlist(undefined, 'navbar')}
+              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-[#BD5324] hover:bg-[#A64319] text-white text-xs sm:text-sm font-bold tracking-tight shadow-sm hover:shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
             >
               <span>Join Waitlist</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
 
             {/* Light/Dark Toggle */}
@@ -245,767 +231,512 @@ export const LandingPage: React.FC = () => {
               type="button"
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-stone-300/80 dark:border-stone-700/80 bg-stone-100/50 dark:bg-stone-900/50 flex items-center justify-center text-stone-700 dark:text-stone-300 hover:bg-stone-200/60 dark:hover:bg-stone-800 transition-colors shrink-0 cursor-pointer"
+              className="w-9 h-9 rounded-full border border-stone-300/80 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 flex items-center justify-center text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors shrink-0 cursor-pointer"
             >
-              {isDarkMode ? <SunHugeIcon size={18} className="text-[#BD5324]" /> : <MoonHugeIcon size={18} className="text-[#BD5324]" />}
-            </button>
-
-            {/* Mobile Hamburger Toggle Button */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle navigation menu"
-              className="lg:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-stone-300/80 dark:border-stone-700/80 bg-stone-100/50 dark:bg-stone-900/50 flex items-center justify-center text-stone-700 dark:text-stone-300 hover:bg-stone-200/60 dark:hover:bg-stone-800 transition-colors shrink-0 cursor-pointer"
-            >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {isDarkMode ? <SunHugeIcon size={17} className="text-amber-400" /> : <MoonHugeIcon size={17} className="text-stone-800" />}
             </button>
           </div>
 
         </div>
-
-        {/* Mobile Dropdown Menu Drawer */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-stone-300/80 dark:border-stone-800 bg-[#F5EFEB]/98 dark:bg-[#0E1310]/98 px-6 py-6 backdrop-blur-xl shadow-2xl animate-in slide-in-from-top-2 duration-200">
-            <nav className="flex flex-col gap-4 text-sm font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-              <a
-                href="#how-it-works"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2 border-b border-stone-200 dark:border-stone-800/60 hover:text-[#BD5324] transition-colors"
-              >
-                How It Works
-              </a>
-              <a
-                href="#for-clients"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2 border-b border-stone-200 dark:border-stone-800/60 hover:text-[#BD5324] transition-colors"
-              >
-                For Clients
-              </a>
-              <a
-                href="#for-artisans"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2 border-b border-stone-200 dark:border-stone-800/60 hover:text-[#BD5324] transition-colors"
-              >
-                For Artisans
-              </a>
-              <a
-                href="#trades"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2 border-b border-stone-200 dark:border-stone-800/60 hover:text-[#BD5324] transition-colors"
-              >
-                Trades
-              </a>
-              <a
-                href="#trust"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2 border-b border-stone-200 dark:border-stone-800/60 hover:text-[#BD5324] transition-colors"
-              >
-                Trust &amp; Escrow
-              </a>
-              <a
-                href="#faq"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2 border-b border-stone-200 dark:border-stone-800/60 hover:text-[#BD5324] transition-colors"
-              >
-                FAQ
-              </a>
-            </nav>
-            <div className="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => scrollToWaitlist()}
-                className="w-full py-3 rounded-full bg-[#BD5324] text-white text-xs font-bold uppercase tracking-wider shadow-md text-center"
-              >
-                Join Waitlist
-              </button>
-            </div>
-          </div>
-        )}
       </header>
 
 
       {/* ============================================================ */}
-      {/* 2. THE HERO SECTION (REPLICATING THE REFERENCED DESIGN)      */}
+      {/* 2. THE HERO SECTION (EXACT REFERENCE REDESIGN)               */}
       {/* ============================================================ */}
-      <section className="relative pt-6 pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section className="relative pt-6 sm:pt-10 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         
-        {/* Illustrative Floating Artisan Doodles (Subtle Hand-drawn Background) */}
+        {/* Subtle Decorative Doodles Background */}
         <ArtisanDoodles />
 
-        {/* Subtle Architectural Drafting Marks */}
-        <div className="absolute top-8 left-12 hidden md:block text-[11px] font-mono text-stone-400 dark:text-stone-600 select-none">
-          <div className="flex items-center gap-1.5">
-            <span className="inline-block w-2.5 h-2.5 border-t border-l border-stone-400 dark:border-stone-600" />
-            <span>3.3792° N</span>
-          </div>
-          <div className="pl-4">7.3986° E</div>
-        </div>
-
-        <div className="absolute top-12 right-20 hidden md:block text-[11px] font-mono text-stone-400 dark:text-stone-600 select-none">
-          <span>+ GRID REF #AF-2026</span>
-        </div>
-
-        {/* Hero Grid Container */}
-        <div className="max-w-[1400px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 items-center relative z-10 pt-4">
+        <div className="max-w-7xl mx-auto">
           
-          {/* ========================================== */}
-          {/* LEFT COLLAGE OF CARDS (Span 3 on XL)       */}
-          {/* ========================================== */}
-          <div className="hidden xl:flex xl:col-span-3 flex-col gap-6 relative">
+          {/* Main Dual-Column Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center relative z-10">
             
-            {/* Card 1: Electrician Photo Card (tilted -4deg) */}
-            <div className="relative transform -rotate-3 hover:rotate-0 transition-transform duration-300 w-64">
-              <div className="relative rounded-xl overflow-hidden shadow-xl border border-stone-300/80 dark:border-stone-800 bg-stone-900">
-                <img
-                  src={LANDING_IMAGES.electrician}
-                  alt="Electrician at work"
-                  className="w-full h-44 object-cover filter contrast-[1.05]"
-                />
-                <div className="absolute bottom-2.5 left-2.5">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-stone-950/85 backdrop-blur-sm text-[11px] font-bold text-white tracking-wider uppercase border border-stone-700/60">
-                    <span className="text-emerald-400">ELECTRICIAN</span>
-                    <span className="text-stone-400">/</span>
-                    <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-                      <Check className="w-3 h-3 stroke-[3]" /> NIN VERIFIED
-                    </span>
-                  </div>
+            {/* ========================================================= */}
+            {/* LEFT COLUMN: HERO HEADLINE, VALUE COPY & FORM            */}
+            {/* ========================================================= */}
+            <div className="lg:col-span-6 flex flex-col items-start text-left">
+              
+              
+
+              {/* Title Typography: Script "Join the" + Bold "WAITLIST" */}
+              <div className="relative mb-5 sm:mb-6">
+                <div className="flex items-center gap-2 font-caveat text-4xl sm:text-5xl md:text-6xl text-[#1C1917] dark:text-stone-100 font-bold -rotate-1 select-none">
+                  <span>Join the</span>
+                  {/* Dynamic Motion Flare Dashes */}
+                  <svg className="w-8 h-8 text-[#BD5324] -mt-2 shrink-0" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M4 14L10 8" />
+                    <path d="M12 18L18 12" />
+                    <path d="M10 26L20 22" />
+                  </svg>
+                </div>
+
+                <div className="relative inline-block mt-1">
+                  <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-[82px] font-black uppercase tracking-tight text-[#00A86B] dark:text-[#10B981] -rotate-1 drop-shadow-sm font-sans leading-none">
+                    WAITLIST
+                  </h1>
+                  {/* Dynamic Green Brush Underline */}
+                  <svg
+                    viewBox="0 0 320 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-full h-4 sm:h-5 text-[#00A86B] dark:text-[#10B981] -mt-1 sm:-mt-2"
+                    preserveAspectRatio="none"
+                  >
+                    <path
+                      d="M3 14C60 6 180 3 317 12C240 18 100 22 3 14Z"
+                      fill="currentColor"
+                    />
+                  </svg>
                 </div>
               </div>
+
+              {/* Supporting Value Proposition Heading & Paragraph */}
+              <h2 className="text-2xl sm:text-3xl md:text-[34px] font-bold text-stone-900 dark:text-white tracking-tight leading-[1.18] mb-3.5 font-sans">
+                The safer way to hire and get work done.
+              </h2>
+              <p className="text-sm sm:text-base text-stone-600 dark:text-stone-300 leading-relaxed max-w-lg mb-6">
+                Be among the first to experience a better way to hire skilled professionals. Artifix combines artisan verification, escrow protection, and transparent project tracking in one platform.
+              </p>
+
+              {/* Segmented Dual Role Toggle Switch */}
+              <div className="p-1 sm:p-1.5 rounded-full bg-stone-200/90 dark:bg-stone-900/90 border border-stone-300/80 dark:border-stone-800 flex items-center gap-1 mb-5 shadow-inner max-w-full">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('client')}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    selectedRole === 'client'
+                      ? 'bg-[#262B25] dark:bg-[#1E2721] text-white shadow-md'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+                  }`}
+                >
+                  <ClientProfileHugeIcon size={14} className={selectedRole === 'client' ? 'text-white' : 'text-[#BD5324]'} />
+                  <span>Hire an Artisan</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('artisan')}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    selectedRole === 'artisan'
+                      ? 'bg-[#262B25] dark:bg-[#1E2721] text-white shadow-md'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+                  }`}
+                >
+                  <ArtisanCraftsmanHugeIcon size={14} className={selectedRole === 'artisan' ? 'text-white' : 'text-[#BD5324]'} />
+                  <span>Join as an Artisan</span>
+                </button>
+              </div>
+
+              {/* Restored Waitlist Form Card */}
+              <div id="waitlist-hero" className="w-full max-w-lg mb-4">
+                {!waitlistSubmitted ? (
+                  <form
+                    onSubmit={handleWaitlistSubmit}
+                    className="p-3.5 sm:p-4 bg-white/95 dark:bg-[#131B16]/95 backdrop-blur-md rounded-2xl border border-stone-300/90 dark:border-stone-800 shadow-xl text-left"
+                  >
+                    <div className="space-y-2.5 mb-3">
+                      {/* Full Name Input */}
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <input
+                          id="waitlist-name-input"
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="Full name"
+                          required
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-[#18231C] border border-stone-300/80 dark:border-stone-700 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#BD5324] focus:border-transparent transition-all"
+                        />
+                      </div>
+
+                      {/* Email Input */}
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
+                          <Mail className="w-4 h-4" />
+                        </div>
+                        <input
+                          id="waitlist-email-input"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="Email address"
+                          required
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-[#18231C] border border-stone-300/80 dark:border-stone-700 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#BD5324] focus:border-transparent transition-all"
+                        />
+                      </div>
+
+                      {/* Craft / Skill Input (Artisan Only) */}
+                      {selectedRole === 'artisan' && (
+                        <div className="relative animate-in fade-in duration-200">
+                          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
+                            <Wrench className="w-4 h-4" />
+                          </div>
+                          <input
+                            id="waitlist-craft-input"
+                            type="text"
+                            value={craftOrSkill}
+                            onChange={(e) => setCraftOrSkill(e.target.value)}
+                            placeholder="Trade (e.g. Solar, Plumbing, Electrical)"
+                            required={selectedRole === 'artisan'}
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-[#18231C] border border-stone-300/80 dark:border-stone-700 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#BD5324] focus:border-transparent transition-all"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full py-3 px-6 rounded-xl bg-[#BD5324] hover:bg-[#A64319] disabled:opacity-70 disabled:cursor-not-allowed text-white text-xs font-bold tracking-wider uppercase shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer group"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Reserving spot...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>
+                            {selectedRole === 'client'
+                              ? 'Join Client Waitlist'
+                              : 'Join Artisan Waitlist'}
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-white/95 dark:bg-[#131B16]/95 border border-emerald-400 dark:border-emerald-800 shadow-xl text-left transition-all">
+                    <div className="flex items-start gap-3.5 mb-2.5">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-mono text-[10px] font-bold uppercase tracking-wider mb-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Early Access</span>
+                        </div>
+                        <h4 className="text-base font-black text-stone-900 dark:text-white">
+                          You&apos;re on the list, {submittedLead?.name || 'Partner'}!
+                        </h4>
+                        <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mt-1">
+                          We reserved your spot as a{' '}
+                          <span className="font-bold text-[#BD5324]">
+                            {submittedLead?.role === 'artisan' ? 'Verified Artisan' : 'Client'}
+                          </span>
+                          . Priority invitations rollout in Q2 2026.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Trust statement under form */}
+              <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400 mb-8">
+                <ShieldCheck className="w-4 h-4 text-[#00A86B]" />
+                <span>No spam. Just important updates.</span>
+              </div>
+
+              {/* 3 Quick Soft-Mint Feature Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 w-full max-w-xl">
+                {/* Feature 1: For Artisans */}
+                <a
+                  href="#for-artisans"
+                  className="p-4 sm:p-4.5 rounded-[20px] bg-[#EAF5EF] dark:bg-[#131D17] border border-[#D5EDE0] dark:border-stone-800 hover:border-[#BD5324]/60 dark:hover:border-[#BD5324]/60 hover:shadow-md transition-all group block text-left"
+                >
+                  <div className="text-[#0A261B] dark:text-emerald-300 mb-2.5">
+                    <svg className="w-7 h-7" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="10" cy="8" r="4" />
+                      <path d="M3 23C3 18.5 6.5 16 11 16" />
+                      <path d="M19 16L24 21M22 13L25 16" />
+                    </svg>
+                  </div>
+                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-[#0B281B] dark:text-stone-200 group-hover:text-[#BD5324] transition-colors">
+                    <span>For Artisans</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-stone-600 dark:text-stone-400 mt-1 leading-relaxed">
+                    Showcase your skills and get more opportunities.
+                  </p>
+                </a>
+
+                {/* Feature 2: For Customers */}
+                <a
+                  href="#for-clients"
+                  className="p-4 sm:p-4.5 rounded-[20px] bg-[#EAF5EF] dark:bg-[#131D17] border border-[#D5EDE0] dark:border-stone-800 hover:border-[#BD5324]/60 dark:hover:border-[#BD5324]/60 hover:shadow-md transition-all group block text-left"
+                >
+                  <div className="text-[#0A261B] dark:text-emerald-300 mb-2.5">
+                    <svg className="w-7 h-7" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="10" cy="8" r="4" fill="currentColor" />
+                      <path d="M3 23C3 18.5 6.5 16 11 16" fill="currentColor" />
+                      <circle cx="21" cy="18" r="4" fill="#00A86B" />
+                      <path d="M21 16L21.6 17.3L23 17.4L21.9 18.4L22.3 19.8L21 19L19.7 19.8L20.1 18.4L19 17.4L20.4 17.3Z" fill="white" />
+                    </svg>
+                  </div>
+                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-[#0B281B] dark:text-stone-200 group-hover:text-[#BD5324] transition-colors">
+                    <span>For Customers</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-stone-600 dark:text-stone-400 mt-1 leading-relaxed">
+                    Find trusted artisans and get your tasks done with ease.
+                  </p>
+                </a>
+
+                {/* Feature 3: Secure & Fair */}
+                <a
+                  href="#escrow"
+                  className="p-4 sm:p-4.5 rounded-[20px] bg-[#EAF5EF] dark:bg-[#131D17] border border-[#D5EDE0] dark:border-stone-800 hover:border-[#BD5324]/60 dark:hover:border-[#BD5324]/60 hover:shadow-md transition-all group block text-left"
+                >
+                  <div className="text-[#0A261B] dark:text-emerald-300 mb-2.5">
+                    <svg className="w-7 h-7" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 3L5 7V13C5 19 8.8 24.5 14 26C19.2 24.5 23 19 23 13V7L14 3Z" />
+                      <path d="M9.5 13.5L12.5 16.5L18.5 10.5" strokeWidth="2.5" />
+                    </svg>
+                  </div>
+                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-[#0B281B] dark:text-stone-200 group-hover:text-[#BD5324] transition-colors">
+                    <span>Secure &amp; Fair</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-stone-600 dark:text-stone-400 mt-1 leading-relaxed">
+                    Powered by blockchain and smart contracts.
+                  </p>
+                </a>
+              </div>
+
             </div>
 
-            {/* Card 2: Artisan Trade Passport Card (tilted -1deg) */}
-            <div className="relative transform -rotate-1 hover:rotate-0 transition-transform duration-300 w-72 -mt-2">
-              {/* Pushpin at top */}
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-stone-700 border-2 border-amber-600 shadow-md z-20" />
+
+            {/* ========================================================= */}
+            {/* RIGHT COLUMN: SHAPED CRAFTSPEOPLE IMAGERY & PHONE CARD    */}
+            {/* ========================================================= */}
+            <div className="lg:col-span-6 relative flex items-center justify-center pt-8 sm:pt-10 lg:pt-0">
               
-              <div className="paper-card rounded-xl p-4 shadow-2xl relative text-stone-900 dark:text-stone-100">
-                <div className="text-[10px] font-mono uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">
-                  ARTISAN TRADE PASSPORT
-                </div>
+              {/* Central Sizing Stage Container */}
+              <div className="relative w-full max-w-[480px] sm:max-w-[520px] h-[520px] sm:h-[580px] flex items-center justify-center">
 
-                <div className="flex items-center gap-3 mb-3">
-                  <img
-                    src={LANDING_IMAGES.babatunde}
-                    alt="Babatunde O."
-                    className="w-12 h-12 rounded-lg object-cover border border-stone-300 shadow-sm"
-                  />
-                  <div>
-                    <div className="text-sm font-bold leading-tight">Babatunde O.</div>
-                    <div className="text-[10px] font-mono text-stone-500 uppercase">Master Solar Technician</div>
-                  </div>
-                </div>
+                {/* Background Organic Mint Backdrop Shape / Blob */}
+                <div
+                  className="absolute inset-0 bg-[#D4ECE1]/85 dark:bg-emerald-950/40 pointer-events-none -z-10"
+                  style={{
+                    borderRadius: '46% 54% 62% 38% / 40% 60% 40% 60%',
+                    transform: 'scale(1.03) rotate(-4deg)',
+                  }}
+                />
 
-                {/* Verification Checklist */}
-                <div className="space-y-1 text-[11px] font-medium text-stone-700 dark:text-stone-300 border-t border-stone-200 dark:border-stone-800 pt-2 mb-3">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
-                    <span>NIN VERIFIED</span>
+                {/* ------------------------------------------------------ */}
+                {/* IMAGE 1: Top Center-Left (Tailor / Seamstress)          */}
+                {/* Shape: Cathedral Arch / Tombstone                      */}
+                {/* ------------------------------------------------------ */}
+                <div className="absolute -top-2 sm:-top-3 left-[25%] sm:left-[26%] -translate-x-1/2 w-42 sm:w-48 h-52 sm:h-58 z-10">
+                  <div className="relative w-full h-full rounded-t-[96px] rounded-b-[20px] overflow-hidden shadow-xl bg-stone-900">
+                    <img
+                      src={WAITLIST_HERO_ASSETS.tailor}
+                      onError={(e) => {
+                        e.currentTarget.src = WAITLIST_HERO_ASSETS.tailorFallback;
+                      }}
+                      alt="Artisan tailor seamstress at sewing machine"
+                      className="w-full h-full object-cover object-[center_25%] filter contrast-[1.05]"
+                    />
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
-                    <span>PHONE VERIFIED</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
-                    <span>TRADE CERTIFIED</span>
-                  </div>
-                </div>
 
-                {/* Stats row */}
-                <div className="grid grid-cols-3 gap-1 text-center py-1.5 px-2 bg-stone-100 dark:bg-stone-900 rounded-lg text-stone-800 dark:text-stone-200 border border-stone-200/80 dark:border-stone-800 mb-3">
-                  <div>
-                    <div className="text-xs font-black">127</div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">JOBS</div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-black">98.7%</div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">ON TIME</div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-black flex items-center justify-center gap-0.5">
-                      4.9 <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
-                    </div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">RATING</div>
+                  {/* Radiating 3 Green Flare Dashes on Top Right */}
+                  <div className="absolute -top-3.5 -right-6 text-[#00A86B] pointer-events-none select-none">
+                    <svg className="w-8 h-8" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                      <path d="M5 22L12 6" />
+                      <path d="M14 22L19 9" />
+                      <path d="M21 22L25 12" />
+                    </svg>
                   </div>
                 </div>
 
-                {/* Card footer with ID, QR and Wax Stamp */}
-                <div className="flex items-center justify-between pt-1 border-t border-stone-200/80 dark:border-stone-800">
-                  <div>
-                    <div className="text-[9px] font-mono text-stone-400">ID: AF / 00921</div>
-                    <div className="w-7 h-7 bg-stone-200 dark:bg-stone-800 rounded flex items-center justify-center mt-1">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="3" y="3" width="7" height="7" />
-                        <rect x="14" y="3" width="7" height="7" />
-                        <rect x="3" y="14" width="7" height="7" />
-                        <rect x="14" y="14" width="3" height="3" />
-                        <rect x="18" y="18" width="3" height="3" />
+                {/* ------------------------------------------------------ */}
+                {/* IMAGE 2: Top Right (Electrician on Breaker Panel)      */}
+                {/* Shape: Angled Tilted Parallelogram Banner              */}
+                {/* ------------------------------------------------------ */}
+                <div className="absolute top-3 sm:top-5 right-0 sm:right-1 w-36 sm:w-44 h-36 sm:h-44 z-10 rotate-[3.5deg]">
+                  {/* Floating Hand-written Script Annotation */}
+                  <div className="absolute -top-10 sm:-top-12 -left-5 sm:-left-8 -rotate-6 font-caveat text-[#0A261B] dark:text-emerald-300 text-base sm:text-lg font-bold leading-tight select-none pointer-events-none whitespace-nowrap z-30">
+                    <div>Skilled People.</div>
+                    <div>Real Work.</div>
+                    <div className="relative inline-block">
+                      <span>Better Outcomes.</span>
+                      <svg
+                        viewBox="0 0 100 8"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-full h-1.5 text-[#00A86B] absolute -bottom-1 left-0 opacity-80"
+                        preserveAspectRatio="none"
+                      >
+                        <path d="M2 5C30 1 70 1 98 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                       </svg>
                     </div>
                   </div>
 
-                  {/* Embossed Terracotta Wax Stamp */}
-                  <div className="wax-seal w-14 h-14 rounded-full flex flex-col items-center justify-center text-amber-50 border border-amber-900/40 transform rotate-6 shadow-md select-none">
-                    <div className="text-[7px] font-black uppercase tracking-tighter leading-none">VERIFIED</div>
-                    <div className="text-[9px] font-extrabold tracking-tight">ARTIFIX</div>
-                    <div className="text-[6px] font-mono">2026 SEAL</div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* Card 3: Solar Tech Photo (tilted -3deg) */}
-            <div className="relative transform -rotate-3 hover:rotate-0 transition-transform duration-300 w-60 -mt-2">
-              <div className="relative rounded-xl overflow-hidden shadow-lg border border-stone-300/80 dark:border-stone-800 bg-stone-900">
-                <img
-                  src={LANDING_IMAGES.solarTech}
-                  alt="Solar technician installing panels"
-                  className="w-full h-32 object-cover filter contrast-[1.05]"
-                />
-                <div className="absolute bottom-2 left-2">
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-950/85 backdrop-blur-sm text-[10px] font-bold text-white tracking-wider uppercase border border-stone-700/60">
-                    <span className="text-emerald-400">SOLAR TECH</span>
-                    <span className="text-stone-400">/</span>
-                    <span className="text-emerald-400">✓ VERIFIED</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4: Plumbing Photo Card (tilted -1deg) */}
-            <div className="relative transform -rotate-1 hover:rotate-0 transition-transform duration-300 w-56 -mt-2">
-              <div className="relative rounded-xl overflow-hidden shadow-lg border border-stone-300/80 dark:border-stone-800 bg-stone-900">
-                <img
-                  src={LANDING_IMAGES.plumber}
-                  alt="Plumber working with pipe wrench"
-                  className="w-full h-28 object-cover filter contrast-[1.05]"
-                />
-                <div className="absolute bottom-2 left-2">
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-950/85 backdrop-blur-sm text-[10px] font-bold text-white tracking-wider uppercase border border-stone-700/60">
-                    <span className="text-emerald-400">PLUMBING</span>
-                    <span className="text-stone-400">/</span>
-                    <span className="text-emerald-400">✓ VERIFIED</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 5: Floating Payment Choice Card */}
-            <div className="relative transform rotate-2 hover:rotate-0 transition-transform duration-300 w-64 -mt-2">
-              <div className="rounded-xl p-3.5 bg-[#171E18] text-white shadow-2xl border border-stone-700/60">
-                <div className="text-[9px] font-mono uppercase tracking-widest text-stone-400 mb-2">
-                  CHOOSE PAYMENT
-                </div>
-
-                <div className="space-y-2">
-                  {/* Paystack Option */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPayment('paystack')}
-                    className={`w-full text-left flex items-center justify-between p-2 rounded-lg border transition-all ${
-                      selectedPayment === 'paystack'
-                        ? 'border-amber-500/80 bg-stone-800/80'
-                        : 'border-stone-800 hover:border-stone-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded bg-[#BD5324]/20 border border-[#BD5324]/40 flex items-center justify-center text-[#BD5324]">
-                        <CreditCardHugeIcon size={14} className="text-[#BD5324]" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold leading-tight">Paystack</div>
-                        <div className="text-[9px] text-stone-400">NGN • Card / Bank Transfer</div>
-                      </div>
-                    </div>
-                    <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                      selectedPayment === 'paystack' ? 'border-[#BD5324]' : 'border-stone-600'
-                    }`}>
-                      {selectedPayment === 'paystack' && (
-                        <div className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                      )}
-                    </div>
-                  </button>
-
-                  <div className="text-center text-[8px] font-mono text-stone-500">OR</div>
-
-                  {/* Monad Option */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPayment('monad')}
-                    className={`w-full text-left flex items-center justify-between p-2 rounded-lg border transition-all ${
-                      selectedPayment === 'monad'
-                        ? 'border-[#BD5324]/80 bg-stone-800/80'
-                        : 'border-stone-800 hover:border-stone-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded bg-[#BD5324]/20 border border-[#BD5324]/40 flex items-center justify-center text-[#BD5324]">
-                        <MonadTokenHugeIcon size={14} className="text-[#BD5324]" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold leading-tight">Monad</div>
-                        <div className="text-[9px] text-stone-400">$MON • Crypto</div>
-                      </div>
-                    </div>
-                    <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                      selectedPayment === 'monad' ? 'border-purple-500' : 'border-stone-600'
-                    }`}>
-                      {selectedPayment === 'monad' && (
-                        <div className="w-2 h-2 rounded-full bg-purple-500" />
-                      )}
-                    </div>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 5: Carpentry Photo */}
-            <div className="relative transform -rotate-2 hover:rotate-0 transition-transform duration-300 w-56 -mt-2">
-              <div className="relative rounded-xl overflow-hidden shadow-lg border border-stone-300/80 dark:border-stone-800 bg-stone-900">
-                <img
-                  src={LANDING_IMAGES.carpenter}
-                  alt="Carpenter planing wood"
-                  className="w-full h-28 object-cover filter contrast-[1.05]"
-                />
-                <div className="absolute bottom-2 left-2">
-                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-950/85 backdrop-blur-sm text-[10px] font-bold text-white tracking-wider uppercase border border-stone-700/60">
-                    <span className="text-emerald-400">CARPENTRY</span>
-                    <span className="text-stone-400">/</span>
-                    <span className="text-emerald-400">✓ VERIFIED</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-
-          {/* ========================================== */}
-          {/* ========================================== */}
-          {/* CENTER HERO COPY & ACTIONS (Span 6 on XL)  */}
-          {/* ========================================== */}
-          <div className="xl:col-span-6 flex flex-col items-center text-center px-2 sm:px-4">
-            
-            {/* Status Pill */}
-            <div className="inline-flex items-center gap-2 sm:gap-2.5 px-3.5 sm:px-4 py-1.5 rounded-full border border-stone-300 dark:border-stone-700 bg-white/70 dark:bg-stone-900/70 backdrop-blur-sm text-[11px] font-mono text-stone-700 dark:text-stone-300 mb-6 sm:mb-8 shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              
-              
-              <span className="uppercase text-amber-700 dark:text-amber-400 font-bold">Early Access Open</span>
-            </div>
-
-            {/* Massive Headline with Highlight Pill */}
-            <h1 className="font-display text-3xl sm:text-5xl lg:text-[58px] font-black tracking-tight text-stone-900 dark:text-stone-100 leading-[1.15] sm:leading-[1.12] max-w-2xl mb-6">
-              Verified artisans. <br />
-              <span className="text-highlight-pill">
-                Protected payments.
-              </span>
-            </h1>
-
-            {/* Subtitle Paragraph */}
-            <p className="text-sm sm:text-base md:text-lg text-stone-600 dark:text-stone-300 max-w-xl mb-7 sm:mb-8 leading-relaxed font-normal px-1">
-              Hire vetted trades with milestone escrow. Funds stay protected until each stage is inspected and approved.
-            </p>
-
-            {/* Segmented Dual Role Toggle Switch */}
-            <div className="p-1 sm:p-1.5 rounded-full bg-stone-200/90 dark:bg-stone-900/90 border border-stone-300/80 dark:border-stone-800 flex items-center gap-1 mb-8 shadow-inner max-w-full">
-              <button
-                type="button"
-                onClick={() => setSelectedRole('client')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs font-bold transition-all ${
-                  selectedRole === 'client'
-                    ? 'bg-[#262B25] text-white shadow-md'
-                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
-                }`}
-              >
-                <ClientProfileHugeIcon size={14} className={selectedRole === 'client' ? 'text-white' : 'text-[#BD5324]'} />
-                <span>Hire an Artisan</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedRole('artisan')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs font-bold transition-all ${
-                  selectedRole === 'artisan'
-                    ? 'bg-[#262B25] text-white shadow-md'
-                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
-                }`}
-              >
-                <ArtisanCraftsmanHugeIcon size={14} className={selectedRole === 'artisan' ? 'text-white' : 'text-[#BD5324]'} />
-                <span>Join as an Artisan</span>
-              </button>
-            </div>
-
-            {/* Waitlist Form Card */}
-            <div id="waitlist-hero" className="w-full max-w-lg mb-8">
-              {!waitlistSubmitted ? (
-                <form
-                  onSubmit={handleWaitlistSubmit}
-                  className="p-3 sm:p-4 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md rounded-2xl border border-stone-300/90 dark:border-stone-700 shadow-xl text-left"
-                >
-                  <div className="space-y-2.5 mb-3">
-                    {/* Full Name Input */}
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
-                        <User className="w-4 h-4" />
-                      </div>
-                      <input
-                        id="waitlist-name-input"
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Full name"
-                        required
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-300/80 dark:border-stone-700 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#BD5324] focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    {/* Email Input */}
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
-                        <Mail className="w-4 h-4" />
-                      </div>
-                      <input
-                        id="waitlist-email-input"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Email address"
-                        required
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-300/80 dark:border-stone-700 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#BD5324] focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    {/* Craft / Skill Input (Artisan Only) */}
-                    {selectedRole === 'artisan' && (
-                      <div className="relative animate-in fade-in duration-200">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
-                          <Wrench className="w-4 h-4" />
-                        </div>
-                        <input
-                          id="waitlist-craft-input"
-                          type="text"
-                          value={craftOrSkill}
-                          onChange={(e) => setCraftOrSkill(e.target.value)}
-                          placeholder="Trade (e.g. Solar, Plumbing, Electrical)"
-                          required={selectedRole === 'artisan'}
-                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/80 border border-stone-300/80 dark:border-stone-700 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#BD5324] focus:border-transparent transition-all"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-3 px-6 rounded-xl bg-[#BD5324] hover:bg-[#A64319] disabled:opacity-70 disabled:cursor-not-allowed text-white text-xs font-bold tracking-wider uppercase shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] group"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Reserving spot...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>
-                          {selectedRole === 'client'
-                            ? 'Join Client Waitlist'
-                            : 'Join Artisan Waitlist'}
-                        </span>
-                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              ) : (
-                <div className="p-5 sm:p-6 rounded-2xl bg-white/95 dark:bg-stone-900/95 border border-emerald-300 dark:border-emerald-800 shadow-xl text-left transition-all">
-                  <div className="flex items-start gap-3.5 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-mono text-[10px] font-bold uppercase tracking-wider mb-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span>Early Access</span>
-                      </div>
-                      <h4 className="text-base font-black text-stone-900 dark:text-white">
-                        You&apos;re on the list, {submittedLead?.name || 'Partner'}!
-                      </h4>
-                      <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mt-1">
-                        We reserved your spot as a{' '}
-                        <span className="font-bold text-[#BD5324]">
-                          {submittedLead?.role === 'artisan' ? 'Verified Artisan' : 'Client'}
-                        </span>
-                        . We&apos;ll send your onboarding invite to{' '}
-                        <span className="font-mono font-medium text-stone-800 dark:text-stone-200">
-                          {submittedLead?.email}
-                        </span>
-                        .
-                      </p>
-
-                      {submittedLead?.craftOrSkill && submittedLead.craftOrSkill !== 'N/A' && (
-                        <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-semibold">
-                          <Wrench className="w-3.5 h-3.5 text-[#BD5324]" />
-                          <span>Trade: <strong className="text-stone-900 dark:text-white font-bold">{submittedLead.craftOrSkill}</strong></span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-[11px]">
-                    <span className="text-stone-500 dark:text-stone-400">
-                      Early access registered
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setWaitlistSubmitted(false);
-                        setEmail('');
-                        setFullName('');
-                        setCraftOrSkill('');
+                  <div className="relative w-full h-full rounded-[24px] overflow-hidden shadow-xl bg-stone-900">
+                    <img
+                      src={WAITLIST_HERO_ASSETS.electrician}
+                      onError={(e) => {
+                        e.currentTarget.src = WAITLIST_HERO_ASSETS.electricianFallback;
                       }}
-                      className="text-[#BD5324] hover:underline font-semibold"
-                    >
-                      Register another email
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Social Proof Row */}
-            <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-medium text-stone-700 dark:text-stone-300">
-              <div className="flex -space-x-2">
-                {LANDING_IMAGES.avatars.map((avatar, idx) => (
-                  <img
-                    key={idx}
-                    src={avatar}
-                    alt="Artifix member"
-                    className="w-7 h-7 rounded-full border-2 border-[#F5EFEB] dark:border-[#0E1310] object-cover"
-                  />
-                ))}
-              </div>
-              <span className="text-stone-600 dark:text-stone-400">
-                Over 350 property owners &amp; trades registered for early access.
-              </span>
-            </div>
-
-            {/* Reassurance note */}
-            <div className="mt-6 flex items-center justify-center gap-2 text-xs font-medium text-stone-500 dark:text-stone-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-              <span>Invites roll out weekly to verified users</span>
-            </div>
-
-            {/* ============================================================ */}
-            {/* TABLET & MOBILE VISUAL SHOWCASE (Visible below XL screens)  */}
-            {/* ============================================================ */}
-            <div className="xl:hidden mt-12 w-full max-w-lg flex flex-col gap-6 text-left">
-              
-              {/* Responsive Live Milestone Escrow Card */}
-              <div className="rounded-2xl p-4 sm:p-5 bg-[#141C15] text-white shadow-2xl border border-stone-700/60 font-sans">
-                {/* Header */}
-                <div className="flex items-center justify-between text-[10px] font-mono text-stone-400 mb-2">
-                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold tracking-wider uppercase">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    LIVE MILESTONE ESCROW #AF-9021
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-stone-400" />
-                </div>
-
-                <div className="text-sm sm:text-base font-bold text-white mb-2">
-                  Solar Inverter &amp; Lithium Battery Setup
-                </div>
-
-                {/* Artisan Row */}
-                <div className="flex items-center gap-2.5 mb-3 text-[11px] text-stone-300">
-                  <img
-                    src={LANDING_IMAGES.babatunde}
-                    alt="Babatunde O."
-                    className="w-7 h-7 rounded-full object-cover border border-stone-600"
-                  />
-                  <div>
-                    <span className="font-semibold text-white">Artisan: Babatunde O.</span>
-                    <span className="text-[10px] text-stone-400 block leading-tight">Master Solar Technician • NIN Verified ✓</span>
+                      alt="Electrician working on panel"
+                      className="w-full h-full object-cover filter contrast-[1.05]"
+                    />
                   </div>
                 </div>
 
-                {/* Milestones */}
-                <div className="space-y-1.5 text-[11px] mb-3.5 border-t border-stone-800 pt-2.5">
-                  <div className="flex items-center justify-between py-0.5">
-                    <span className="text-stone-300 flex items-center gap-1.5 font-mono">
-                      <span className="w-4 h-4 rounded-full bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-[9px] text-emerald-400">01</span>
-                      Survey
-                    </span>
-                    <span className="text-emerald-400 font-medium flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Completed
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-0.5 bg-amber-950/30 -mx-2 px-2 rounded">
-                    <span className="text-amber-200 font-semibold flex items-center gap-1.5 font-mono">
-                      <span className="w-4 h-4 rounded-full bg-amber-900 border border-amber-500/50 flex items-center justify-center text-[9px] text-amber-300">02</span>
-                      Installation
-                    </span>
-                    <span className="text-[#BD5324] font-medium flex items-center gap-1 text-[10px] bg-[#BD5324]/20 border border-[#BD5324]/40 px-2 py-0.5 rounded-full">
-                      <VaultLockHugeIcon size={11} className="text-[#BD5324]" /> Locked in Escrow
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-0.5 text-stone-400">
-                    <span className="flex items-center gap-1.5 font-mono">
-                      <span className="w-4 h-4 rounded-full bg-stone-900 border border-stone-700 flex items-center justify-center text-[9px]">03</span>
-                      Inspection
-                    </span>
-                    <span className="text-stone-500 text-[10px]">⚪ Pending</span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-0.5 text-stone-400">
-                    <span className="flex items-center gap-1.5 font-mono">
-                      <span className="w-4 h-4 rounded-full bg-stone-900 border border-stone-700 flex items-center justify-center text-[9px]">04</span>
-                      Release
-                    </span>
-                    <span className="text-stone-500 text-[10px]">⚪ Locked</span>
+                {/* ------------------------------------------------------ */}
+                {/* IMAGE 3: Middle-Left (Potter Shaping Clay)             */}
+                {/* Shape: Asymmetrical Rounded Pebble / Shield Mask       */}
+                {/* ------------------------------------------------------ */}
+                <div className="absolute top-[40%] -left-2 sm:-left-4 w-40 sm:w-46 h-40 sm:h-46 z-10">
+                  <div
+                    className="relative w-full h-full overflow-hidden shadow-xl bg-stone-900"
+                    style={{ borderRadius: '50px 18px 50px 18px' }}
+                  >
+                    <img
+                      src={WAITLIST_HERO_ASSETS.potter}
+                      onError={(e) => {
+                        e.currentTarget.src = WAITLIST_HERO_ASSETS.potterAlt;
+                      }}
+                      alt="Ceramic potter artisan shaping clay"
+                      className="w-full h-full object-cover filter contrast-[1.05]"
+                    />
                   </div>
                 </div>
 
-                {/* Escrow Value Box */}
-                <div className="p-3 rounded-xl bg-stone-900/90 border border-stone-800 mb-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[9px] font-mono uppercase tracking-widest text-stone-400">ESCROW VALUE</span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPayment('paystack')}
-                        className={`text-[9px] font-bold px-2 py-0.5 rounded border transition-colors ${
-                          selectedPayment === 'paystack'
-                            ? 'bg-[#0BA4DB]/40 text-[#0BA4DB] border-[#0BA4DB]'
-                            : 'text-stone-500 border-stone-700'
-                        }`}
-                      >
-                        Paystack NGN
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPayment('monad')}
-                        className={`text-[9px] font-bold px-2 py-0.5 rounded border transition-colors ${
-                          selectedPayment === 'monad'
-                            ? 'bg-[#836EF9]/40 text-[#836EF9] border-[#836EF9]'
-                            : 'text-stone-500 border-stone-700'
-                        }`}
-                      >
-                        MONAD Testnet
-                      </button>
-                    </div>
-                  </div>
-                  <div className="text-xl font-extrabold tracking-tight text-white">
-                    {selectedPayment === 'paystack' ? '₦240,000' : '415 $MON'}
-                  </div>
-                  <div className="text-[10px] font-mono text-stone-400">
-                    {selectedPayment === 'paystack' ? '≈ 415 $MON' : '≈ ₦240,000 NGN'}
+                {/* ------------------------------------------------------ */}
+                {/* IMAGE 4: Lower-Right (Beadworker / Jewelry Artisan)    */}
+                {/* Shape: Vertical Elongated Capsule Arch                 */}
+                {/* ------------------------------------------------------ */}
+                <div className="absolute bottom-5 sm:bottom-6 right-0 sm:right-0 w-34 sm:w-40 h-48 sm:h-56 z-10">
+                  <div className="relative w-full h-full rounded-[36px] overflow-hidden shadow-xl bg-stone-900">
+                    <img
+                      src={WAITLIST_HERO_ASSETS.jewelry}
+                      onError={(e) => {
+                        e.currentTarget.src = WAITLIST_HERO_ASSETS.jewelryAlt;
+                      }}
+                      alt="Artisan crafting wire bead jewelry"
+                      className="w-full h-full object-cover filter contrast-[1.05]"
+                    />
                   </div>
                 </div>
 
-                {/* Proof of Work */}
-                <div>
-                  <div className="text-[9px] font-mono uppercase tracking-widest text-stone-400 mb-1.5">
-                    PROOF OF WORK
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 mb-2">
-                    <div className="relative rounded-lg overflow-hidden border border-stone-800">
-                      <img
-                        src={LANDING_IMAGES.proofBefore}
-                        alt="Before: Empty utility wall"
-                        className="w-full h-16 sm:h-20 object-cover"
-                      />
-                      <div className="p-1 bg-stone-950/90 text-[8px] text-stone-300 font-mono">
-                        <span className="font-bold text-amber-400">Before</span>
-                        <div className="truncate text-stone-400">Empty utility wall</div>
+                {/* ------------------------------------------------------ */}
+                {/* CENTERPIECE: 3D FLOATING MOBILE PHONE SCREEN CARD      */}
+                {/* ------------------------------------------------------ */}
+                <div className="relative z-20 w-full max-w-[260px] xs:max-w-[275px] sm:max-w-[295px] md:max-w-[305px] transform -rotate-[3.5deg] hover:rotate-0 transition-transform duration-500">
+                  <div className="bg-[#071F15] dark:bg-[#07150E] rounded-[34px] p-4.5 sm:p-5 border-2 border-white/60 dark:border-stone-700/70 shadow-2xl shadow-emerald-950/40 text-white">
+                    
+                    {/* Top Status Bar */}
+                    <div className="flex items-center justify-between mb-3.5">
+                      {/* Brand Logo Mini */}
+                      <div className="flex items-center gap-2">
+                        <img
+                          src="/brand/artifix-icon-dark.png"
+                          alt="Artifix"
+                          className="w-4.5 h-4.5 object-contain shrink-0"
+                        />
+                        <span className="text-xs sm:text-sm font-black tracking-tight text-white">Artifix</span>
+                      </div>
+
+                      {/* Waitlist Pill Status Badge */}
+                      <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#0D3825] border border-emerald-500/30 text-[10px] font-bold text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>Waitlist</span>
                       </div>
                     </div>
-                    <div className="relative rounded-lg overflow-hidden border border-stone-800">
-                      <img
-                        src={LANDING_IMAGES.proofAfter}
-                        alt="After: 5kVA Inverter rack wiring"
-                        className="w-full h-16 sm:h-20 object-cover"
-                      />
-                      <div className="p-1 bg-stone-950/90 text-[8px] text-stone-300 font-mono">
-                        <span className="font-bold text-emerald-400">After</span>
-                        <div className="truncate text-stone-400">5kVA Inverter rack wiring</div>
+
+                    {/* Notification Heading */}
+                    <div className="mb-2">
+                      <div className="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight">
+                        You&apos;re on the
+                      </div>
+                      <div className="text-xl sm:text-2xl font-black text-[#10B981] leading-tight">
+                        waitlist!
                       </div>
                     </div>
-                  </div>
 
-                  {/* Verification Pill */}
-                  <div className="w-full py-1.5 px-3 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-[10px] font-semibold flex items-center justify-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Approved by Client • Ready for Instant Settlement</span>
-                  </div>
-                </div>
-              </div>
+                    <p className="text-[10px] sm:text-[11px] text-stone-300 leading-relaxed">
+                      We&apos;ll notify you as soon as we&apos;re ready. Thanks for being early!
+                    </p>
 
-              {/* Responsive Artisan Trade Passport Card */}
-              <div className="paper-card rounded-2xl p-4 sm:p-5 shadow-xl text-stone-900 dark:text-stone-100">
-                <div className="text-[10px] font-mono uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">
-                  ARTISAN TRADE PASSPORT
-                </div>
-
-                <div className="flex items-center gap-3 mb-3">
-                  <img
-                    src={LANDING_IMAGES.babatunde}
-                    alt="Babatunde O."
-                    className="w-12 h-12 rounded-lg object-cover border border-stone-300 shadow-sm"
-                  />
-                  <div>
-                    <div className="text-sm font-bold leading-tight">Babatunde O.</div>
-                    <div className="text-[10px] font-mono text-stone-500 uppercase">Master Solar Technician</div>
-                  </div>
-                </div>
-
-                {/* Verification Checklist */}
-                <div className="grid grid-cols-3 gap-1 text-[10px] font-medium text-stone-700 dark:text-stone-300 border-t border-stone-200 dark:border-stone-800 pt-2 mb-3">
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
-                    <span>NIN VERIFIED</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
-                    <span>PHONE VERIFIED</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100" />
-                    <span>TRADE CERTIFIED</span>
-                  </div>
-                </div>
-
-                {/* Stats row */}
-                <div className="grid grid-cols-3 gap-1 text-center py-2 px-2 bg-stone-100 dark:bg-stone-900 rounded-lg text-stone-800 dark:text-stone-200 border border-stone-200/80 dark:border-stone-800 mb-3">
-                  <div>
-                    <div className="text-xs font-black">127</div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">JOBS</div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-black">98.7%</div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">ON TIME</div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-black flex items-center justify-center gap-0.5">
-                      4.9 <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                    {/* Waitlist Stat Count Card */}
+                    <div className="bg-[#0D3323] dark:bg-[#0A261B] border border-[#164D35] rounded-xl p-2.5 sm:p-3 my-3 sm:my-3.5 flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-base sm:text-lg font-black text-white tracking-tight leading-none">
+                          {waitlistCount.toLocaleString()}
+                        </div>
+                        <div className="text-[9px] sm:text-[10px] text-emerald-200/80 font-medium mt-0.5">
+                          people already on the waitlist
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">RATING</div>
+
+                    {/* "What you'll get" Value Checklist */}
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] font-bold text-stone-200 uppercase tracking-wider mb-1.5">
+                        What you&apos;ll get
+                      </div>
+                      
+                      {[
+                        'Early access to the platform',
+                        'Exclusive launch perks',
+                        'Product updates & sneak peeks',
+                        'Priority support',
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-[11px] sm:text-xs text-stone-200">
+                          <div className="w-3.5 h-3.5 rounded-full bg-[#10B981] flex items-center justify-center text-[#071F15] shrink-0">
+                            <Check className="w-2 h-2 stroke-[3]" />
+                          </div>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Handwritten Slogan inside Phone Card */}
+                    <div className="mt-4 pt-2.5 border-t border-emerald-900/50 text-center select-none">
+                      <div className="font-caveat text-emerald-200 text-base sm:text-lg font-bold leading-tight">
+                        Real People. Real Skills. Real Trust.
+                      </div>
+                      <svg
+                        viewBox="0 0 160 10"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-28 h-1.5 text-[#00A86B] mx-auto mt-1 opacity-80"
+                        preserveAspectRatio="none"
+                      >
+                        <path d="M2 6C35 2 110 2 158 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                      </svg>
+                    </div>
+
                   </div>
                 </div>
 
-                {/* Footer with ID and Wax Seal */}
-                <div className="flex items-center justify-between pt-2 border-t border-stone-200/80 dark:border-stone-800">
-                  <div className="text-[9px] font-mono text-stone-400">ID: AF / 00921 • Monad 10143 Verified</div>
-                  <div className="wax-seal w-12 h-12 rounded-full flex flex-col items-center justify-center text-amber-50 border border-amber-900/40 transform rotate-3 shadow-md select-none">
-                    <div className="text-[6px] font-black uppercase tracking-tighter leading-none">VERIFIED</div>
-                    <div className="text-[8px] font-extrabold tracking-tight">ARTIFIX</div>
-                    <div className="text-[5px] font-mono">2026 SEAL</div>
+                {/* ------------------------------------------------------ */}
+                {/* BOTTOM HAND-DRAWN ANNOTATION: ARROW + SCRIPT           */}
+                {/* ------------------------------------------------------ */}
+                <div className="absolute -bottom-8 sm:-bottom-9 left-4 sm:left-10 flex items-center gap-2 font-caveat text-[#00965E] dark:text-emerald-400 text-xl sm:text-2xl font-bold -rotate-6 select-none pointer-events-none">
+                  {/* Curved Arrow SVG */}
+                  <svg className="w-9 h-9 text-[#00965E] dark:text-emerald-400 -mt-1 shrink-0" viewBox="0 0 44 44" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M34 32C24 34 14 28 10 16M10 16L16 14M10 16L12 22" />
+                  </svg>
+                  <div className="leading-[1.1] text-left">
+                    <div>It only</div>
+                    <div>takes a minute!</div>
                   </div>
                 </div>
+
               </div>
 
             </div>
@@ -1013,609 +744,69 @@ export const LandingPage: React.FC = () => {
           </div>
 
 
-          {/* ========================================== */}
-          {/* RIGHT COLLAGE OF CARDS (Span 3 on XL)      */}
-          {/* ========================================== */}
-          <div className="hidden xl:flex xl:col-span-3 flex-col gap-6 relative">
-            
-            {/* Top Right Group: Villa + Rooftop Worker */}
-            <div className="flex items-start justify-end gap-3 -mr-6">
-              {/* Card 1A: Luxury Villa Architecture with Tape */}
-              <div className="relative transform rotate-3 hover:rotate-0 transition-transform duration-300 w-52">
-                <div className="relative rounded-xl overflow-hidden shadow-xl border border-stone-300/80 dark:border-stone-800 bg-stone-900">
-                  <img
-                    src={LANDING_IMAGES.villa}
-                    alt="Modern architectural home"
-                    className="w-full h-32 object-cover filter contrast-[1.05]"
-                  />
-                  {/* Tape Label */}
-                  <div className="absolute top-2 right-2 transform rotate-2">
-                    <span className="tape-strip">Residential Projects</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 1B: Rooftop Construction Worker with Tape */}
-              <div className="relative transform rotate-6 hover:rotate-0 transition-transform duration-300 w-40 -mt-2">
-                <div className="relative rounded-xl overflow-hidden shadow-xl border border-stone-300/80 dark:border-stone-800 bg-stone-900">
-                  <img
-                    src={LANDING_IMAGES.roofer}
-                    alt="Rooftop construction worker"
-                    className="w-full h-36 object-cover filter contrast-[1.05]"
-                  />
-                  {/* Tape Label */}
-                  <div className="absolute bottom-2 right-2 transform -rotate-2">
-                    <span className="tape-strip">Verified Trades</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: THE STAR - Live Milestone Escrow Card (tilted -2deg) */}
-            <div className="relative transform -rotate-1 hover:rotate-0 transition-transform duration-300 w-[330px] -ml-8 z-20">
-              <div className="rounded-2xl p-4 bg-[#141C15] text-white shadow-2xl border border-stone-700/60 font-sans">
+          {/* ============================================================ */}
+          {/* 3. FULL-WIDTH DARK FOREST GREEN TRUST STRIP                  */}
+          {/* ============================================================ */}
+          <div className="mt-16 sm:mt-24">
+            <div className="bg-[#0A2218] dark:bg-[#071710] border border-transparent dark:border-stone-800/80 rounded-2xl sm:rounded-3xl p-6 sm:px-10 sm:py-7 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+              
+              {/* 3 Trust Pillars */}
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 sm:gap-10 text-white">
                 
-                {/* Header */}
-                <div className="flex items-center justify-between text-[10px] font-mono text-stone-400 mb-1">
-                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold tracking-wider uppercase">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    MILESTONE ESCROW #AF-9021
+                {/* Pillar 1: Trusted Artisans */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full border border-emerald-500/30 bg-emerald-950/40 flex items-center justify-center text-emerald-400 shadow-inner">
+                    <ShieldCheck className="w-5 h-5" />
                   </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-stone-400" />
-                </div>
-
-                <div className="text-sm font-bold text-white mb-2">
-                  Solar Inverter &amp; Lithium Battery Setup
-                </div>
-
-                {/* Artisan Row */}
-                <div className="flex items-center gap-2.5 mb-3.5 text-[11px] text-stone-300">
-                  <img
-                    src={LANDING_IMAGES.babatunde}
-                    alt="Babatunde O."
-                    className="w-6 h-6 rounded-full object-cover border border-stone-600"
-                  />
-                  <div>
-                    <span className="font-semibold text-white">Babatunde O.</span>
-                    <span className="text-[10px] text-stone-400 block leading-tight">Solar Technician • NIN Verified ✓</span>
+                  <div className="text-sm sm:text-base font-bold tracking-tight">
+                    Trusted Artisans
                   </div>
                 </div>
 
-                {/* 4 Milestones Timeline */}
-                <div className="space-y-1.5 text-[11px] mb-4 border-t border-stone-800 pt-2.5">
-                  <div className="flex items-center justify-between py-0.5">
-                    <span className="text-stone-300 flex items-center gap-1.5 font-mono">
-                      <span className="w-4 h-4 rounded-full bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-[9px] text-emerald-400">01</span>
-                      Survey
-                    </span>
-                    <span className="text-emerald-400 font-medium flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Completed
-                    </span>
-                  </div>
+                <div className="hidden sm:block w-px h-8 bg-emerald-800/40" />
 
-                  <div className="flex items-center justify-between py-0.5 bg-amber-950/30 -mx-2 px-2 rounded">
-                    <span className="text-amber-200 font-semibold flex items-center gap-1.5 font-mono">
-                      <span className="w-4 h-4 rounded-full bg-amber-900 border border-amber-500/50 flex items-center justify-center text-[9px] text-amber-300">02</span>
-                      Installation
-                    </span>
-                    <span className="text-[#BD5324] font-medium flex items-center gap-1 text-[10px] bg-[#BD5324]/20 border border-[#BD5324]/40 px-2 py-0.5 rounded-full">
-                      <VaultLockHugeIcon size={11} className="text-[#BD5324]" /> Locked in Escrow
-                    </span>
+                {/* Pillar 2: Real Connections */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full border border-emerald-500/30 bg-emerald-950/40 flex items-center justify-center text-emerald-400 shadow-inner">
+                    <Users className="w-5 h-5" />
                   </div>
-
-                  <div className="flex items-center justify-between py-0.5 text-stone-400">
-                    <span className="flex items-center gap-1.5 font-mono">
-                      <span className="w-4 h-4 rounded-full bg-stone-900 border border-stone-700 flex items-center justify-center text-[9px]">03</span>
-                      Inspection
-                    </span>
-                    <span className="text-stone-500 text-[10px]">⚪ Pending</span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-0.5 text-stone-400">
-                    <span className="flex items-center gap-1.5 font-mono">
-                      <span className="w-4 h-4 rounded-full bg-stone-900 border border-stone-700 flex items-center justify-center text-[9px]">04</span>
-                      Release
-                    </span>
-                    <span className="text-stone-500 text-[10px]">⚪ Locked</span>
+                  <div className="text-sm sm:text-base font-bold tracking-tight">
+                    Real Connections
                   </div>
                 </div>
 
-                {/* Escrow Value Display Box */}
-                <div className="p-2.5 rounded-xl bg-stone-900/90 border border-stone-800 mb-3.5">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[9px] font-mono uppercase tracking-widest text-stone-400">ESCROW VALUE</span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-[#0BA4DB]/30 text-[#0BA4DB] border border-[#0BA4DB]/40">
-                        Paystack
-                      </span>
-                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-[#836EF9]/30 text-[#836EF9] border border-[#836EF9]/40">
-                        MONAD
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-xl font-extrabold tracking-tight text-white">
-                    {selectedPayment === 'paystack' ? '₦240,000' : '415 $MON'}
-                  </div>
-                  <div className="text-[10px] font-mono text-stone-400">
-                    {selectedPayment === 'paystack' ? '≈ 415 $MON' : '≈ ₦240,000 NGN'}
-                  </div>
-                </div>
+                <div className="hidden sm:block w-px h-8 bg-emerald-800/40" />
 
-                {/* Proof of Work Before / After */}
-                <div>
-                  <div className="text-[9px] font-mono uppercase tracking-widest text-stone-400 mb-1.5">
-                    PROOF OF WORK
+                {/* Pillar 3: Local Services */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full border border-emerald-500/30 bg-emerald-950/40 flex items-center justify-center text-emerald-400 shadow-inner">
+                    <MapPin className="w-5 h-5" />
                   </div>
-                  <div className="grid grid-cols-2 gap-2 mb-2">
-                    <div className="relative rounded-lg overflow-hidden border border-stone-800">
-                      <img
-                        src={LANDING_IMAGES.proofBefore}
-                        alt="Before: Empty utility wall"
-                        className="w-full h-16 object-cover"
-                      />
-                      <div className="p-1 bg-stone-950/90 text-[8px] text-stone-300 font-mono">
-                        <span className="font-bold text-amber-400">Before</span>
-                        <div className="truncate text-stone-400">Empty utility wall</div>
-                      </div>
-                    </div>
-                    <div className="relative rounded-lg overflow-hidden border border-stone-800">
-                      <img
-                        src={LANDING_IMAGES.proofAfter}
-                        alt="After: 5kVA Inverter rack wiring"
-                        className="w-full h-16 object-cover"
-                      />
-                      <div className="p-1 bg-stone-950/90 text-[8px] text-stone-300 font-mono">
-                        <span className="font-bold text-emerald-400">After</span>
-                        <div className="truncate text-stone-400">5kVA Inverter rack wiring</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Verification Pill */}
-                  <div className="w-full py-1.5 px-3 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-[10px] font-semibold flex items-center justify-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Approved by Client</span>
+                  <div className="text-sm sm:text-base font-bold tracking-tight">
+                    Local Services
                   </div>
                 </div>
 
               </div>
-            </div>
 
-            {/* Card 3: Pinned Job Contract Docket & Stats */}
-            <div className="flex items-start gap-4 -mt-2">
-              
-              {/* Job Contract Paper Card */}
-              <div className="paper-card rounded-xl p-3 shadow-xl transform rotate-2 hover:rotate-0 transition-transform duration-300 w-44 text-stone-900 dark:text-stone-100 relative">
-                {/* Paper clip */}
-                <div className="absolute -top-3 right-3 w-3 h-6 rounded-full border-2 border-amber-600/80 bg-transparent" />
-
-                <div className="text-[9px] font-mono uppercase tracking-wider text-stone-500 mb-1">
-                  JOB CONTRACT
-                </div>
-                <div className="text-xs font-bold leading-tight">Solar Installation</div>
-                <div className="text-[9px] font-mono text-stone-500 mb-2">5kVA Inverter System</div>
-
-                <div className="space-y-1 text-[10px] font-medium border-t border-stone-200 dark:border-stone-800 pt-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <JobContractDocketHugeIcon size={12} className="text-[#BD5324]" />
-                    <span>4 Milestones</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 font-bold text-stone-900 dark:text-white">
-                    <NairaCoinsHugeIcon size={12} className="text-[#BD5324]" />
-                    <span>₦800,000 Total</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[#BD5324] font-semibold">
-                    <ShieldCheckHugeIcon size={12} className="text-[#BD5324]" />
-                    <span>Escrow Protected</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats Paper Card */}
-              <div className="paper-card rounded-xl p-2.5 shadow-xl transform -rotate-3 hover:rotate-0 transition-transform duration-300 w-32 text-stone-900 dark:text-stone-100">
-                <div className="space-y-1.5 text-center">
-                  <div>
-                    <div className="text-sm font-black">100%</div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">ESCROW BACKED</div>
-                  </div>
-                  <div className="border-t border-stone-200 dark:border-stone-800 pt-1">
-                    <div className="text-sm font-black">NIN</div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">ID VERIFIED</div>
-                  </div>
-                  <div className="border-t border-stone-200 dark:border-stone-800 pt-1">
-                    <div className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                      0%
-                    </div>
-                    <div className="text-[8px] font-mono text-stone-500 uppercase">PAYMENT RISK</div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Card 4: Worker Photo with Tape Note (tilted 3deg) */}
-            <div className="relative transform rotate-3 hover:rotate-0 transition-transform duration-300 w-60 self-end -mt-2">
-              <div className="relative rounded-xl overflow-hidden shadow-lg border border-stone-300/80 dark:border-stone-800 bg-stone-900">
+              {/* Artifix Monogram Logo */}
+              <div className="flex items-center gap-3 shrink-0">
                 <img
-                  src={LANDING_IMAGES.welder}
-                  alt="Skilled technician in workshop"
-                  className="w-full h-28 object-cover filter contrast-[1.05]"
+                  src="/brand/artifix-icon-dark.png"
+                  alt="Artifix"
+                  className="h-10 sm:h-11 w-auto object-contain"
                 />
-                <div className="absolute bottom-2 right-2 transform -rotate-1">
-                  <span className="tape-strip">Metal Fabrication</span>
-                </div>
               </div>
-            </div>
 
-            {/* Card 5: Commercial & Residential Building Photo */}
-            <div className="relative transform -rotate-2 hover:rotate-0 transition-transform duration-300 w-52 self-start -mt-2">
-              <div className="relative rounded-xl overflow-hidden shadow-lg border border-stone-300/80 dark:border-stone-800 bg-stone-900">
-                <img
-                  src={LANDING_IMAGES.building}
-                  alt="Commercial architecture"
-                  className="w-full h-24 object-cover filter contrast-[1.05]"
-                />
-                <div className="absolute top-2 left-2">
-                  <span className="tape-strip">Commercial Builds</span>
-                </div>
-              </div>
             </div>
-
           </div>
 
-        </div>
-
-        {/* Bottom Center Scroll Indicator with Drafting Crosshair */}
-        <div className="mt-14 flex flex-col items-center justify-center select-none text-stone-400 dark:text-stone-600">
-          <a
-            href="#how-it-works"
-            className="flex flex-col items-center gap-1.5 group hover:text-stone-700 dark:hover:text-stone-300 transition-colors"
-          >
-            <div className="w-10 h-10 rounded-full border border-stone-300 dark:border-stone-700 flex items-center justify-center text-[10px] font-mono tracking-widest uppercase group-hover:border-stone-500 transition-colors">
-              <ChevronDown className="w-4 h-4 animate-bounce" />
-            </div>
-            <span className="text-[10px] font-mono tracking-widest uppercase">SCROLL</span>
-          </a>
         </div>
 
       </section>
 
 
-      {/* ============================================================ */}
-      {/* 3. HOW IT WORKS (THE 4-STEP ESCROW LIFECYCLE)                */}
-      {/* ============================================================ */}
-      <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8 border-t border-stone-300/60 dark:border-stone-800 bg-white/50 dark:bg-stone-950/40">
-        <div className="max-w-6xl mx-auto">
-          
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <div className="text-xs font-mono uppercase tracking-widest text-[#BD5324] font-bold mb-2">
-              How It Works
-            </div>
-            <h2 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white mb-4">
-              Milestone escrow from start to finish.
-            </h2>
-            <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base leading-relaxed">
-              Funds stay locked in neutral escrow and release only as each stage is completed and approved.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative">
-            
-            {/* Step 1 */}
-            <div className="paper-card rounded-2xl p-6 shadow-sm flex flex-col justify-between relative group hover:border-[#BD5324]/50 transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-stone-900 text-white font-mono text-sm font-bold flex items-center justify-center">
-                  01
-                </div>
-                <div className="w-9 h-9 rounded-lg bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center">
-                  <ScopeContractHugeIcon className="w-5 h-5 text-[#BD5324]" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-stone-900 dark:text-white mb-2">
-                  Define Milestones
-                </h3>
-                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Agree on deliverables, deadlines, and phased costs before work starts.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 text-[11px] font-mono text-[#BD5324]">
-                ✓ Scope agreed
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="paper-card rounded-2xl p-6 shadow-sm flex flex-col justify-between relative group hover:border-[#BD5324]/50 transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#BD5324] text-white font-mono text-sm font-bold flex items-center justify-center">
-                  02
-                </div>
-                <div className="w-9 h-9 rounded-lg bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center">
-                  <FundEscrowHugeIcon className="w-5 h-5 text-[#BD5324]" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-stone-900 dark:text-white mb-2">
-                  Fund Escrow
-                </h3>
-                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Deposit funds via Paystack (NGN) or Monad ($MON). Payment is held safely in escrow.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 text-[11px] font-mono text-[#BD5324] font-semibold">
-                🔒 Funds secured
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="paper-card rounded-2xl p-6 shadow-sm flex flex-col justify-between relative group hover:border-[#BD5324]/50 transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-stone-900 text-white font-mono text-sm font-bold flex items-center justify-center">
-                  03
-                </div>
-                <div className="w-9 h-9 rounded-lg bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center">
-                  <VisualInspectionHugeIcon className="w-5 h-5 text-[#BD5324]" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-stone-900 dark:text-white mb-2">
-                  Verify Work
-                </h3>
-                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  The artisan uploads timestamped before-and-after photos for client review.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 text-[11px] font-mono text-[#BD5324]">
-                📸 Photo proof
-              </div>
-            </div>
-
-            {/* Step 4 */}
-            <div className="paper-card rounded-2xl p-6 shadow-sm flex flex-col justify-between relative group hover:border-[#BD5324]/50 transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#BD5324] text-white font-mono text-sm font-bold flex items-center justify-center">
-                  04
-                </div>
-                <div className="w-9 h-9 rounded-lg bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center">
-                  <InstantSettlementHugeIcon className="w-5 h-5 text-[#BD5324]" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-stone-900 dark:text-white mb-2">
-                  Approve &amp; Settle
-                </h3>
-                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Approve the milestone to release funds immediately to the artisan.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-stone-200 dark:border-stone-800 text-[11px] font-mono text-[#BD5324] font-semibold">
-                ⚡ Instant payout
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-
-      {/* ============================================================ */}
-      {/* 4. CERTIFIED TRADES DIRECTORY                                */}
-      {/* ============================================================ */}
-      <section id="trades" className="py-24 px-4 sm:px-6 lg:px-8 border-t border-stone-300/60 dark:border-stone-800">
-        <div className="max-w-6xl mx-auto">
-          
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-14">
-            <div>
-              <div className="text-xs font-mono uppercase tracking-widest text-[#BD5324] font-bold mb-2">
-                Core Trades
-              </div>
-              <h2 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white">
-                Vetted specialists for critical work.
-              </h2>
-            </div>
-            <p className="text-stone-600 dark:text-stone-400 text-sm max-w-md mt-3 md:mt-0">
-              Every artisan undergoes biometric ID checks, credential screening, and technical evaluation.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            {/* Trade 1: Solar & Clean Energy */}
-            <div className="paper-card rounded-2xl p-6 hover:shadow-xl transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <SolarEnergyHugeIcon className="w-7 h-7 text-[#BD5324]" />
-              </div>
-              <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                Solar &amp; Power Inverters
-              </h3>
-              <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                Certified solar installers, battery wiremen, and clean energy technicians.
-              </p>
-              <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
-                <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>Verified Category</span>
-              </div>
-            </div>
-
-            {/* Trade 2: Electrical Engineering */}
-            <div className="paper-card rounded-2xl p-6 hover:shadow-xl transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <ElectricalHugeIcon className="w-7 h-7 text-[#BD5324]" />
-              </div>
-              <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                Electrical Engineering
-              </h3>
-              <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                Industrial panel wiring, conduit runs, generator changeovers, and surge suppression.
-              </p>
-              <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
-                <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>Verified Category</span>
-              </div>
-            </div>
-
-            {/* Trade 3: Precision Plumbing */}
-            <div className="paper-card rounded-2xl p-6 hover:shadow-xl transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <PlumbingHugeIcon className="w-7 h-7 text-[#BD5324]" />
-              </div>
-              <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                Precision Plumbing
-              </h3>
-              <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                PPR &amp; PVC pressure piping, borehole pumps, drainage, and sanitary fittings.
-              </p>
-              <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
-                <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>Verified Category</span>
-              </div>
-            </div>
-
-            {/* Trade 4: Carpentry & Cabinetry */}
-            <div className="paper-card rounded-2xl p-6 hover:shadow-xl transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <CarpentryHugeIcon className="w-7 h-7 text-[#BD5324]" />
-              </div>
-              <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                Carpentry &amp; Cabinetry
-              </h3>
-              <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                Custom kitchen cabinetry, hardwood roofing rafters, flush doors, and architectural woodwork.
-              </p>
-              <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
-                <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>Verified Category</span>
-              </div>
-            </div>
-
-            {/* Trade 5: Masonry & Tiling */}
-            <div className="paper-card rounded-2xl p-6 hover:shadow-xl transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <MasonryHugeIcon className="w-7 h-7 text-[#BD5324]" />
-              </div>
-              <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                Masonry &amp; Precision Tiling
-              </h3>
-              <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                Structural blocklaying, porcelain floor tiling, and laser-accurate leveling.
-              </p>
-              <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
-                <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>Verified Category</span>
-              </div>
-            </div>
-
-            {/* Trade 6: Welding & Metal Fabrication */}
-            <div className="paper-card rounded-2xl p-6 hover:shadow-xl transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <WeldingHugeIcon className="w-7 h-7 text-[#BD5324]" />
-              </div>
-              <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                Welding &amp; Metal Fabrication
-              </h3>
-              <p className="text-xs text-stone-600 dark:text-stone-400 mb-4 leading-relaxed">
-                Structural steel beams, security gates, burglary bars, and stainless steel handrails.
-              </p>
-              <div className="flex items-center gap-2 text-[11px] font-mono text-stone-500">
-                <span className="w-2 h-2 rounded-full bg-[#BD5324]" />
-                <span>Verified Category</span>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-
-      {/* ============================================================ */}
-      {/* 5. THE TRUST & VERIFICATION ARCHITECTURE                     */}
-      {/* ============================================================ */}
-      <section id="trust" className="py-24 px-4 sm:px-6 lg:px-8 border-t border-stone-300/60 dark:border-stone-800 bg-[#F5EFEB]/50 dark:bg-stone-900/30">
-        <div className="max-w-6xl mx-auto">
-          
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <div className="text-xs font-mono uppercase tracking-widest text-[#BD5324] font-bold mb-2">
-              Security &amp; Escrow
-            </div>
-            <h2 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white mb-4">
-              Built to eliminate payment and delivery risk.
-            </h2>
-            <p className="text-stone-600 dark:text-stone-400 text-sm sm:text-base leading-relaxed">
-              No cash advances to strangers. No unpaid labor. Simple, milestone-backed protection.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
-            {/* Pillar 1 */}
-            <div className="paper-card rounded-2xl p-8 flex items-start gap-5">
-              <div className="w-12 h-12 rounded-xl bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center shrink-0">
-                <IdentityAuditHugeIcon className="w-7 h-7 text-[#BD5324]" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                  Government Identity Verification
-                </h3>
-                <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Every artisan verifies their biometric NIN and phone records before accepting jobs. Unverified contractors cannot operate on Artifix.
-                </p>
-              </div>
-            </div>
-
-            {/* Pillar 2 */}
-            <div className="paper-card rounded-2xl p-8 flex items-start gap-5">
-              <div className="w-12 h-12 rounded-xl bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center shrink-0">
-                <SmartContractVaultHugeIcon className="w-7 h-7 text-[#BD5324]" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                  Dual Escrow: Paystack &amp; Monad
-                </h3>
-                <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Settle locally in Naira via Paystack or on-chain with $MON on Monad Testnet. Funds stay in neutral custody until milestones are approved.
-                </p>
-              </div>
-            </div>
-
-            {/* Pillar 3 */}
-            <div className="paper-card rounded-2xl p-8 flex items-start gap-5">
-              <div className="w-12 h-12 rounded-xl bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center shrink-0">
-                <ProofOfWorkAuditHugeIcon className="w-7 h-7 text-[#BD5324]" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                  Verifiable Proof of Work
-                </h3>
-                <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Milestone payout requests require timestamped before-and-after photos and completion notes for client review.
-                </p>
-              </div>
-            </div>
-
-            {/* Pillar 4 */}
-            <div className="paper-card rounded-2xl p-8 flex items-start gap-5">
-              <div className="w-12 h-12 rounded-xl bg-[#BD5324]/10 dark:bg-[#BD5324]/20 text-[#BD5324] flex items-center justify-center shrink-0">
-                <DisputeTribunalHugeIcon className="w-7 h-7 text-[#BD5324]" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-                  Evidence-Based Dispute Review
-                </h3>
-                <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
-                  If work does not meet agreed specifications, neutral inspectors review project photos and contract terms to resolve escrow within 48 hours.
-                </p>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-
-      {/* ============================================================ */}
+            {/* ============================================================ */}
       {/* 6. DUAL PATHWAY: FOR CLIENTS VS FOR ARTISANS                 */}
       {/* ============================================================ */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 border-t border-stone-300/60 dark:border-stone-800">
@@ -1655,7 +846,7 @@ export const LandingPage: React.FC = () => {
             <div>
               <button
                 type="button"
-                onClick={() => scrollToWaitlist('client')}
+                onClick={() => scrollToWaitlist('client', 'dual_perspective_client')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 font-bold text-xs uppercase tracking-wider hover:bg-stone-800 dark:hover:bg-stone-100 transition-all shadow-md active:scale-95"
               >
                 <span>Join Client Waitlist</span>
@@ -1698,7 +889,7 @@ export const LandingPage: React.FC = () => {
             <div>
               <button
                 type="button"
-                onClick={() => scrollToWaitlist('artisan')}
+                onClick={() => scrollToWaitlist('artisan', 'dual_perspective_artisan')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#BD5324] hover:bg-[#A64319] text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95"
               >
                 <span>Join Artisan Waitlist</span>
@@ -1711,178 +902,46 @@ export const LandingPage: React.FC = () => {
       </section>
 
 
-      {/* ============================================================ */}
-      {/* 7. FREQUENTLY ASKED QUESTIONS (FAQ)                          */}
-      {/* ============================================================ */}
-      <section id="faq" className="py-24 px-4 sm:px-6 lg:px-8 border-t border-stone-300/60 dark:border-stone-800 bg-[#F5EFEB]/50 dark:bg-stone-900/30">
-        <div className="max-w-4xl mx-auto">
-          
-          <div className="text-center mb-14">
-            <div className="text-xs font-mono uppercase tracking-widest text-[#BD5324] font-bold mb-2">
-              FAQ
-            </div>
-            <h2 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-stone-900 dark:text-white">
-              Frequently Asked Questions
-            </h2>
-          </div>
 
-          <div className="space-y-4">
-            {[
-              {
-                q: 'How does escrow protect client funds?',
-                a: 'Your deposit is held in neutral custody via Paystack or Monad smart contract. The artisan cannot withdraw funds until you inspect and approve each milestone.',
-              },
-              {
-                q: 'How do artisans know they will get paid?',
-                a: '100% of the milestone payment must be deposited into escrow before work begins. Clients cannot unilaterally withdraw funds once deposited.',
-              },
-              {
-                q: 'Can I pay with Nigerian Naira?',
-                a: 'Yes. You can pay in Naira (NGN) via Paystack using cards or bank transfer, or in crypto with $MON on Monad Testnet.',
-              },
-              {
-                q: 'How are artisans verified?',
-                a: 'Every artisan completes biometric NIN identity verification, phone verification, and trade credential checks before accepting projects.',
-              },
-              {
-                q: 'What happens if there is a dispute?',
-                a: 'Either party can request arbitration. An Artifix inspector reviews the project agreement and submitted photo proof to resolve the escrow within 48 hours.',
-              },
-            ].map((faq, idx) => (
-              <div
-                key={idx}
-                className="paper-card rounded-2xl overflow-hidden border border-stone-200 dark:border-stone-800 transition-colors"
-              >
-                <button
-                  type="button"
-                  onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
-                  className="w-full text-left px-6 py-5 flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-stone-900 dark:text-white"
-                >
-                  <span>{faq.q}</span>
-                  <ChevronDown
-                    className={`w-4 h-4 text-stone-500 shrink-0 transition-transform duration-200 ${
-                      activeFaq === idx ? 'transform rotate-180 text-[#BD5324]' : ''
-                    }`}
-                  />
-                </button>
-                {activeFaq === idx && (
-                  <div className="px-6 pb-5 text-xs sm:text-sm text-stone-600 dark:text-stone-400 leading-relaxed border-t border-stone-100 dark:border-stone-800/60 pt-3">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </section>
 
 
       {/* ============================================================ */}
-      {/* 8. FOOTER                                                    */}
+      {/* 8. FOOTER (Streamlined — Navigation Links Removed)           */}
       {/* ============================================================ */}
-      <footer className="py-16 px-4 sm:px-6 lg:px-8 border-t border-stone-300/80 dark:border-stone-800 bg-[#F5EFEB] dark:bg-[#0E1310] text-stone-600 dark:text-stone-400 text-xs">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-          
-          <div className="md:col-span-1">
-            <Link to="/" className="flex items-center mb-4 group inline-block focus:outline-none" aria-label="Artifix Home">
+      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-stone-300/80 dark:border-stone-800 bg-[#F5EFEB] dark:bg-[#0A0E0C] text-stone-600 dark:text-stone-400 text-xs">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+            <Link to="/" className="flex items-center group focus:outline-none" aria-label="Artifix Home">
               <img
                 src="/brand/logo1.png"
                 alt="Artifix"
-                className="h-9 sm:h-10 w-auto object-contain dark:hidden transition-transform group-hover:scale-105"
+                className="h-9 w-auto object-contain dark:hidden transition-transform group-hover:scale-105"
               />
               <img
                 src="/brand/logo1-dark.png"
                 alt="Artifix"
-                className="h-9 sm:h-10 w-auto object-contain hidden dark:block transition-transform group-hover:scale-105"
+                className="h-9 w-auto object-contain hidden dark:block transition-transform group-hover:scale-105"
               />
             </Link>
-            <p className="text-xs text-stone-500 leading-relaxed mb-4">
-              Verified artisans and milestone escrow. Payments protected from quote to completion.
+            <span className="hidden sm:inline-block text-stone-300 dark:text-stone-700">|</span>
+            <p className="text-xs text-stone-500 dark:text-stone-400 max-w-md">
+              The verified trades network connecting Nigerian property owners with vetted craftsmen.
             </p>
-            {/* <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-mono text-[10px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Monad Testnet 10143</span>
-            </div> */}
           </div>
 
-          <div>
-            <div className="font-mono uppercase tracking-widest text-stone-900 dark:text-white font-bold text-[11px] mb-3">
-              Platform
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-xs text-stone-500 dark:text-stone-400 text-center sm:text-right">
+            <span>&copy; {new Date().getFullYear()} Artifix Network. Built for Nigeria&apos;s craft economy.</span>
+            <div className="flex items-center gap-4">
+              <span className="hover:text-stone-900 dark:hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
+              <span className="hover:text-stone-900 dark:hover:text-white cursor-pointer transition-colors">Terms of Service</span>
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="hover:text-stone-900 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                Top ↑
+              </button>
             </div>
-            <ul className="space-y-2">
-              <li><a href="#how-it-works" className="hover:text-stone-900 dark:hover:text-white">How It Works</a></li>
-              <li><a href="#trades" className="hover:text-stone-900 dark:hover:text-white">Trades Directory</a></li>
-              <li><a href="#trust" className="hover:text-stone-900 dark:hover:text-white">Trust &amp; Escrow</a></li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => scrollToWaitlist('client')}
-                  className="text-left hover:text-stone-900 dark:hover:text-white transition-colors"
-                >
-                  Client Early Access
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => scrollToWaitlist('artisan')}
-                  className="text-left hover:text-stone-900 dark:hover:text-white transition-colors"
-                >
-                  Artisan Waitlist
-                </button>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <div className="font-mono uppercase tracking-widest text-stone-900 dark:text-white font-bold text-[11px] mb-3">
-              Security
-            </div>
-            <ul className="space-y-2 font-mono text-[11px]">
-              <li><span className="text-stone-500">Monad Testnet Escrow</span></li>
-              <li><span className="text-stone-500">Paystack NGN Gateway</span></li>
-              <li><span className="text-stone-500">NIN Identity Verification</span></li>
-              <li><a href="#trust" className="hover:text-stone-900 dark:hover:text-white">Dispute Arbitration</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <div className="font-mono uppercase tracking-widest text-stone-900 dark:text-white font-bold text-[11px] mb-3">
-              Early Access &amp; Network
-            </div>
-            <ul className="space-y-2 font-mono text-[11px]">
-              <li>
-                <button
-                  type="button"
-                  onClick={() => scrollToWaitlist()}
-                  className="text-left text-[#BD5324] font-bold hover:underline transition-colors"
-                >
-                  Join Priority Waitlist ↑
-                </button>
-              </li>
-              <li>
-                <span className="text-stone-500">Early Access Wave 1 (Q2 2026)</span>
-              </li>
-              <li>
-                <span className="text-stone-500">Lagos • Abuja • Port Harcourt</span>
-              </li>
-              <li>
-                <span className="text-stone-500">Verified Contractor Whitelist</span>
-              </li>
-            </ul>
-          </div>
-
-        </div>
-
-        <div className="max-w-7xl mx-auto pt-8 border-t border-stone-300/60 dark:border-stone-800/60 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[11px] text-stone-500">
-          <div>
-            &copy; {new Date().getFullYear()} Artifix Network. All rights reserved.
-          </div>
-          <div className="flex items-center gap-6">
-            <span className="hover:text-stone-700 dark:hover:text-stone-300 cursor-pointer">Terms of Service</span>
-            <span className="hover:text-stone-700 dark:hover:text-stone-300 cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-stone-700 dark:hover:text-stone-300 cursor-pointer">Security Audits</span>
           </div>
         </div>
       </footer>

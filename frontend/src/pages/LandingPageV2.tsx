@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { trackEvent } from '../lib/posthog';
 
 // Modular Full-Page Landing V2 Sections
 import { CategoryGridSection } from '../components/landing-v2/CategoryGridSection';
@@ -120,12 +121,14 @@ export function LandingPageV2() {
           <div className="hidden md:flex items-center gap-3.5 lg:gap-6 shrink-0">
             <Link
               to="/login"
+              onClick={() => trackEvent('landing_v2_auth_clicked', { target: 'login', location: 'header' })}
               className="text-xs lg:text-[13px] font-semibold text-[#141A16] hover:text-stone-600 transition-colors whitespace-nowrap"
             >
               Log In
             </Link>
             <Link
               to="/register"
+              onClick={() => trackEvent('landing_v2_cta_clicked', { target: 'get_started', location: 'header' })}
               className="inline-flex items-center gap-1.5 bg-[#123E2A] text-white text-xs lg:text-[13px] font-semibold px-4 lg:px-6 py-2 lg:py-2.5 rounded-full hover:bg-[#0E3222] transition-all shadow-sm active:scale-95 whitespace-nowrap"
             >
               <span>Get Started</span>
@@ -268,14 +271,20 @@ export function LandingPageV2() {
             <div className="flex flex-col gap-3 pt-2 border-t border-stone-200/70">
               <Link
                 to="/login"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  trackEvent('landing_v2_auth_clicked', { target: 'login', location: 'mobile_drawer' });
+                  setMobileMenuOpen(false);
+                }}
                 className="w-full text-center py-3 text-sm font-bold text-[#141A16] border border-stone-300 rounded-full hover:bg-stone-200/40 transition-colors"
               >
                 Log In
               </Link>
               <Link
                 to="/register"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  trackEvent('landing_v2_cta_clicked', { target: 'get_started', location: 'mobile_drawer' });
+                  setMobileMenuOpen(false);
+                }}
                 className="w-full text-center py-3 text-sm font-bold text-white bg-[#123E2A] rounded-full hover:bg-[#0E3222] shadow-md transition-all active:scale-98"
               >
                 Get Started →
@@ -321,6 +330,7 @@ export function LandingPageV2() {
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-3 sm:mb-6">
               <Link
                 to="/register?role=CLIENT"
+                onClick={() => trackEvent('landing_v2_cta_clicked', { target: 'find_artisan', role: 'CLIENT', location: 'hero' })}
                 className="inline-flex items-center gap-2 bg-[#123E2A] text-white text-xs sm:text-[13px] font-semibold px-5 sm:px-6 py-3 rounded-full hover:bg-[#0E3222] transition-all shadow-md active:scale-95"
               >
                 <span>Find an Artisan</span>
@@ -329,6 +339,7 @@ export function LandingPageV2() {
 
               <Link
                 to="/register?role=ARTISAN"
+                onClick={() => trackEvent('landing_v2_cta_clicked', { target: 'become_artisan', role: 'ARTISAN', location: 'hero' })}
                 className="inline-flex items-center border border-[#123E2A] text-[#123E2A] text-xs sm:text-[13px] font-semibold px-5 sm:px-6 py-3 rounded-full hover:bg-[#123E2A]/5 transition-all active:scale-95"
               >
                 Become an Artisan

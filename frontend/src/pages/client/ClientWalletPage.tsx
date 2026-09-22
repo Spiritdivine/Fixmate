@@ -29,6 +29,7 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { useUnifiedWallet } from '../../lib/privy-provider';
 import { getUsdcBalance, mintTestUsdc, MONAD_EXPLORER_URL } from '../../lib/monad-web3';
+import { trackEvent } from '../../lib/posthog';
 
 export const ClientWalletPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -132,12 +133,14 @@ export const ClientWalletPage: React.FC = () => {
 
       if (depositMethod === 'SIMULATE') {
         await apiClient.post('/wallets/simulate-deposit', { amount: amountNum });
+        trackEvent('wallet_deposit_initiated', { amount: amountNum, method: depositMethod });
       } else {
         const { data } = await apiClient.post<ApiResponse<{ authorizationUrl: string; reference: string }>>(
           '/payments/initialize',
           { amount: amountNum }
         );
         if (data.data.authorizationUrl) {
+          trackEvent('wallet_deposit_initiated', { amount: amountNum, method: depositMethod });
           window.location.href = data.data.authorizationUrl;
           return;
         }

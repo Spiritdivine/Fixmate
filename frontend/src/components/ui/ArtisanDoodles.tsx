@@ -5,7 +5,7 @@ export const ArtisanDoodles: React.FC = () => {
     <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-0">
       
       {/* Doodle 1: Hand-drawn Pipe Wrench & Water Drop (Plumbing) - Upper Mid-Left */}
-      <div className="absolute top-[16%] left-[15%] opacity-20 dark:opacity-15 text-[#BD5324] transform -rotate-12 transition-transform hover:scale-105 duration-300">
+      <div className="absolute top-[16%] left-[15%] opacity-20 dark:opacity-15 text-stone-400/35 dark:text-emerald-900/25 transform -rotate-12 transition-transform hover:scale-105 duration-300">
         <svg width="68" height="68" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Wrench handle */}
           <path d="M 28 78 L 48 48 C 50 45 54 45 56 48 L 58 50 C 60 52 60 56 58 58 L 38 88 C 35 91 30 91 28 88 L 26 86 C 24 84 24 80 28 78 Z" />
@@ -22,7 +22,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 2: Hand-drawn Incandescent Filament Bulb & Circuit Waves (Electrical) - Upper Center-Right */}
-      <div className="absolute top-[10%] right-[20%] opacity-20 dark:opacity-15 text-[#BD5324] transform rotate-8 transition-transform hover:scale-105 duration-300">
+      <div className="absolute top-[10%] right-[20%] opacity-20 dark:opacity-15 text-stone-400/35 dark:text-emerald-900/25 transform rotate-8 transition-transform hover:scale-105 duration-300">
         <svg width="64" height="64" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Bulb glass */}
           <path d="M 36 56 C 28 50 25 38 30 28 C 36 17 50 14 62 20 C 72 26 76 40 70 50 C 66 56 64 58 64 64 L 36 64 C 36 58 34 56 36 56 Z" />
@@ -38,7 +38,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 3: Hand-drawn Architect Compass & Rule (Measurement & Design) - Upper Center */}
-      <div className="absolute top-[4%] left-[46%] opacity-15 dark:opacity-10 text-[#BD5324] transform -rotate-6">
+      <div className="absolute top-[4%] left-[46%] opacity-15 dark:opacity-10 text-stone-400/35 dark:text-emerald-900/25 transform -rotate-6">
         <svg width="60" height="60" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           {/* Hinge */}
           <circle cx="50" cy="22" r="6" />
@@ -56,7 +56,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 4: Hand-drawn Hand Saw & Dovetail Timber Joint (Carpentry) - Lower Mid-Left */}
-      <div className="absolute bottom-[28%] left-[10%] opacity-20 dark:opacity-15 text-[#BD5324] transform rotate-15">
+      <div className="absolute bottom-[28%] left-[10%] opacity-20 dark:opacity-15 text-stone-400/35 dark:text-emerald-900/25 transform rotate-15">
         <svg width="72" height="72" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Saw blade with teeth */}
           <path d="M 32 38 L 86 60 L 84 65 L 78 63 L 76 68 L 70 66 L 68 71 L 62 69 L 60 74 L 54 72 L 52 77 L 46 75 L 44 80 L 30 74 Z" />
@@ -69,7 +69,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 5: Hand-drawn Brickwork & Mason Trowel (Masonry & Tiling) - Lower Mid-Right */}
-      <div className="absolute bottom-[24%] right-[12%] opacity-20 dark:opacity-15 text-[#BD5324] transform -rotate-10">
+      <div className="absolute bottom-[24%] right-[12%] opacity-20 dark:opacity-15 text-stone-400/35 dark:text-emerald-900/25 transform -rotate-10">
         <svg width="68" height="68" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* 3 Offset Bricks */}
           <rect x="20" y="55" width="28" height="14" rx="2" />
@@ -86,7 +86,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 6: Hand-drawn Solar Panel Array & Radiant Sun (Solar Energy) - Center Bottom Background */}
-      <div className="absolute bottom-[6%] left-[48%] opacity-15 dark:opacity-10 text-[#BD5324] transform rotate-3">
+      <div className="absolute bottom-[6%] left-[48%] opacity-15 dark:opacity-10 text-stone-400/35 dark:text-emerald-900/25 transform rotate-3">
         <svg width="66" height="66" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Sun */}
           <circle cx="50" cy="30" r="10" />
@@ -101,7 +101,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 7 [NEW]: Welding Helmet & Electric Arc Sparks (Welding & Metalwork) - Top Far-Left */}
-      <div className="absolute top-[6%] left-[3%] opacity-20 dark:opacity-15 text-[#BD5324] transform -rotate-6">
+      <div className="absolute top-[6%] left-[3%] opacity-20 dark:opacity-15 text-stone-400/35 dark:text-emerald-900/25 transform -rotate-6">
         <svg width="65" height="65" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Welder mask helmet contour */}
           <path d="M 30 20 C 30 14 70 14 70 20 L 76 52 C 76 68 66 84 50 86 C 34 84 24 68 24 52 Z" />
@@ -115,7 +115,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 8 [NEW]: Painter's Roller with Wet Drips (Painting & Finishes) - Top Far-Right */}
-      <div className="absolute top-[5%] right-[4%] opacity-20 dark:opacity-15 text-[#BD5324] transform rotate-12">
+      <div className="absolute top-[5%] right-[4%] opacity-20 dark:opacity-15 text-stone-400/35 dark:text-emerald-900/25 transform rotate-12">
         <svg width="64" height="64" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Paint roller cylinder */}
           <rect x="34" y="16" width="38" height="18" rx="4" />
@@ -131,7 +131,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 9 [NEW]: Claw Hammer & Framer's Nails (Construction Framing) - Mid Far-Left */}
-      <div className="absolute top-[42%] left-[2%] opacity-18 dark:opacity-12 text-[#BD5324] transform rotate-25">
+      <div className="absolute top-[42%] left-[2%] opacity-18 dark:opacity-12 text-stone-400/35 dark:text-emerald-900/25 transform rotate-25">
         <svg width="68" height="68" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Hammer head */}
           <path d="M 28 32 L 62 32 C 68 32 74 34 76 38 L 74 44 C 68 40 60 40 56 42 L 28 42 Z" />
@@ -148,7 +148,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 10 [NEW]: Retractable Steel Tape Measure (Site Survey & Accuracy) - Mid Far-Right */}
-      <div className="absolute top-[44%] right-[2%] opacity-18 dark:opacity-12 text-[#BD5324] transform -rotate-15">
+      <div className="absolute top-[44%] right-[2%] opacity-18 dark:opacity-12 text-stone-400/35 dark:text-emerald-900/25 transform -rotate-15">
         <svg width="66" height="66" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Tape measure housing body */}
           <rect x="22" y="32" width="46" height="46" rx="10" />
@@ -167,7 +167,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 11 [NEW]: Spirit Bubble Level (Precision Leveling) - Bottom Far-Left */}
-      <div className="absolute bottom-[10%] left-[3%] opacity-20 dark:opacity-15 text-[#BD5324] transform rotate-12">
+      <div className="absolute bottom-[10%] left-[3%] opacity-20 dark:opacity-15 text-stone-400/35 dark:text-emerald-900/25 transform rotate-12">
         <svg width="74" height="40" viewBox="0 0 120 60" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Level body beam */}
           <rect x="10" y="16" width="100" height="28" rx="5" />
@@ -184,7 +184,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 12 [NEW]: Safety Hard Hat / Helmet (Site Safety & Inspection) - Bottom Far-Right */}
-      <div className="absolute bottom-[8%] right-[4%] opacity-20 dark:opacity-15 text-[#BD5324] transform -rotate-10">
+      <div className="absolute bottom-[8%] right-[4%] opacity-20 dark:opacity-15 text-stone-400/35 dark:text-emerald-900/25 transform -rotate-10">
         <svg width="68" height="68" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Helmet dome */}
           <path d="M 22 56 C 22 34 32 20 50 20 C 68 20 78 34 78 56 Z" />
@@ -196,7 +196,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 13 [NEW]: Lineman's Pliers / Wire Cutters (Cabling & Electrical) - Upper Center-Left */}
-      <div className="absolute top-[28%] left-[28%] opacity-15 dark:opacity-10 text-[#BD5324] transform -rotate-25">
+      <div className="absolute top-[28%] left-[28%] opacity-15 dark:opacity-10 text-stone-400/35 dark:text-emerald-900/25 transform -rotate-25">
         <svg width="56" height="56" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           {/* Jaws */}
           <path d="M 44 26 L 40 40 L 48 44 L 54 36 Z" />
@@ -212,7 +212,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 14 [NEW]: Precision Vernier Caliper (Machining & Engineering) - Upper Center-Right */}
-      <div className="absolute top-[26%] right-[28%] opacity-15 dark:opacity-10 text-[#BD5324] transform rotate-20">
+      <div className="absolute top-[26%] right-[28%] opacity-15 dark:opacity-10 text-stone-400/35 dark:text-emerald-900/25 transform rotate-20">
         <svg width="60" height="60" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           {/* Main ruler beam */}
           <rect x="20" y="38" width="68" height="12" rx="1" />
@@ -232,7 +232,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 15 [NEW]: Industrial Interlocking Gear (Generators & Equipment) - Bottom Center-Left */}
-      <div className="absolute bottom-[18%] left-[26%] opacity-15 dark:opacity-10 text-[#BD5324] transform rotate-45">
+      <div className="absolute bottom-[18%] left-[26%] opacity-15 dark:opacity-10 text-stone-400/35 dark:text-emerald-900/25 transform rotate-45">
         <svg width="58" height="58" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="50" cy="50" r="18" />
           <circle cx="50" cy="50" r="7" fill="currentColor" fillOpacity="0.2" />
@@ -249,7 +249,7 @@ export const ArtisanDoodles: React.FC = () => {
       </div>
 
       {/* Doodle 16 [NEW]: Subtle Architectural Drafting Marks & Crosshairs (Blueprint Aesthetic) */}
-      <div className="absolute top-[52%] left-[48%] opacity-15 dark:opacity-10 text-[#BD5324] transform -rotate-3">
+      <div className="absolute top-[52%] left-[48%] opacity-15 dark:opacity-10 text-stone-400/35 dark:text-emerald-900/25 transform -rotate-3">
         <svg width="50" height="50" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
           {/* Target crosshair with guide arcs */}
           <circle cx="50" cy="50" r="28" strokeDasharray="3 4" />

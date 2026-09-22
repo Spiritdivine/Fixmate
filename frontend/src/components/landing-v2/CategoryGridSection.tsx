@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { trackEvent } from '../../lib/posthog';
 
 interface CategoryItem {
   id: string;
@@ -261,6 +262,12 @@ export const CategoryGridSection: React.FC = () => {
             <Link
               key={cat.id}
               to={`/client/find-artisans?category=${cat.queryParam}`}
+              onClick={() =>
+                trackEvent('landing_v2_category_clicked', {
+                  category_id: cat.id,
+                  category_name: cat.name.replace('\n', ' '),
+                })
+              }
               className="group relative bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_24px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between min-h-[135px] sm:min-h-[155px] lg:min-h-[165px] text-left select-none"
             >
               {/* Top: Green Lineart Icon */}

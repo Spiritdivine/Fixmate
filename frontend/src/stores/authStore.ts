@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { User, ApiResponse } from '../types';
 import { apiClient } from '../lib/api-client';
 import { connectSocket, disconnectSocket } from '../lib/socket';
+import { identifyUser, resetUser } from '../lib/posthog';
 
 interface AuthState {
   user: User | null;
@@ -24,6 +25,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
 
   login: (accessToken, refreshToken, user) => {
+    const previousUser = get().user;
+    if (previousUser && previousUser.id !== user.id) {
+      resetUser();
+    }
+
+    identifyUser(user.id, {
+      email: user.email,
+      role: user.role,
+      account_status: user.status,
+      is_kyc_verified: user.isKycVerified,
+    });
+
     localStorage.setItem('access_token', accessToken);
     localStorage.setItem('refresh_token', refreshToken);
     set({ accessToken, refreshToken, user, isInitialized: true });
@@ -39,6 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Ignore logout errors
     } finally {
+      resetUser();
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       disconnectSocket();
@@ -58,12 +72,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true });
       const { data } = await apiClient.get<ApiResponse<User>>('/auth/me');
+      identifyUser(data.data.id, {
+        email: data.data.email,
+        role: data.data.role,
+        account_status: data.data.status,
+        is_kyc_verified: data.data.isKycVerified,
+      });
       set({ user: data.data, isInitialized: true });
       if (get().accessToken) {
         connectSocket(get().accessToken as string);
       }
       return data.data;
     } catch {
+      resetUser();
       set({ user: null, isInitialized: true });
       return null;
     } finally {

@@ -7,6 +7,7 @@ import { Select } from '../../components/ui/Select';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { useAuthStore } from '../../stores/authStore';
 import { ApiResponse, AuthResponse } from '../../types';
+import { trackEvent } from '../../lib/posthog';
 
 export const Register: React.FC = () => {
   const [role, setRole] = useState<'CLIENT' | 'ARTISAN'>('CLIENT');
@@ -68,6 +69,7 @@ export const Register: React.FC = () => {
       const user = data.data.user;
 
       login(accessToken, refreshToken, user);
+      trackEvent('account_registered', { role });
 
       if (role === 'CLIENT') {
         navigate('/client/dashboard');
