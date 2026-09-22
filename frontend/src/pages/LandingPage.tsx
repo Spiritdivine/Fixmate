@@ -520,14 +520,14 @@ export const LandingPage: React.FC = () => {
             <div className="lg:col-span-6 relative flex items-center justify-center pt-8 sm:pt-10 lg:pt-0">
               
               {/* Central Sizing Stage Container */}
-              <div className="relative w-full max-w-[480px] sm:max-w-[520px] h-[520px] sm:h-[580px] flex items-center justify-center">
+              <div className="relative w-full max-w-[340px] xs:max-w-[390px] sm:max-w-[460px] lg:max-w-[500px] h-[420px] xs:h-[460px] sm:h-[510px] lg:h-[560px] flex items-center justify-center">
 
                 {/* Background Organic Mint Backdrop Shape / Blob */}
                 <div
                   className="absolute inset-0 bg-[#D4ECE1]/85 dark:bg-emerald-950/40 pointer-events-none -z-10"
                   style={{
                     borderRadius: '46% 54% 62% 38% / 40% 60% 40% 60%',
-                    transform: 'scale(1.03) rotate(-4deg)',
+                    transform: 'scale(1.02) rotate(-4deg)',
                   }}
                 />
 
@@ -535,8 +535,8 @@ export const LandingPage: React.FC = () => {
                 {/* IMAGE 1: Top Center-Left (Tailor / Seamstress)          */}
                 {/* Shape: Cathedral Arch / Tombstone                      */}
                 {/* ------------------------------------------------------ */}
-                <div className="absolute -top-2 sm:-top-3 left-[25%] sm:left-[26%] -translate-x-1/2 w-42 sm:w-48 h-52 sm:h-58 z-10">
-                  <div className="relative w-full h-full rounded-t-[96px] rounded-b-[20px] overflow-hidden shadow-xl bg-stone-900">
+                <div className="absolute -top-2 sm:-top-3 left-[25%] sm:left-[26%] -translate-x-1/2 w-32 xs:w-36 sm:w-42 lg:w-46 h-40 xs:h-46 sm:h-52 lg:h-56 z-10">
+                  <div className="relative w-full h-full rounded-t-[72px] xs:rounded-t-[84px] sm:rounded-t-[96px] rounded-b-[16px] sm:rounded-b-[20px] overflow-hidden shadow-xl bg-stone-900">
                     <img
                       src={WAITLIST_HERO_ASSETS.tailor}
                       onError={(e) => {
@@ -548,8 +548,8 @@ export const LandingPage: React.FC = () => {
                   </div>
 
                   {/* Radiating 3 Green Flare Dashes on Top Right */}
-                  <div className="absolute -top-3.5 -right-6 text-[#00A86B] pointer-events-none select-none">
-                    <svg className="w-8 h-8" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                  <div className="absolute -top-2.5 -right-4 sm:-top-3.5 sm:-right-6 text-[#00A86B] pointer-events-none select-none">
+                    <svg className="w-6 h-6 sm:w-8 sm:h-8" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                       <path d="M5 22L12 6" />
                       <path d="M14 22L19 9" />
                       <path d="M21 22L25 12" />
@@ -561,9 +561,9 @@ export const LandingPage: React.FC = () => {
                 {/* IMAGE 2: Top Right (Electrician on Breaker Panel)      */}
                 {/* Shape: Angled Tilted Parallelogram Banner              */}
                 {/* ------------------------------------------------------ */}
-                <div className="absolute top-3 sm:top-5 right-0 sm:right-1 w-36 sm:w-44 h-36 sm:h-44 z-10 rotate-[3.5deg]">
+                <div className="absolute top-2.5 sm:top-4 right-0 sm:right-1 w-28 xs:w-32 sm:w-38 lg:w-42 h-28 xs:h-32 sm:h-38 lg:h-42 z-10 rotate-[3.5deg]">
                   {/* Floating Hand-written Script Annotation */}
-                  <div className="absolute -top-10 sm:-top-12 -left-5 sm:-left-8 -rotate-6 font-caveat text-[#0A261B] dark:text-emerald-300 text-base sm:text-lg font-bold leading-tight select-none pointer-events-none whitespace-nowrap z-30">
+                  <div className="absolute -top-8 xs:-top-9 sm:-top-11 -left-4 xs:-left-6 sm:-left-8 -rotate-6 font-caveat text-[#0A261B] dark:text-emerald-300 text-xs xs:text-sm sm:text-base lg:text-lg font-bold leading-tight select-none pointer-events-none whitespace-nowrap z-30">
                     <div>Skilled People.</div>
                     <div>Real Work.</div>
                     <div className="relative inline-block">
@@ -580,7 +580,7 @@ export const LandingPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="relative w-full h-full rounded-[24px] overflow-hidden shadow-xl bg-stone-900">
+                  <div className="relative w-full h-full rounded-[18px] xs:rounded-[20px] sm:rounded-[24px] overflow-hidden shadow-xl bg-stone-900">
                     <img
                       src={WAITLIST_HERO_ASSETS.electrician}
                       onError={(e) => {
@@ -596,10 +596,9 @@ export const LandingPage: React.FC = () => {
                 {/* IMAGE 3: Middle-Left (Potter Shaping Clay)             */}
                 {/* Shape: Asymmetrical Rounded Pebble / Shield Mask       */}
                 {/* ------------------------------------------------------ */}
-                <div className="absolute top-[40%] -left-2 sm:-left-4 w-40 sm:w-46 h-40 sm:h-46 z-10">
+                <div className="absolute top-[38%] xs:top-[40%] -left-1.5 xs:-left-2 sm:-left-3 w-30 xs:w-34 sm:w-40 lg:w-44 h-30 xs:h-34 sm:h-40 lg:h-44 z-10">
                   <div
-                    className="relative w-full h-full overflow-hidden shadow-xl bg-stone-900"
-                    style={{ borderRadius: '50px 18px 50px 18px' }}
+                    className="relative w-full h-full overflow-hidden shadow-xl bg-stone-900 rounded-[38px_14px_38px_14px] sm:rounded-[50px_18px_50px_18px]"
                   >
                     <img
                       src={WAITLIST_HERO_ASSETS.potter}
@@ -616,8 +615,8 @@ export const LandingPage: React.FC = () => {
                 {/* IMAGE 4: Lower-Right (Beadworker / Jewelry Artisan)    */}
                 {/* Shape: Vertical Elongated Capsule Arch                 */}
                 {/* ------------------------------------------------------ */}
-                <div className="absolute bottom-5 sm:bottom-6 right-0 sm:right-0 w-34 sm:w-40 h-48 sm:h-56 z-10">
-                  <div className="relative w-full h-full rounded-[36px] overflow-hidden shadow-xl bg-stone-900">
+                <div className="absolute bottom-3 xs:bottom-4 sm:bottom-5 right-0 sm:right-0 w-26 xs:w-30 sm:w-34 lg:w-38 h-38 xs:h-42 sm:h-48 lg:h-54 z-10">
+                  <div className="relative w-full h-full rounded-[26px] xs:rounded-[30px] sm:rounded-[36px] overflow-hidden shadow-xl bg-stone-900">
                     <img
                       src={WAITLIST_HERO_ASSETS.jewelry}
                       onError={(e) => {
@@ -632,60 +631,60 @@ export const LandingPage: React.FC = () => {
                 {/* ------------------------------------------------------ */}
                 {/* CENTERPIECE: 3D FLOATING MOBILE PHONE SCREEN CARD      */}
                 {/* ------------------------------------------------------ */}
-                <div className="relative z-20 w-full max-w-[260px] xs:max-w-[275px] sm:max-w-[295px] md:max-w-[305px] transform -rotate-[3.5deg] hover:rotate-0 transition-transform duration-500">
-                  <div className="bg-[#071F15] dark:bg-[#07150E] rounded-[34px] p-4.5 sm:p-5 border-2 border-white/60 dark:border-stone-700/70 shadow-2xl shadow-emerald-950/40 text-white">
+                <div className="relative z-20 w-full max-w-[215px] xs:max-w-[235px] sm:max-w-[265px] lg:max-w-[290px] transform -rotate-[3.5deg] hover:rotate-0 transition-transform duration-500">
+                  <div className="bg-[#071F15] dark:bg-[#07150E] rounded-[26px] xs:rounded-[28px] sm:rounded-[32px] p-3.5 xs:p-4 sm:p-5 border-2 border-white/60 dark:border-stone-700/70 shadow-2xl shadow-emerald-950/40 text-white">
                     
                     {/* Top Status Bar */}
-                    <div className="flex items-center justify-between mb-3.5">
+                    <div className="flex items-center justify-between mb-2.5 sm:mb-3.5">
                       {/* Brand Logo Mini */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
                         <img
                           src="/brand/artifix-icon-dark.png"
                           alt="Artifix"
-                          className="w-4.5 h-4.5 object-contain shrink-0"
+                          className="w-4 h-4 sm:w-4.5 sm:h-4.5 object-contain shrink-0"
                         />
                         <span className="text-xs sm:text-sm font-black tracking-tight text-white">Artifix</span>
                       </div>
 
                       {/* Waitlist Pill Status Badge */}
-                      <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#0D3825] border border-emerald-500/30 text-[10px] font-bold text-emerald-400">
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 rounded-full bg-[#0D3825] border border-emerald-500/30 text-[9px] sm:text-[10px] font-bold text-emerald-400">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         <span>Waitlist</span>
                       </div>
                     </div>
 
                     {/* Notification Heading */}
-                    <div className="mb-2">
-                      <div className="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight">
+                    <div className="mb-1.5 sm:mb-2">
+                      <div className="text-sm xs:text-base sm:text-lg font-bold tracking-tight text-white leading-tight">
                         You&apos;re on the
                       </div>
-                      <div className="text-xl sm:text-2xl font-black text-[#10B981] leading-tight">
+                      <div className="text-base xs:text-lg sm:text-xl font-black text-[#10B981] leading-tight">
                         waitlist!
                       </div>
                     </div>
 
-                    <p className="text-[10px] sm:text-[11px] text-stone-300 leading-relaxed">
+                    <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-stone-300 leading-relaxed">
                       We&apos;ll notify you as soon as we&apos;re ready. Thanks for being early!
                     </p>
 
                     {/* Waitlist Stat Count Card */}
-                    <div className="bg-[#0D3323] dark:bg-[#0A261B] border border-[#164D35] rounded-xl p-2.5 sm:p-3 my-3 sm:my-3.5 flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                        <Users className="w-4 h-4" />
+                    <div className="bg-[#0D3323] dark:bg-[#0A261B] border border-[#164D35] rounded-lg sm:rounded-xl p-2 xs:p-2.5 sm:p-3 my-2 sm:my-3 flex items-center gap-2 sm:gap-2.5">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                        <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
                       <div>
-                        <div className="text-base sm:text-lg font-black text-white tracking-tight leading-none">
+                        <div className="text-sm sm:text-base font-black text-white tracking-tight leading-none">
                           {waitlistCount.toLocaleString()}
                         </div>
-                        <div className="text-[9px] sm:text-[10px] text-emerald-200/80 font-medium mt-0.5">
+                        <div className="text-[8px] sm:text-[9px] text-emerald-200/80 font-medium mt-0.5">
                           people already on the waitlist
                         </div>
                       </div>
                     </div>
 
                     {/* "What you'll get" Value Checklist */}
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-bold text-stone-200 uppercase tracking-wider mb-1.5">
+                    <div className="space-y-1 sm:space-y-1.5">
+                      <div className="text-[10px] sm:text-[11px] font-bold text-stone-200 uppercase tracking-wider mb-1 sm:mb-1.5">
                         What you&apos;ll get
                       </div>
                       
@@ -695,8 +694,8 @@ export const LandingPage: React.FC = () => {
                         'Product updates & sneak peeks',
                         'Priority support',
                       ].map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-[11px] sm:text-xs text-stone-200">
-                          <div className="w-3.5 h-3.5 rounded-full bg-[#10B981] flex items-center justify-center text-[#071F15] shrink-0">
+                        <div key={idx} className="flex items-center gap-1.5 sm:gap-2 text-[10px] xs:text-[11px] sm:text-xs text-stone-200">
+                          <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#10B981] flex items-center justify-center text-[#071F15] shrink-0">
                             <Check className="w-2 h-2 stroke-[3]" />
                           </div>
                           <span>{item}</span>
@@ -705,15 +704,15 @@ export const LandingPage: React.FC = () => {
                     </div>
 
                     {/* Handwritten Slogan inside Phone Card */}
-                    <div className="mt-4 pt-2.5 border-t border-emerald-900/50 text-center select-none">
-                      <div className="font-caveat text-emerald-200 text-base sm:text-lg font-bold leading-tight">
+                    <div className="mt-3 pt-2 sm:mt-4 sm:pt-2.5 border-t border-emerald-900/50 text-center select-none">
+                      <div className="font-caveat text-emerald-200 text-sm sm:text-base font-bold leading-tight">
                         Real People. Real Skills. Real Trust.
                       </div>
                       <svg
                         viewBox="0 0 160 10"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="w-28 h-1.5 text-[#00A86B] mx-auto mt-1 opacity-80"
+                        className="w-24 sm:w-28 h-1.5 text-[#00A86B] mx-auto mt-0.5 sm:mt-1 opacity-80"
                         preserveAspectRatio="none"
                       >
                         <path d="M2 6C35 2 110 2 158 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
@@ -726,9 +725,9 @@ export const LandingPage: React.FC = () => {
                 {/* ------------------------------------------------------ */}
                 {/* BOTTOM HAND-DRAWN ANNOTATION: ARROW + SCRIPT           */}
                 {/* ------------------------------------------------------ */}
-                <div className="absolute -bottom-8 sm:-bottom-9 left-4 sm:left-10 flex items-center gap-2 font-caveat text-[#00965E] dark:text-emerald-400 text-xl sm:text-2xl font-bold -rotate-6 select-none pointer-events-none">
+                <div className="absolute -bottom-7 xs:-bottom-8 sm:-bottom-9 left-2 xs:left-4 sm:left-8 flex items-center gap-1.5 sm:gap-2 font-caveat text-[#00965E] dark:text-emerald-400 text-lg xs:text-xl sm:text-2xl font-bold -rotate-6 select-none pointer-events-none">
                   {/* Curved Arrow SVG */}
-                  <svg className="w-9 h-9 text-[#00965E] dark:text-emerald-400 -mt-1 shrink-0" viewBox="0 0 44 44" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="w-7 h-7 sm:w-9 sm:h-9 text-[#00965E] dark:text-emerald-400 -mt-1 shrink-0" viewBox="0 0 44 44" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M34 32C24 34 14 28 10 16M10 16L16 14M10 16L12 22" />
                   </svg>
                   <div className="leading-[1.1] text-left">
