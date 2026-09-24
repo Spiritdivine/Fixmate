@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import apiRouter from './routes/index.js';
+import seoRoutes from './routes/seo.routes.js';
+import { crawlerMetaMiddleware } from './middlewares/crawler-meta.middleware.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { ApiError } from './utils/api-error.js';
 import { standardApiLimiter } from './config/rate-limiter.js';
@@ -11,7 +13,9 @@ import { standardApiLimiter } from './config/rate-limiter.js';
 const app = express();
 
 // Security & Utility Middlewares
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 const allowedOrigins = env.CLIENT_URL
   ? env.CLIENT_URL.split(',').map((url) => url.trim())
   : ['*'];
@@ -50,8 +54,14 @@ app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 // Apply rate limiting to all /api routes
 app.use('/api', standardApiLimiter);
 
+// Root SEO & OpenGraph routes (accessible directly without /api/v1 prefix)
+app.use(seoRoutes);
+
 // API Version 1
 app.use('/api/v1', apiRouter);
+
+// Social Media Bot Pre-rendering & Metadata Injection
+app.use(crawlerMetaMiddleware);
 
 // 404 Route Handler
 app.use((req, res, next) => {

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { trackEvent } from '../lib/posthog';
 
 // Modular Full-Page Landing V2 Sections
+import { PublicNavbar } from '../components/layout/PublicNavbar';
 import { CategoryGridSection } from '../components/landing-v2/CategoryGridSection';
 import { HowItWorksSection } from '../components/landing-v2/HowItWorksSection';
 import { SponsorBarSection } from '../components/landing-v2/SponsorBarSection';
@@ -15,285 +16,13 @@ import { ClosingCtaSection } from '../components/landing-v2/ClosingCtaSection';
 import { EditorialFooter } from '../components/landing-v2/EditorialFooter';
 
 export function LandingPageV2() {
-  const [activeTab, setActiveTab] = useState<'home' | 'how' | 'artisans' | 'customers' | 'about'>('home');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Close mobile menu on Escape key press and prevent body scroll
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setMobileMenuOpen(false);
-      }
-    };
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [mobileMenuOpen]);
-
   return (
     <div className="min-h-screen bg-[#FAF7F0] text-[#141A16] font-sans antialiased selection:bg-[#133E2B] selection:text-white flex flex-col justify-between overflow-x-clip scroll-smooth">
       
       {/* ============================================================ */}
-      {/* 1. TOP HEADER / NAVIGATION                                  */}
+      {/* 1. TOP HEADER / NAVIGATION (Unified PublicNavbar)            */}
       {/* ============================================================ */}
-      <header className="w-full relative z-40 bg-[#FAF7F0]/95 backdrop-blur-md sticky top-0 border-b border-stone-200/50">
-        <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 pt-3.5 sm:pt-4 pb-3 flex items-center justify-between gap-3 sm:gap-6">
-          
-          {/* Left Brand Logo */}
-          <Link to="/v2" className="flex items-center group select-none shrink-0" aria-label="Artifix Home">
-            <img
-              src="/brand/logo1.png"
-              alt="Artifix"
-              className="h-9 sm:h-10 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-            />
-          </Link>
-
-          {/* Center Navigation Links (Visible on tablet & desktop >= md) */}
-          <nav className="hidden md:flex items-center gap-5 lg:gap-8 text-xs lg:text-[13px] font-medium text-stone-600">
-            <a
-              href="#home"
-              onClick={() => setActiveTab('home')}
-              className={`relative py-1 whitespace-nowrap transition-colors ${
-                activeTab === 'home' ? 'text-[#141A16] font-bold' : 'hover:text-[#141A16]'
-              }`}
-            >
-              Home
-              {activeTab === 'home' && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#141A16] rounded-full" />
-              )}
-            </a>
-
-            <a
-              href="#how-it-works"
-              onClick={() => setActiveTab('how')}
-              className={`whitespace-nowrap transition-colors ${activeTab === 'how' ? 'text-[#141A16] font-bold' : 'hover:text-[#141A16]'}`}
-            >
-              How It Works
-            </a>
-
-            <a
-              href="#for-artisans"
-              onClick={() => setActiveTab('artisans')}
-              className={`whitespace-nowrap transition-colors ${activeTab === 'artisans' ? 'text-[#141A16] font-bold' : 'hover:text-[#141A16]'}`}
-            >
-              For Artisans
-            </a>
-
-            <a
-              href="#for-customers"
-              onClick={() => setActiveTab('customers')}
-              className={`whitespace-nowrap transition-colors ${activeTab === 'customers' ? 'text-[#141A16] font-bold' : 'hover:text-[#141A16]'}`}
-            >
-              For Customers
-            </a>
-
-            <a
-              href="#categories"
-              className="whitespace-nowrap hover:text-[#141A16] transition-colors"
-            >
-              Categories
-            </a>
-
-            <a
-              href="#trades"
-              className="whitespace-nowrap hover:text-[#141A16] transition-colors"
-            >
-              Trades
-            </a>
-
-            <a
-              href="#about"
-              onClick={() => setActiveTab('about')}
-              className={`whitespace-nowrap transition-colors ${activeTab === 'about' ? 'text-[#141A16] font-bold' : 'hover:text-[#141A16]'}`}
-            >
-              Trust &amp; Escrow
-            </a>
-          </nav>
-
-          {/* Right Login & Get Started Group (Desktop/Tablet >= md) */}
-          <div className="hidden md:flex items-center gap-3.5 lg:gap-6 shrink-0">
-            <Link
-              to="/login"
-              onClick={() => trackEvent('landing_v2_auth_clicked', { target: 'login', location: 'header' })}
-              className="text-xs lg:text-[13px] font-semibold text-[#141A16] hover:text-stone-600 transition-colors whitespace-nowrap"
-            >
-              Log In
-            </Link>
-            <Link
-              to="/register"
-              onClick={() => trackEvent('landing_v2_cta_clicked', { target: 'get_started', location: 'header' })}
-              className="inline-flex items-center gap-1.5 bg-[#123E2A] text-white text-xs lg:text-[13px] font-semibold px-4 lg:px-6 py-2 lg:py-2.5 rounded-full hover:bg-[#0E3222] transition-all shadow-sm active:scale-95 whitespace-nowrap"
-            >
-              <span>Get Started</span>
-              <span aria-hidden="true">→</span>
-            </Link>
-          </div>
-
-          {/* Mobile Hamburger Menu Toggle Button (< md) */}
-          <div className="flex md:hidden items-center">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle navigation menu"
-              aria-expanded={mobileMenuOpen}
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-[#141A16] hover:bg-stone-200/60 active:scale-95 transition-all"
-            >
-              {mobileMenuOpen ? (
-                <svg className="w-6 h-6 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                </svg>
-              )}
-            </button>
-          </div>
-
-        </div>
-      </header>
-
-      {/* ============================================================ */}
-      {/* MOBILE NAVIGATION DRAWER OVERLAY (< md)                      */}
-      {/* ============================================================ */}
-      {mobileMenuOpen && (
-        <div 
-          className="fixed inset-0 z-50 md:hidden flex flex-col justify-between"
-          role="dialog"
-          aria-modal="true"
-        >
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-[#141A16]/40 backdrop-blur-sm transition-opacity" 
-            onClick={() => setMobileMenuOpen(false)}
-          />
-
-          {/* Drawer Panel */}
-          <div className="relative w-full bg-[#FAF7F0] border-b border-stone-200/80 shadow-2xl px-6 pt-5 pb-8 flex flex-col gap-6 animate-in slide-in-from-top duration-200">
-            
-            {/* Drawer Header */}
-            <div className="flex items-center justify-between">
-              <Link 
-                to="/v2" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center group select-none"
-                aria-label="Artifix Home"
-              >
-                <img
-                  src="/brand/logo1.png"
-                  alt="Artifix"
-                  className="h-8 sm:h-9 w-auto object-contain"
-                />
-              </Link>
-
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(false)}
-                aria-label="Close menu"
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-[#141A16] hover:bg-stone-200/60 active:scale-95 transition-all"
-              >
-                <svg className="w-6 h-6 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Nav Links */}
-            <nav className="flex flex-col gap-2 pt-2 text-[15px] font-semibold text-stone-700">
-              <a
-                href="#home"
-                onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }}
-                className={`text-left py-2 px-3 rounded-lg transition-colors ${
-                  activeTab === 'home' ? 'bg-[#123E2A]/10 text-[#123E2A] font-bold' : 'hover:bg-stone-200/40'
-                }`}
-              >
-                Home
-              </a>
-              <a
-                href="#how-it-works"
-                onClick={() => { setActiveTab('how'); setMobileMenuOpen(false); }}
-                className="py-2 px-3 rounded-lg hover:bg-stone-200/40 transition-colors"
-              >
-                How It Works
-              </a>
-              <a
-                href="#for-artisans"
-                onClick={() => { setActiveTab('artisans'); setMobileMenuOpen(false); }}
-                className="py-2 px-3 rounded-lg hover:bg-stone-200/40 transition-colors"
-              >
-                For Artisans
-              </a>
-              <a
-                href="#for-customers"
-                onClick={() => { setActiveTab('customers'); setMobileMenuOpen(false); }}
-                className="py-2 px-3 rounded-lg hover:bg-stone-200/40 transition-colors"
-              >
-                For Customers
-              </a>
-              <a
-                href="#categories"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2 px-3 rounded-lg hover:bg-stone-200/40 transition-colors"
-              >
-                Categories
-              </a>
-              <a
-                href="#trades"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2 px-3 rounded-lg hover:bg-stone-200/40 transition-colors"
-              >
-                Verified Trades
-              </a>
-              <a
-                href="#about"
-                onClick={() => { setActiveTab('about'); setMobileMenuOpen(false); }}
-                className="py-2 px-3 rounded-lg hover:bg-stone-200/40 transition-colors"
-              >
-                Trust &amp; Escrow
-              </a>
-              <a
-                href="#faq"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-2 px-3 rounded-lg hover:bg-stone-200/40 transition-colors"
-              >
-                FAQ
-              </a>
-            </nav>
-
-            {/* Auth Buttons */}
-            <div className="flex flex-col gap-3 pt-2 border-t border-stone-200/70">
-              <Link
-                to="/login"
-                onClick={() => {
-                  trackEvent('landing_v2_auth_clicked', { target: 'login', location: 'mobile_drawer' });
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-center py-3 text-sm font-bold text-[#141A16] border border-stone-300 rounded-full hover:bg-stone-200/40 transition-colors"
-              >
-                Log In
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => {
-                  trackEvent('landing_v2_cta_clicked', { target: 'get_started', location: 'mobile_drawer' });
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-center py-3 text-sm font-bold text-white bg-[#123E2A] rounded-full hover:bg-[#0E3222] shadow-md transition-all active:scale-98"
-              >
-                Get Started →
-              </Link>
-            </div>
-
-          </div>
-        </div>
-      )}
+      <PublicNavbar />
 
       {/* ============================================================ */}
       {/* 2. MAIN HERO SECTION                                         */}
@@ -329,8 +58,8 @@ export function LandingPageV2() {
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-3 sm:mb-6">
               <Link
-                to="/register?role=CLIENT"
-                onClick={() => trackEvent('landing_v2_cta_clicked', { target: 'find_artisan', role: 'CLIENT', location: 'hero' })}
+                to="/artisans"
+                onClick={() => trackEvent('landing_v2_cta_clicked', { target: 'find_artisan', location: 'hero' })}
                 className="inline-flex items-center gap-2 bg-[#123E2A] text-white text-xs sm:text-[13px] font-semibold px-5 sm:px-6 py-3 rounded-full hover:bg-[#0E3222] transition-all shadow-md active:scale-95"
               >
                 <span>Find an Artisan</span>

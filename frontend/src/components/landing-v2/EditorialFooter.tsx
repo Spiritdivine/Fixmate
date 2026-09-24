@@ -27,25 +27,26 @@ export const EditorialFooter: React.FC = () => {
           </div>
 
           {/* Col 2: Platform */}
+          {/* Col 2: Platform */}
           <div className="col-span-1 md:col-span-2">
             <h4 className="text-xs font-bold text-[#141A16] uppercase tracking-wider mb-4">
               Platform
             </h4>
             <ul className="space-y-2.5 text-xs text-[#556259] font-medium">
               <li>
-                <a href="#how-it-works" className="hover:text-[#123E2A] transition-colors">How It Works</a>
+                <Link to="/artisans" className="hover:text-[#123E2A] transition-colors">Artisan Directory</Link>
               </li>
               <li>
-                <a href="#trades" className="hover:text-[#123E2A] transition-colors">Verified Trades</a>
+                <Link to="/trades" className="hover:text-[#123E2A] transition-colors">Trades &amp; Pricing</Link>
               </li>
               <li>
-                <a href="#about" className="hover:text-[#123E2A] transition-colors">Dual-Rail Escrow</a>
+                <Link to="/jobs" className="hover:text-[#123E2A] transition-colors">Jobs Marketplace</Link>
               </li>
               <li>
-                <a href="#trust" className="hover:text-[#123E2A] transition-colors">Proof of Work Vault</a>
+                <Link to="/pricing" className="hover:text-[#123E2A] transition-colors">Escrow Fee Model</Link>
               </li>
               <li>
-                <a href="#faq" className="hover:text-[#123E2A] transition-colors">FAQ</a>
+                <Link to="/security" className="hover:text-[#123E2A] transition-colors">Security &amp; Audit</Link>
               </li>
             </ul>
           </div>
@@ -60,13 +61,13 @@ export const EditorialFooter: React.FC = () => {
                 <Link to="/register?role=CLIENT" className="hover:text-[#123E2A] transition-colors">Post a Project</Link>
               </li>
               <li>
-                <Link to="/register?role=CLIENT" className="hover:text-[#123E2A] transition-colors">Find an Artisan</Link>
+                <Link to="/artisans" className="hover:text-[#123E2A] transition-colors">Find an Artisan</Link>
               </li>
               <li>
-                <a href="#how-it-works" className="hover:text-[#123E2A] transition-colors">Milestone Guarantees</a>
+                <Link to="/guarantee" className="hover:text-[#123E2A] transition-colors">Deliverable Guarantee</Link>
               </li>
               <li>
-                <a href="#faq" className="hover:text-[#123E2A] transition-colors">Dispute Tribunal</a>
+                <Link to="/pricing" className="hover:text-[#123E2A] transition-colors">Fee Calculator</Link>
               </li>
             </ul>
           </div>
@@ -81,34 +82,37 @@ export const EditorialFooter: React.FC = () => {
                 <Link to="/register?role=ARTISAN" className="hover:text-[#123E2A] transition-colors">Apply as Artisan</Link>
               </li>
               <li>
-                <a href="#for-artisans" className="hover:text-[#123E2A] transition-colors">Vetting Standards</a>
+                <Link to="/jobs" className="hover:text-[#123E2A] transition-colors">Browse Live Jobs</Link>
               </li>
               <li>
-                <a href="#for-artisans" className="hover:text-[#123E2A] transition-colors">Guaranteed Payouts</a>
+                <Link to="/guarantee" className="hover:text-[#123E2A] transition-colors">Payment Protection</Link>
               </li>
               <li>
-                <a href="#for-artisans" className="hover:text-[#123E2A] transition-colors">Reputation Credit</a>
+                <Link to="/contact" className="hover:text-[#123E2A] transition-colors">Artisan Support Desk</Link>
               </li>
             </ul>
           </div>
 
-          {/* Col 5: Legal & Trust */}
+          {/* Col 5: Company & Legal */}
           <div className="col-span-1 md:col-span-2">
             <h4 className="text-xs font-bold text-[#141A16] uppercase tracking-wider mb-4">
-              Trust &amp; Legal
+              Company &amp; Legal
             </h4>
             <ul className="space-y-2.5 text-xs text-[#556259] font-medium">
               <li>
-                <span className="text-stone-400">Terms of Escrow</span>
+                <Link to="/about" className="hover:text-[#123E2A] transition-colors">Our Story &amp; Hubs</Link>
               </li>
               <li>
-                <span className="text-stone-400">Privacy Policy</span>
+                <Link to="/contact" className="hover:text-[#123E2A] transition-colors">Contact Us</Link>
               </li>
               <li>
-                <span className="text-stone-400">Dispute Guidelines</span>
+                <Link to="/guarantee" className="hover:text-[#123E2A] transition-colors">Dispute Policy</Link>
               </li>
               <li>
-                <span className="text-stone-400">Smart Contract Audit</span>
+                <Link to="/terms" className="hover:text-[#123E2A] transition-colors">Terms of Service</Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="hover:text-[#123E2A] transition-colors">Privacy Policy</Link>
               </li>
             </ul>
           </div>

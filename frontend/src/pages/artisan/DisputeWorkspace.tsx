@@ -9,7 +9,7 @@ import {
  Trash2,
  ArrowLeft,
  Clock,
- Sparkles,
+ 
  ExternalLink,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';

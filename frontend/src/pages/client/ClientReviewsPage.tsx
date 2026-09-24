@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   Trash2,
   Edit,
-  Sparkles,
+  
   FileCheck,
   ChevronRight,
   MessageSquare,

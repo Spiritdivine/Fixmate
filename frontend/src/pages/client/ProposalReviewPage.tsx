@@ -9,7 +9,7 @@ import {
   DollarSign,
   FileCheck,
   MessageSquare,
-  Sparkles,
+  
   MapPin,
   Clock,
   ShieldCheck,

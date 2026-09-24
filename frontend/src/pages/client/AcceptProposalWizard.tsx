@@ -7,7 +7,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
+  
   Wallet as WalletIcon,
   CreditCard,
   Layers,
@@ -235,7 +235,7 @@ export const AcceptProposalWizard: React.FC = () => {
               }`}
             >
               <div className="flex items-center gap-2 mb-1 text-purple-700 font-bold text-xs">
-                <Sparkles className="w-4 h-4" />
+                
                 <span>Monad Web3 Escrow</span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">

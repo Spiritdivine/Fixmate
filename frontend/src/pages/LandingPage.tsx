@@ -18,7 +18,7 @@ import {
   ShieldCheck,
   Shield,
   MapPin,
-  Sparkles,
+  
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { trackEvent } from '../lib/posthog';
@@ -40,6 +40,7 @@ import {
   SunHugeIcon,
   MoonHugeIcon,
 } from '../components/ui/HugeIcons';
+import { SeoHead } from '../components/seo/SeoHead';
 
 export const FixmateLogo: React.FC<{ light?: boolean; className?: string }> = ({ light = false, className = '' }) => (
   <div className={`flex items-center gap-3 ${className}`}>
@@ -188,6 +189,27 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className={`min-h-screen font-sans selection:bg-amber-200 selection:text-stone-900 ${isDarkMode ? 'dark bg-[#0E1310] text-stone-100' : 'bg-[#F5EFEB] text-stone-900'} dark:bg-[#0E1310] dark:text-stone-100 overflow-x-clip transition-colors duration-200`}>
+      <SeoHead
+        title="Artifix — The Verified Artisan Trust Network | Smart Escrow Protection"
+        description="Hire ID-verified plumbers, electricians, solar installers, and carpenters in Nigeria. Guaranteed zero-dispute milestone deliverables with Monad EVM smart contract escrow."
+        canonical="https://artifix.app/"
+        ogType="website"
+        ogImage="/api/v1/og/default"
+        ogImageAlt="Artifix Verified Artisan Trust Network"
+        twitterCard="summary_large_image"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'Artifix',
+          url: 'https://artifix.app',
+          description: 'The Verified Artisan Trust Network with zero-dispute deliverable settlements.',
+          potentialAction: {
+            '@type': 'SearchAction',
+            target: 'https://artifix.app/artisans?search={search_term_string}',
+            'query-input': 'required name=search_term_string',
+          },
+        }}
+      />
       
       {/* ============================================================ */}
       {/* 1. TOP NAVIGATION (Streamlined — Focused Conversion)         */}

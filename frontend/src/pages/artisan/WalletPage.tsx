@@ -10,7 +10,7 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  Sparkles,
+  
   ShieldCheck,
   RefreshCw,
   Coins,
@@ -535,7 +535,7 @@ export const WalletPage: React.FC = () => {
             isLoading={isTopUpLoading}
             className="flex items-center gap-1.5 text-xs border-dashed border-indigo-300 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50"
           >
-            <Sparkles className="h-3.5 w-3.5" />
+            
             Dev Fund (+₦50k)
           </Button>
         </div>
@@ -1419,7 +1419,7 @@ export const WalletPage: React.FC = () => {
         <div className="space-y-4">
           <div className="p-3.5 bg-indigo-50/80 border border-indigo-100 rounded-xl text-xs text-indigo-950 space-y-1.5">
             <p className="font-semibold flex items-center gap-1.5 text-indigo-900">
-              <Sparkles className="w-4 h-4 text-indigo-600" />
+              
               Direct Smart Contract Settlement Address
             </p>
             <p className="text-[11px] text-indigo-700 leading-relaxed">

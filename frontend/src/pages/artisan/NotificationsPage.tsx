@@ -6,7 +6,7 @@ import {
  Trash2,
  Clock,
  ArrowRight,
- Sparkles,
+ 
  ExternalLink,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';

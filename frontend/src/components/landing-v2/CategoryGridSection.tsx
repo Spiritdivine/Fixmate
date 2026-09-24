@@ -261,7 +261,7 @@ export const CategoryGridSection: React.FC = () => {
           {artisanTrades.map((cat) => (
             <Link
               key={cat.id}
-              to={`/client/find-artisans?category=${cat.queryParam}`}
+              to={`/artisans?trade=${encodeURIComponent(cat.name.replace('\n', ' '))}`}
               onClick={() =>
                 trackEvent('landing_v2_category_clicked', {
                   category_id: cat.id,

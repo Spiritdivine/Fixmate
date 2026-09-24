@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Compass,
-  Sparkles,
+  
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import { Input } from '../ui/Input';
@@ -171,7 +171,7 @@ export const WorkshopLocationCard: React.FC<WorkshopLocationCardProps> = ({
         {lastSuggestedAddress && (
           <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
-              <Sparkles className="w-4 h-4 shrink-0 text-emerald-600" />
+              
               <span>
                 Detected address:{' '}
                 <strong className="font-semibold">{lastSuggestedAddress.formattedAddress}</strong>

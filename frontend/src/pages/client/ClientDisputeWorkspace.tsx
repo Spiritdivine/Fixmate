@@ -11,7 +11,7 @@ import {
   Trash2,
   CheckCircle2,
   Clock,
-  Sparkles,
+  
 } from 'lucide-react';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { useAuthStore } from '../../stores/authStore';

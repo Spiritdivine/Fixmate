@@ -12,7 +12,7 @@ import {
   Smartphone,
   Mail,
   Volume2,
-  Sparkles,
+  
 } from 'lucide-react';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { useAuthStore } from '../../stores/authStore';

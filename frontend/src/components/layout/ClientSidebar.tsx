@@ -16,7 +16,7 @@ import {
   Settings,
   HelpCircle,
   LogOut,
-  Sparkles,
+  
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../stores/authStore';
@@ -169,7 +169,7 @@ export const ClientSidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
             <div className="relative z-10 flex flex-col items-start text-left gap-1 mb-4">
               <div className="p-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10 mb-1 inline-flex text-white">
-                <Sparkles className="w-4 h-4" />
+                
               </div>
               <h4 className="font-bold text-sm leading-tight font-dashboard">
                 Download our<br />Mobile App

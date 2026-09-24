@@ -291,7 +291,7 @@ export const TradesShowcaseSection: React.FC = () => {
           <span className="hidden xs:inline text-stone-400">{job.turnaround}</span>
         </div>
         <Link
-          to="/artisan/jobs"
+          to="/jobs"
           className="text-xs font-bold text-[#123E2A] hover:text-[#0B3B24] flex items-center gap-1 group-hover:translate-x-1 transition-transform shrink-0"
         >
           <span>Submit Bid</span>
@@ -337,7 +337,7 @@ export const TradesShowcaseSection: React.FC = () => {
           {/* Right Action Button & Controls Group */}
           <div className="shrink-0 flex items-center gap-3">
             <Link
-              to="/artisan/jobs"
+              to="/jobs"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0B3B24] text-white text-xs sm:text-sm font-bold px-5 sm:px-6 py-3 sm:py-3.5 rounded-full hover:bg-[#072818] transition-all shadow-md active:scale-95 whitespace-nowrap text-center"
             >
               <span>Explore All Live Jobs</span>

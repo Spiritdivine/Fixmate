@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   FileCheck,
   Search,
-  Sparkles,
+  
   Eye,
 } from 'lucide-react';
 import { apiClient } from '../../lib/api-client';
@@ -61,7 +61,7 @@ export const ClientContractsPage: React.FC = () => {
         </div>
         <Link to="/client/jobs/post">
           <button className="flex items-center gap-2 bg-emerald-800 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-colors shadow-sm cursor-pointer">
-            <Sparkles className="w-4 h-4" />
+            
             <span>Post a New Job</span>
           </button>
         </Link>

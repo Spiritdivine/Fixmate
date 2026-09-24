@@ -12,7 +12,7 @@ import {
   ChevronLeft,
   Trash2,
   FileText,
-  Sparkles,
+  
   AlertCircle,
 } from 'lucide-react';
 import { apiClient, getErrorMessage } from '../../lib/api-client';

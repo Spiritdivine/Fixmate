@@ -1,0 +1,92 @@
+# ==============================================================================
+# ARTIFIX (THE VERIFIED ARTISAN TRUST NETWORK) - ROBOTS.TXT
+# Production crawler rules, GEO (Generative Engine Optimization) & bot controls
+# ==============================================================================
+
+User-agent: *
+# Core public discovery & marketing routes
+Allow: /
+Allow: /trades
+Allow: /trades/*
+Allow: /artisans
+Allow: /p/
+Allow: /jobs
+Allow: /security
+Allow: /terms
+Allow: /privacy
+Allow: /brand/*
+Allow: /images/*
+Allow: /videos/*
+
+# Disallow private dashboards, user portals, auth actions, and internal endpoints
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /artisan/*
+Disallow: /client/*
+Disallow: /admin/*
+Disallow: /auth/*
+Disallow: /login
+Disallow: /register
+Disallow: /api/*
+
+# Explicitly allow public SEO and OpenGraph endpoints
+Allow: /api/v1/seo/sitemap.xml
+Allow: /api/v1/seo/robots.txt
+Allow: /api/v1/og/*
+
+# ==============================================================================
+# SOCIAL MEDIA & LINK PREVIEW BOTS (FULL ACCESS TO PUBLIC MEDIA & PREVIEWS)
+# ==============================================================================
+User-agent: Twitterbot
+User-agent: facebookexternalhit
+User-agent: LinkedInBot
+User-agent: WhatsApp
+User-agent: Slackbot
+User-agent: TelegramBot
+User-agent: Discordbot
+User-agent: Applebot
+Allow: /
+
+# ==============================================================================
+# SEARCH ENGINES & WEB CRAWLERS
+# ==============================================================================
+User-agent: Googlebot
+User-agent: Googlebot-Image
+User-agent: Bingbot
+User-agent: DuckDuckBot
+User-agent: Yandex
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /client
+Disallow: /artisan
+Disallow: /auth
+
+# ==============================================================================
+# AI ANSWER ENGINES & LLM SCRAPERS (GEO: Generative Engine Optimization)
+# Allow knowledge extraction of public artisan benchmarks & pricing guides
+# ==============================================================================
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+User-agent: PerplexityBot
+User-agent: Bytespider
+Allow: /
+Allow: /trades
+Allow: /trades/*
+Allow: /artisans
+Allow: /p/
+Allow: /jobs
+Allow: /security
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /client
+Disallow: /artisan
+Disallow: /auth
+Disallow: /api/*
+
+# ==============================================================================
+# XML SITEMAP LOCATION
+# ==============================================================================
+Sitemap: https://artifix.app/sitemap.xml

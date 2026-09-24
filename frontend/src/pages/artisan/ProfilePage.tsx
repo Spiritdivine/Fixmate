@@ -4,7 +4,7 @@ import {
  User,
  Briefcase,
  MapPin,
- Sparkles,
+ 
  Camera,
  Save,
  CheckCircle2,
@@ -321,7 +321,7 @@ export const ProfilePage: React.FC = () => {
  <Card className="space-y-4 border-purple-500/30">
  <CardHeader>
  <div className="flex items-center gap-2">
- <Sparkles className="w-5 h-5 text-purple-400" />
+
  <div>
  <CardTitle className="text-purple-400">Monad Testnet EVM Wallet</CardTitle>
  <CardDescription>Link your EVM address to receive direct smart contract escrow payouts.</CardDescription>

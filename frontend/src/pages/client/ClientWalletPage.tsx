@@ -11,7 +11,7 @@ import {
   Search,
   CheckCircle2,
   Trash2,
-  Sparkles,
+  
   Receipt,
   Copy,
   ExternalLink,
@@ -759,7 +759,7 @@ export const ClientWalletPage: React.FC = () => {
                     : 'border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <Sparkles className="w-4 h-4 text-amber-500 mb-1" />
+                
                 Sandbox Simulated Top-Up
                 <span className="block text-[10px] font-normal text-slate-400">Instant test fund</span>
               </button>
@@ -792,7 +792,7 @@ export const ClientWalletPage: React.FC = () => {
         <div className="space-y-4">
           <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-900 text-xs">
             <p className="font-semibold flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-indigo-600" />
+              
               Direct Naira to Monad USDC On-Ramp
             </p>
             <p className="mt-1 text-slate-600 text-[11px] leading-relaxed">

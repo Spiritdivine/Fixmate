@@ -13,6 +13,21 @@ import { Register } from './pages/auth/Register';
 import { VerifyOtp } from './pages/auth/VerifyOtp';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
 
+// Public Discovery & Marketplace Module
+import { PublicLayout } from './components/layout/PublicLayout';
+import { PublicArtisanDirectoryPage } from './pages/public/PublicArtisanDirectoryPage';
+import { PublicArtisanProfilePage } from './pages/public/PublicArtisanProfilePage';
+import { TradesCatalogPage } from './pages/public/TradesCatalogPage';
+import { PublicJobsMarketplacePage } from './pages/public/PublicJobsMarketplacePage';
+import { TermsOfServicePage } from './pages/public/TermsOfServicePage';
+import { PrivacyPolicyPage } from './pages/public/PrivacyPolicyPage';
+import { SecurityAndAuditPage } from './pages/public/SecurityAndAuditPage';
+import { ContactUsPage } from './pages/public/ContactUsPage';
+import { PricingPage } from './pages/public/PricingPage';
+import { WaitlistConfirmedPage } from './pages/public/WaitlistConfirmedPage';
+import { DisputeGuaranteePage } from './pages/public/DisputeGuaranteePage';
+import { AboutUsPage } from './pages/public/AboutUsPage';
+
 // Artisan Layout & Pages
 import { ArtisanLayout } from './components/layout/ArtisanLayout';
 import { DashboardOverview } from './pages/artisan/DashboardOverview';
@@ -186,6 +201,43 @@ export function App() {
               <Route path="audit-logs" element={<AuditLogsPage />} />
               <Route path="settings" element={<SystemSettingsPage />} />
               <Route path="health" element={<SystemHealthPage />} />
+            </Route>
+
+            {/* Public Discovery & Directory Module */}
+            <Route element={<PublicLayout />}>
+              <Route path="/artisans" element={<PublicArtisanDirectoryPage />} />
+              <Route path="/directory" element={<Navigate to="/artisans" replace />} />
+              <Route path="/p/:artisanId" element={<PublicArtisanProfilePage />} />
+              <Route path="/artisans/:id" element={<PublicArtisanProfilePage />} />
+              <Route path="/trades" element={<TradesCatalogPage />} />
+              <Route path="/trades/:slug" element={<Navigate to="/trades" replace />} />
+              <Route path="/categories/:slug" element={<Navigate to="/trades" replace />} />
+              <Route path="/jobs" element={<PublicJobsMarketplacePage />} />
+              <Route path="/jobs-board" element={<Navigate to="/jobs" replace />} />
+              <Route path="/terms" element={<TermsOfServicePage />} />
+              <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
+              <Route path="/privacy" element={<PrivacyPolicyPage />} />
+              <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
+              <Route path="/security" element={<SecurityAndAuditPage />} />
+              <Route path="/audit" element={<Navigate to="/security" replace />} />
+              <Route path="/security-audit" element={<Navigate to="/security" replace />} />
+              <Route path="/how-it-works" element={<Navigate to="/security" replace />} />
+              <Route path="/trust" element={<Navigate to="/security" replace />} />
+              <Route path="/escrow" element={<Navigate to="/security" replace />} />
+              <Route path="/contact" element={<ContactUsPage />} />
+              <Route path="/support" element={<Navigate to="/contact" replace />} />
+              <Route path="/contact-us" element={<Navigate to="/contact" replace />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/fees" element={<Navigate to="/pricing" replace />} />
+              <Route path="/pricing-policy" element={<Navigate to="/pricing" replace />} />
+              <Route path="/waitlist/confirmed" element={<WaitlistConfirmedPage />} />
+              <Route path="/waitlist-confirmed" element={<Navigate to="/waitlist/confirmed" replace />} />
+              <Route path="/guarantee" element={<DisputeGuaranteePage />} />
+              <Route path="/dispute-policy" element={<Navigate to="/guarantee" replace />} />
+              <Route path="/disputes" element={<Navigate to="/guarantee" replace />} />
+              <Route path="/about" element={<AboutUsPage />} />
+              <Route path="/our-story" element={<Navigate to="/about" replace />} />
+              <Route path="/company" element={<Navigate to="/about" replace />} />
             </Route>
 
             {/* Root & Fallback */}

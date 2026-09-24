@@ -7,7 +7,7 @@ import {
   Trash2,
   ExternalLink,
   Clock,
-  Sparkles,
+  
 } from 'lucide-react';
 import { apiClient } from '../../lib/api-client';
 import { Notification, ApiResponse } from '../../types';

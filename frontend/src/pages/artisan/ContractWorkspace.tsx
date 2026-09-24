@@ -8,7 +8,7 @@ import {
  Upload,
  ExternalLink,
  MessageSquare,
- Sparkles,
+ 
  ArrowLeft,
  DollarSign,
  Shield,
@@ -226,7 +226,7 @@ export const ContractWorkspace: React.FC = () => {
  </span>
  {contract.onChainEscrowId && (
  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/10 text-purple-500 border border-purple-500/20 flex items-center gap-1">
- <Sparkles className="w-3.5 h-3.5" /> Monad Escrow #{contract.onChainEscrowId}
+  Monad Escrow #{contract.onChainEscrowId}
  </span>
  )}
  </div>
@@ -259,7 +259,7 @@ export const ContractWorkspace: React.FC = () => {
  <div className="p-4 rounded-[24px] bg-purple-950/20 border border-purple-800/30 text-xs space-y-2">
  <div className="flex items-center justify-between">
  <span className="font-bold text-purple-400 flex items-center gap-1.5">
- <Sparkles className="w-4 h-4" /> Monad Testnet On-Chain Verification
+  Monad Testnet On-Chain Verification
  </span>
  <span className="text-slate-400 font-mono">
  Smart Contract: {shortenAddress(contract.smartContractAddr)}
