@@ -52,7 +52,7 @@ export const DisputeGuaranteePage: React.FC = () => {
       <SeoHead
         title="Dispute Resolution & Deliverable Guarantee | Artifix"
         description="Understand how Artifix protects every milestone with our 3-tier arbitration tribunal, evidentiary standards, and smart contract escrow guarantees."
-        canonical="https://artifix.app/guarantee"
+        canonical="https://artifixhq.xyz/guarantee"
         ogType="website"
         ogImage="/api/v1/og/guarantee"
         ogImageAlt="Artifix Dispute Resolution & Guarantee Policy"

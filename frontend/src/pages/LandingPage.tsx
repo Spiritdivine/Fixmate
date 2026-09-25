@@ -192,7 +192,7 @@ export const LandingPage: React.FC = () => {
       <SeoHead
         title="Artifix — The Verified Artisan Trust Network | Smart Escrow Protection"
         description="Hire ID-verified plumbers, electricians, solar installers, and carpenters in Nigeria. Guaranteed zero-dispute milestone deliverables with Monad EVM smart contract escrow."
-        canonical="https://artifix.app/"
+        canonical="https://artifixhq.xyz/"
         ogType="website"
         ogImage="/api/v1/og/default"
         ogImageAlt="Artifix Verified Artisan Trust Network"
@@ -201,11 +201,11 @@ export const LandingPage: React.FC = () => {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
           name: 'Artifix',
-          url: 'https://artifix.app',
+          url: 'https://artifixhq.xyz',
           description: 'The Verified Artisan Trust Network with zero-dispute deliverable settlements.',
           potentialAction: {
             '@type': 'SearchAction',
-            target: 'https://artifix.app/artisans?search={search_term_string}',
+            target: 'https://artifixhq.xyz/artisans?search={search_term_string}',
             'query-input': 'required name=search_term_string',
           },
         }}

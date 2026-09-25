@@ -470,7 +470,7 @@ export class OgImageService {
         <g transform="translate(310, 0)">
           <rect width="280" height="120" rx="20" fill="#0A1811" stroke="#1F6344" stroke-width="1.2" />
           <text x="24" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#94A3B8">EMAIL DESK</text>
-          <text x="24" y="78" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="800" fill="#FBBF24">support@artifix.app</text>
+          <text x="24" y="78" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="800" fill="#FBBF24">support@artifixhq.xyz</text>
         </g>
 
         <g transform="translate(620, 0)">

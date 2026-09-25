@@ -50,7 +50,7 @@ Under **Environment Variables**, add the following keys:
 | :--- | :--- | :---: |
 | `NODE_ENV` | `production` | ✅ Yes |
 | `DATABASE_URL` | Your PostgreSQL connection string (from Supabase/Neon/Render) | ✅ Yes |
-| `CLIENT_URL` | `*` (or your frontend domain, e.g. `https://fixmate.vercel.app`) | ✅ Yes |
+| `CLIENT_URL` | `*` (or your frontend domain, e.g. `https://artifixhq.xyz`) | ✅ Yes |
 | `JWT_ACCESS_SECRET` | A strong 64-char random string | ✅ Yes |
 | `JWT_ACCESS_EXPIRES_IN` | `15m` | ✅ Yes |
 | `JWT_REFRESH_SECRET` | Another strong 64-char random string | ✅ Yes |

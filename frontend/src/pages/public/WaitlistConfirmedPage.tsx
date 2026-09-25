@@ -46,7 +46,7 @@ export const WaitlistConfirmedPage: React.FC = () => {
       <SeoHead
         title="Application Confirmed | Artifix Founding Member"
         description="Your founding member application on Artifix has been recorded. Review rollout stages and next steps."
-        canonical="https://artifix.app/waitlist/confirmed"
+        canonical="https://artifixhq.xyz/waitlist/confirmed"
         ogType="website"
         ogImage="/api/v1/og/default"
         ogImageAlt="Artifix Waitlist Confirmed"

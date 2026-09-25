@@ -55,10 +55,10 @@ export const SeoHead: React.FC<SeoHeadProps> = ({
     setMetaTag('name', 'description', description);
 
     // 3. OpenGraph Tags
-    const fullCanonical = canonical || (typeof window !== 'undefined' ? window.location.href : 'https://artifix.app');
+    const fullCanonical = canonical || (typeof window !== 'undefined' ? window.location.href : 'https://artifixhq.xyz');
     const fullOgImage = ogImage.startsWith('http')
       ? ogImage
-      : (typeof window !== 'undefined' ? `${window.location.origin}${ogImage}` : `https://artifix.app${ogImage}`);
+      : (typeof window !== 'undefined' ? `${window.location.origin}${ogImage}` : `https://artifixhq.xyz${ogImage}`);
 
     setCanonical(fullCanonical);
     setMetaTag('property', 'og:title', title);
@@ -103,7 +103,7 @@ export const SeoHead: React.FC<SeoHeadProps> = ({
     <>
       <title>{title}</title>
       <meta name="description" content={description} />
-      <link rel="canonical" href={canonical || (typeof window !== 'undefined' ? window.location.href : 'https://artifix.app')} />
+      <link rel="canonical" href={canonical || (typeof window !== 'undefined' ? window.location.href : 'https://artifixhq.xyz')} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:type" content={ogType} />

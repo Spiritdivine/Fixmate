@@ -70,7 +70,7 @@ export class SeoController {
     try {
       const baseUrl = (env.CLIENT_URL && !env.CLIENT_URL.includes('*'))
         ? env.CLIENT_URL.split(',')[0].trim().replace(/\/$/, '')
-        : 'https://artifix.app';
+        : 'https://artifixhq.xyz';
 
       // 1. Fetch active verified artisans
       let verifiedArtisans = [];
@@ -202,7 +202,7 @@ export class SeoController {
   static getRobotsTxt(req, res) {
     const baseUrl = (env.CLIENT_URL && !env.CLIENT_URL.includes('*'))
       ? env.CLIENT_URL.split(',')[0].trim().replace(/\/$/, '')
-      : 'https://artifix.app';
+      : 'https://artifixhq.xyz';
 
     const robots = `# Artifix Robots Governance
 User-agent: *

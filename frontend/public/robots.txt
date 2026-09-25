@@ -89,4 +89,4 @@ Disallow: /api/*
 # ==============================================================================
 # XML SITEMAP LOCATION
 # ==============================================================================
-Sitemap: https://artifix.app/sitemap.xml
+Sitemap: https://artifixhq.xyz/sitemap.xml

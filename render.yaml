@@ -14,7 +14,7 @@ services:
       - key: DATABASE_URL
         sync: false # Set your PostgreSQL URL (Supabase, Neon, or Render PostgreSQL)
       - key: CLIENT_URL
-        value: "*" # Set to your frontend production domain (e.g., https://fixmate.vercel.app)
+        value: "*" # Set to your frontend production domain (e.g., https://artifixhq.xyz)
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_ACCESS_EXPIRES_IN

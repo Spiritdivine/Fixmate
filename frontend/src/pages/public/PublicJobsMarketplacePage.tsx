@@ -156,7 +156,7 @@ export const PublicJobsMarketplacePage: React.FC = () => {
       <SeoHead
         title="Live Escrow Job Board for Nigerian Artisans | Artifix"
         description="Browse open artisan jobs and funded service requests across Nigeria. Submit bids directly with smart contract escrow deposits guaranteeing timely payments."
-        canonical="https://artifix.app/jobs"
+        canonical="https://artifixhq.xyz/jobs"
         ogType="website"
         ogImage="/api/v1/og/default"
         ogImageAlt="Artifix Live Escrow Job Board"

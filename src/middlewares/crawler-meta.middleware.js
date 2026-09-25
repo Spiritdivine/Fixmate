@@ -39,7 +39,7 @@ export async function crawlerMetaMiddleware(req, res, next) {
     return next();
   }
 
-  const host = req.get('host') || 'artifix.app';
+  const host = req.get('host') || 'artifixhq.xyz';
   const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
   const siteUrl = (env.CLIENT_URL && !env.CLIENT_URL.includes('*'))
     ? env.CLIENT_URL.split(',')[0].trim().replace(/\/$/, '')

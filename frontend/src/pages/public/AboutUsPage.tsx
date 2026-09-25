@@ -19,7 +19,7 @@ export const AboutUsPage: React.FC = () => {
       <SeoHead
         title="About Us & Company Story | Artifix"
         description="Learn how Artifix is transforming informal blue-collar commerce across Nigeria through verified artisan identity, dual-rail escrow, and zero-dispute settlements."
-        canonical="https://artifix.app/about"
+        canonical="https://artifixhq.xyz/about"
         ogType="website"
         ogImage="/api/v1/og/about"
         ogImageAlt="About Artifix"

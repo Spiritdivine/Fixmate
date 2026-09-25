@@ -34,7 +34,7 @@ export const TradesCatalogPage: React.FC = () => {
       <SeoHead
         title="Browse Verified Artisan Trades & Price Benchmarks | Artifix"
         description="Explore 8 verified skilled trades across Nigeria. Compare fair market price estimates, common job scopes, and hire verified specialists with 100% money-back escrow protection."
-        canonical="https://artifix.app/trades"
+        canonical="https://artifixhq.xyz/trades"
         ogType="website"
         ogImage="/api/v1/og/default"
         ogImageAlt="Artifix Verified Trades Catalog"

@@ -67,7 +67,7 @@ export const ContactUsPage: React.FC = () => {
       <SeoHead
         title="Contact Us & Operational Hubs | Artifix"
         description="Direct communication channels for homeowners, verified artisans, and commercial partners. Contact our team in Lekki, Lagos and Wuse II, Abuja."
-        canonical="https://artifix.app/contact"
+        canonical="https://artifixhq.xyz/contact"
         ogType="website"
         ogImage="/api/v1/og/contact"
         ogImageAlt="Contact Artifix"
@@ -145,9 +145,9 @@ export const ContactUsPage: React.FC = () => {
                   </div>
                   <div>
                     <div className="font-bold text-[#141A16]">Email Inquiries</div>
-                    <div className="text-stone-500 font-normal">Support: support@artifix.app</div>
-                    <div className="text-stone-500 font-normal">Disputes: disputes@artifix.app</div>
-                    <div className="text-stone-500 font-normal">Partnerships: enterprise@artifix.app</div>
+                    <div className="text-stone-500 font-normal">Support: support@artifixhq.xyz</div>
+                    <div className="text-stone-500 font-normal">Disputes: disputes@artifixhq.xyz</div>
+                    <div className="text-stone-500 font-normal">Partnerships: enterprise@artifixhq.xyz</div>
                   </div>
                 </div>
 

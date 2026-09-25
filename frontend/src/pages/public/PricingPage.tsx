@@ -35,7 +35,7 @@ export const PricingPage: React.FC = () => {
       <SeoHead
         title="Escrow Pricing & Fee Transparency | Artifix"
         description="Clear, predictable 5% escrow fee structure on verified artisan jobs across Nigeria. Use our fee calculator to calculate take-home payouts and milestones."
-        canonical="https://artifix.app/pricing"
+        canonical="https://artifixhq.xyz/pricing"
         ogType="website"
         ogImage="/api/v1/og/pricing"
         ogImageAlt="Artifix Escrow Pricing"

@@ -65,7 +65,7 @@ export const SecurityAndAuditPage: React.FC = () => {
       <SeoHead
         title="Security & Smart Contract Audit | Artifix Dual-Rail Escrow"
         description="Review the Monad EVM escrow smart contract architecture, dual-rail fiat & crypto security protocols, automated milestone settlement, and verified audit report for Artifix."
-        canonical="https://artifix.app/security"
+        canonical="https://artifixhq.xyz/security"
         ogType="website"
         ogImage="/api/v1/og/default"
         ogImageAlt="Artifix Security & Smart Contract Escrow Audit"

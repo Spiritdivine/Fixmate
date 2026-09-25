@@ -242,7 +242,7 @@ export const PublicArtisanDirectoryPage: React.FC = () => {
       <SeoHead
         title="Find Verified Nigerian Artisans | Artifix Escrow Directory"
         description="Search and hire ID-verified electricians, plumbers, solar engineers, carpenters, and painters across Nigeria with 100% money-back smart escrow protection."
-        canonical="https://artifix.app/artisans"
+        canonical="https://artifixhq.xyz/artisans"
         ogType="website"
         ogImage="/api/v1/og/default"
         ogImageAlt="Artifix Verified Artisans Directory"
