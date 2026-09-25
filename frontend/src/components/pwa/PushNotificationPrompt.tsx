@@ -67,17 +67,18 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({
       <button
         onClick={handleToggle}
         disabled={isLoading}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+        style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
+        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition cursor-pointer active:scale-95 ${
           isSubscribed
-            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
-            : 'bg-sky-500/10 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20'
+            ? 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-300 dark:border-stone-700 hover:bg-stone-200 dark:hover:bg-stone-700'
+            : 'bg-[#123E2A] text-white hover:bg-[#0E3222] shadow-sm'
         }`}
         title={isSubscribed ? 'Disable Push Alerts' : 'Enable Push Alerts'}
       >
         {isLoading ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         ) : isSubscribed ? (
-          <Bell className="w-3.5 h-3.5 fill-emerald-400/20" />
+          <Bell className="w-3.5 h-3.5 text-[#123E2A] dark:text-emerald-400" />
         ) : (
           <BellOff className="w-3.5 h-3.5" />
         )}
@@ -87,35 +88,39 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({
   }
 
   return (
-    <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-100 backdrop-blur-md">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
+    <div 
+      className="p-5 rounded-2xl bg-[#FAF7F0] dark:bg-[#141A16] border border-stone-200 dark:border-stone-800 text-[#141A16] dark:text-[#FAF7F0] shadow-sm"
+      style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
           <div
-            className={`p-2.5 rounded-xl ${
+            className={`p-3 rounded-xl shrink-0 transition-colors ${
               isSubscribed
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                : 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
+                ? 'bg-[#123E2A]/10 text-[#123E2A] dark:bg-[#123E2A]/30 dark:text-emerald-400 border border-[#123E2A]/20'
+                : 'bg-stone-200/60 dark:bg-stone-800 text-[#141A16] dark:text-stone-300 border border-stone-300/80 dark:border-stone-700'
             }`}
           >
             <Bell className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-              <span>Escrow & Job Push Notifications</span>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-bold text-[#141A16] dark:text-white tracking-[-0.02em]">
+                Escrow & Job Lead Push Notifications
+              </h4>
               {isSubscribed && (
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#123E2A]/10 text-[#123E2A] dark:text-emerald-400 border border-[#123E2A]/20">
                   <CheckCircle2 className="w-3 h-3" /> Active
                 </span>
               )}
-            </h4>
-            <p className="text-xs text-slate-400 mt-1 max-w-md">
-              Receive real-time alerts when a client deposits escrow funds, releases milestone payouts,
-              or sends a message—even when your browser is closed.
+            </div>
+            <p className="text-xs text-[#556259] dark:text-stone-400 mt-1 max-w-lg leading-relaxed font-normal">
+              Receive real-time alerts when a client locks funds into escrow, releases milestone payouts, or posts matching trade jobs in your area.
             </p>
             {message && (
               <p
                 className={`text-xs mt-2 font-medium ${
-                  isSubscribed ? 'text-emerald-400' : 'text-amber-400'
+                  isSubscribed ? 'text-[#123E2A] dark:text-emerald-400' : 'text-[#BD5324] dark:text-[#E07A4B]'
                 }`}
               >
                 {message}
@@ -124,24 +129,26 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={handleToggle}
-          disabled={isLoading}
-          className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition shadow-md active:scale-95 ${
-            isSubscribed
-              ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-              : 'bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/20'
-          }`}
-        >
-          {isLoading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : isSubscribed ? (
-            <BellOff className="w-3.5 h-3.5 text-slate-400" />
-          ) : (
-            <Bell className="w-3.5 h-3.5" />
-          )}
-          <span>{isSubscribed ? 'Disable' : 'Enable Alerts'}</span>
-        </button>
+        <div className="self-end sm:self-auto shrink-0">
+          <button
+            onClick={handleToggle}
+            disabled={isLoading}
+            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold transition shadow-sm active:scale-95 cursor-pointer ${
+              isSubscribed
+                ? 'bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 border border-stone-300 dark:border-stone-700'
+                : 'bg-[#123E2A] hover:bg-[#0E3222] text-white shadow-md'
+            }`}
+          >
+            {isLoading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : isSubscribed ? (
+              <BellOff className="w-3.5 h-3.5 text-stone-500" />
+            ) : (
+              <Bell className="w-3.5 h-3.5" />
+            )}
+            <span>{isSubscribed ? 'Disable Alerts' : 'Enable Mobile Alerts'}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

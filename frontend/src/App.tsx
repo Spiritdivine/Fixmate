@@ -96,6 +96,7 @@ import { SystemHealthPage } from './pages/admin/SystemHealthPage';
 import { PostHogPageViewTracker } from './components/analytics/PostHogPageViewTracker';
 import { PwaInstallBanner } from './components/pwa/PwaInstallBanner';
 import { OfflineIndicator } from './components/pwa/OfflineIndicator';
+import { OfflineFallbackPage } from './components/pwa/OfflineFallbackPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -125,15 +126,14 @@ export function App() {
       <PrivyProviderWrapper>
         <BrowserRouter>
           <PostHogPageViewTracker />
-          <PwaInstallBanner />
-          <OfflineIndicator />
           <Routes>
-            {/* Public Auth Routes */}
+            {/* Public Auth & Utility Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify-otp" element={<VerifyOtp />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/offline" element={<OfflineFallbackPage />} />
 
             {/* Protected Artisan Dashboard Module */}
             <Route path="/artisan" element={<ArtisanLayout />}>
@@ -249,6 +249,8 @@ export function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <PwaInstallBanner />
+          <OfflineIndicator />
         </BrowserRouter>
       </PrivyProviderWrapper>
     </QueryClientProvider>

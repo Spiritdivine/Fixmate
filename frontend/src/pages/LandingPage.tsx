@@ -215,9 +215,9 @@ export const LandingPage: React.FC = () => {
       {/* 1. TOP NAVIGATION (Streamlined — Focused Conversion)         */}
       {/* ============================================================ */}
       <header
-        className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        className={`sticky top-0 z-50 w-full transition-all duration-300 border-b border-stone-300/80 dark:border-stone-800 ${
           isScrolled
-            ? 'bg-[#F5EFEB]/95 dark:bg-[#0E1310]/95 backdrop-blur-md shadow-sm border-b border-stone-300/80 dark:border-stone-800'
+            ? 'bg-[#F5EFEB]/95 dark:bg-[#0E1310]/95 backdrop-blur-md shadow-sm'
             : 'bg-[#F5EFEB]/80 dark:bg-[#0E1310]/80 backdrop-blur-sm'
         }`}
       >
