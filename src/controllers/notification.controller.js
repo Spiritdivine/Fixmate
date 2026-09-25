@@ -46,6 +46,40 @@ export class NotificationController {
       next(error);
     }
   }
+
+  static async getVapidPublicKey(req, res, next) {
+    try {
+      const { PushNotificationService } = await import('../services/pushNotificationService.js');
+      const publicKey = PushNotificationService.getPublicKey();
+      res.status(200).json(new ApiResponse(200, { publicKey }, 'VAPID public key fetched'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async subscribePush(req, res, next) {
+    try {
+      const { subscription } = req.body;
+      const userAgent = req.headers['user-agent'] || null;
+      const { PushNotificationService } = await import('../services/pushNotificationService.js');
+      await PushNotificationService.saveSubscription(req.user.id, subscription, userAgent);
+      res.status(200).json(new ApiResponse(200, null, 'Push subscription registered successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async unsubscribePush(req, res, next) {
+    try {
+      const { endpoint } = req.body;
+      const { PushNotificationService } = await import('../services/pushNotificationService.js');
+      await PushNotificationService.removeSubscription(endpoint);
+      res.status(200).json(new ApiResponse(200, null, 'Push subscription removed successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default NotificationController;
+

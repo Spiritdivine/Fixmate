@@ -1,10 +1,11 @@
 import prisma from '../config/db.js';
 import { ApiError } from '../utils/api-error.js';
 import { getIO } from '../sockets/socket.server.js';
+import { PushNotificationService } from './pushNotificationService.js';
 
 export class NotificationService {
   /**
-   * Create an in-app notification and emit to real-time socket room
+   * Create an in-app notification, emit to real-time socket room, and trigger PWA Web Push
    */
   static async createNotification(userId, title, body, actionUrl = null) {
     const notification = await prisma.notification.create({
@@ -22,6 +23,15 @@ export class NotificationService {
     } catch {
       // Socket.io might not be connected in tests or offline users
     }
+
+    // Trigger PWA Web Push to user's registered devices (non-blocking)
+    PushNotificationService.sendPushToUser(userId, {
+      title,
+      body,
+      actionUrl,
+    }).catch((err) => {
+      console.warn('[WebPush] Background push error:', err.message);
+    });
 
     return notification;
   }

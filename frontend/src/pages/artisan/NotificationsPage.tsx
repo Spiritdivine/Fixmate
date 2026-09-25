@@ -15,6 +15,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { apiClient } from '../../lib/api-client';
 import { formatDateTime, timeAgo } from '../../lib/formatters';
 import { Notification } from '../../types';
+import { PushNotificationPrompt } from '../../components/pwa/PushNotificationPrompt';
 
 export const NotificationsPage: React.FC = () => {
  const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -111,6 +112,9 @@ export const NotificationsPage: React.FC = () => {
  </Button>
  </div>
  </div>
+
+ {/* PWA Web Push Notification Settings */}
+ <PushNotificationPrompt />
 
  {/* Filter Tabs */}
  <div className="flex items-center gap-2 border-b border-slate-200 pb-2">

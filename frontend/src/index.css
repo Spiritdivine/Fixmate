@@ -376,3 +376,28 @@ h1, h2, h3, h4, h5, h6 {
   animation-play-state: paused;
 }
 
+/* ============================================================ */
+/* PWA NATIVE STANDALONE UTILITIES & SAFE AREAS                 */
+/* ============================================================ */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+.pt-safe {
+  padding-top: var(--sat);
+}
+
+.pb-safe {
+  padding-bottom: var(--sab);
+}
+
+@supports (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: contain;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+

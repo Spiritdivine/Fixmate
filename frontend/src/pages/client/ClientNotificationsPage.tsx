@@ -14,6 +14,7 @@ import { Notification, ApiResponse } from '../../types';
 import { formatDate } from '../../lib/formatters';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { PushNotificationPrompt } from '../../components/pwa/PushNotificationPrompt';
 
 export const ClientNotificationsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -103,6 +104,9 @@ export const ClientNotificationsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* PWA Push Notification Settings Card */}
+      <PushNotificationPrompt />
 
       {/* Filter Chips */}
       <div className="flex items-center gap-2 p-1.5 bg-slate-100/80 rounded-2xl w-fit">

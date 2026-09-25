@@ -94,6 +94,8 @@ import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { SystemSettingsPage } from './pages/admin/SystemSettingsPage';
 import { SystemHealthPage } from './pages/admin/SystemHealthPage';
 import { PostHogPageViewTracker } from './components/analytics/PostHogPageViewTracker';
+import { PwaInstallBanner } from './components/pwa/PwaInstallBanner';
+import { OfflineIndicator } from './components/pwa/OfflineIndicator';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -123,6 +125,8 @@ export function App() {
       <PrivyProviderWrapper>
         <BrowserRouter>
           <PostHogPageViewTracker />
+          <PwaInstallBanner />
+          <OfflineIndicator />
           <Routes>
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />

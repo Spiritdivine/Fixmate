@@ -6,6 +6,10 @@ import { notificationParamSchema, notificationQuerySchema } from '../validators/
 
 const router = Router();
 
+router.get('/push/vapid-key', authenticate, NotificationController.getVapidPublicKey);
+router.post('/push/subscribe', authenticate, NotificationController.subscribePush);
+router.post('/push/unsubscribe', authenticate, NotificationController.unsubscribePush);
+
 router.get('/', authenticate, validate(notificationQuerySchema), NotificationController.getNotifications);
 router.patch('/read-all', authenticate, NotificationController.markAllAsRead);
 router.patch('/:id/read', authenticate, validate(notificationParamSchema), NotificationController.markAsRead);
@@ -13,3 +17,4 @@ router.delete('/:id', authenticate, validate(notificationParamSchema), Notificat
 router.delete('/', authenticate, NotificationController.clearRead);
 
 export default router;
+
