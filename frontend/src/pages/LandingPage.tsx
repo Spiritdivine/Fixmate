@@ -67,6 +67,33 @@ export const FixmateLogo: React.FC<{ light?: boolean; className?: string }> = ({
   </div>
 );
 
+export const XSocialIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+    <path
+      d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+      stroke="currentColor"
+      strokeWidth="0.8"
+    />
+  </svg>
+);
+
+export const InstagramSocialIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+  >
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+  </svg>
+);
+
 export const LandingPage: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'client' | 'artisan'>('client');
@@ -411,6 +438,30 @@ export const LandingPage: React.FC = () => {
                       )}
                     </div>
 
+                    {/* Social media follow callout beneath the last input field */}
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-stone-600 dark:text-stone-400 mb-3 text-center">
+                      <span>Follow us on</span>
+                      <a
+                        href="https://x.com/Artifix_hq"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Follow Artifix on X"
+                        className="font-bold text-stone-900 dark:text-white hover:text-[#BD5324] dark:hover:text-[#BD5324] underline decoration-stone-500 dark:decoration-stone-400 decoration-2 underline-offset-2 transition-colors"
+                      >
+                        X
+                      </a>
+                      <span className="text-stone-400 font-medium">/</span>
+                      <a
+                        href="https://www.instagram.com/artifix_hq?stkn=bG1hY3UybDFrZWVk&utm_source=qr"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Follow Artifix on Instagram"
+                        className="font-bold text-[#E1306C] dark:text-pink-400 hover:text-[#C13584] dark:hover:text-pink-300 underline decoration-[#E1306C]/60 dark:decoration-pink-400/60 decoration-2 underline-offset-2 transition-colors"
+                      >
+                        Instagram
+                      </a>
+                    </div>
+
                     {/* Submit Button */}
                     <button
                       type="submit"
@@ -441,19 +492,35 @@ export const LandingPage: React.FC = () => {
                         <CheckCircle2 className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-mono text-[10px] font-bold uppercase tracking-wider mb-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>Early Access</span>
-                        </div>
                         <h4 className="text-base font-black text-stone-900 dark:text-white">
-                          You&apos;re on the list, {submittedLead?.name || 'Partner'}!
+                          You&apos;re now on the list, {submittedLead?.name || 'Partner'}.
                         </h4>
                         <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mt-1">
-                          We reserved your spot as a{' '}
+                          We&apos;ve reserved your spot as a{' '}
                           <span className="font-bold text-[#BD5324]">
                             {submittedLead?.role === 'artisan' ? 'Verified Artisan' : 'Client'}
                           </span>
-                          . Priority invitations rollout in Q2 2026.
+                          . Kindly follow us on{' '}
+                          <a
+                            href="https://x.com/Artifix_hq"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Follow Artifix on X"
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-stone-900 dark:bg-stone-800 text-white hover:bg-black hover:scale-115 transition-all align-middle mx-1 shadow-sm"
+                          >
+                            <XSocialIcon className="w-3.5 h-3.5 fill-current" />
+                          </a>{' '}
+                          &amp;{' '}
+                          <a
+                            href="https://www.instagram.com/artifix_hq?stkn=bG1hY3UybDFrZWVk&utm_source=qr"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Follow Artifix on Instagram"
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90 hover:scale-115 transition-all align-middle mx-1 shadow-sm"
+                          >
+                            <InstagramSocialIcon className="w-3.5 h-3.5" />
+                          </a>{' '}
+                          to keep up with updates.
                         </p>
                       </div>
                     </div>
@@ -461,10 +528,11 @@ export const LandingPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Trust statement under form */}
-              <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400 mb-8">
-                <ShieldCheck className="w-4 h-4 text-[#00A86B]" />
+              {/* Trust statement under form with social media handles */}
+              <div className="flex items-center flex-wrap gap-2 text-xs text-stone-500 dark:text-stone-400 mb-8">
+                <ShieldCheck className="w-4 h-4 text-[#00A86B] shrink-0" />
                 <span>No spam. Just important updates.</span>
+                
               </div>
 
               {/* 3 Quick Soft-Mint Feature Cards */}
@@ -952,13 +1020,34 @@ export const LandingPage: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-xs text-stone-500 dark:text-stone-400 text-center sm:text-right">
             <span>&copy; {new Date().getFullYear()} Artifix Network. Built for Nigeria&apos;s craft economy.</span>
-            <div className="flex items-center gap-4">
-              <span className="hover:text-stone-900 dark:hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
-              <span className="hover:text-stone-900 dark:hover:text-white cursor-pointer transition-colors">Terms of Service</span>
+
+            {/* Social Media Links */}
+            <div className="flex items-center gap-2.5">
+              <a
+                href="https://x.com/Artifix_hq"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Artifix on X"
+                className="w-9 h-9 rounded-full bg-stone-200/90 dark:bg-stone-800 text-stone-900 dark:text-stone-200 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black flex items-center justify-center transition-all hover:scale-110 shadow-sm"
+              >
+                <XSocialIcon className="w-4.5 h-4.5 fill-current" />
+              </a>
+              <a
+                href="https://www.instagram.com/artifix_hq?stkn=bG1hY3UybDFrZWVk&utm_source=qr"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Artifix on Instagram"
+                className="w-9 h-9 rounded-full bg-pink-100/90 dark:bg-pink-950/60 text-pink-600 dark:text-pink-400 hover:bg-gradient-to-tr hover:from-[#F58529] hover:via-[#DD2A7B] hover:to-[#8134AF] hover:text-white flex items-center justify-center transition-all hover:scale-110 shadow-sm"
+              >
+                <InstagramSocialIcon className="w-4.5 h-4.5" />
+              </a>
+            </div>
+
+            <div>
               <button
                 type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="hover:text-stone-900 dark:hover:text-white transition-colors cursor-pointer"
+                className="hover:text-stone-900 dark:hover:text-white transition-colors cursor-pointer font-medium"
               >
                 Top ↑
               </button>

@@ -23,7 +23,42 @@ export const EditorialFooter: React.FC = () => {
               Decentralized trust, escrow, and identity infrastructure for Africa’s informal service economy. Guaranteeing zero-dispute settlements for homeowners and verified craftsmen.
             </p>
 
-            
+            {/* Social Media Links */}
+            <div className="flex items-center gap-2 mb-6">
+              <a
+                href="https://x.com/Artifix_hq"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Artifix on X"
+                className="w-8 h-8 rounded-full bg-stone-200/90 text-stone-800 hover:bg-black hover:text-white flex items-center justify-center transition-all hover:scale-105 shadow-sm"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="w-3.5 h-3.5 fill-current">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </a>
+              <a
+                href="https://www.instagram.com/artifix_hq?stkn=bG1hY3UybDFrZWVk&utm_source=qr"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Artifix on Instagram"
+                className="w-8 h-8 rounded-full bg-pink-100 text-pink-600 hover:bg-gradient-to-tr hover:from-[#F58529] hover:via-[#DD2A7B] hover:to-[#8134AF] hover:text-white flex items-center justify-center transition-all hover:scale-105 shadow-sm"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4 h-4"
+                  aria-hidden="true"
+                >
+                  <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                  <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                </svg>
+              </a>
+            </div>
           </div>
 
           {/* Col 2: Platform */}
