@@ -43,6 +43,10 @@ const envSchema = z.object({
   // Privy Configuration
   PRIVY_APP_ID: optionalCleanString,
   PRIVY_APP_SECRET: optionalCleanString,
+
+  // Resend Email Configuration
+  RESEND_API_KEY: optionalCleanString,
+  EMAIL_FROM: cleanString.default('Artifix <noreply@artifixhq.xyz>'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

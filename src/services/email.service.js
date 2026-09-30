@@ -13,17 +13,20 @@ export class EmailService {
    * @param {string} textBody - Plain text email
    */
   static async sendEmail({ to, subject, htmlBody, textBody }) {
+    const resendApiKey = env.RESEND_API_KEY || process.env.RESEND_API_KEY;
+    const emailFrom = env.EMAIL_FROM || process.env.EMAIL_FROM || 'Artifix <noreply@artifixhq.xyz>';
+
     // If Resend API key is configured
-    if (process.env.RESEND_API_KEY) {
+    if (resendApiKey) {
       try {
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+            Authorization: `Bearer ${resendApiKey}`,
           },
           body: JSON.stringify({
-            from: process.env.EMAIL_FROM || 'Artisan Platform <noreply@artisanplatform.com>',
+            from: emailFrom,
             to,
             subject,
             html: htmlBody,
@@ -31,6 +34,10 @@ export class EmailService {
           }),
         });
         const data = await res.json();
+        if (!res.ok) {
+          console.error(`❌ [EmailService] Resend API error (${res.status}):`, data);
+          return { success: false, provider: 'resend', error: data };
+        }
         return { success: true, provider: 'resend', data };
       } catch (err) {
         console.error(`❌ [EmailService] Resend dispatch failed: ${err.message}`);
