@@ -67,12 +67,16 @@ export const MapView: React.FC<MapViewProps> = ({
       attributionControl: false,
     });
 
-    // Multi-CDN Fallback Tile Layer: CartoDB Voyager primary -> OSM secondary
+    // Multi-CDN Fallback Tile Layer: High-visibility Humanitarian OSM primary -> ArcGIS & Standard OSM secondary
     const tileLayer = new TileLayerWithFallback(
-      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
       {
         maxZoom: 19,
-        subdomains: 'abcd',
+        attribution: '&copy; Humanitarian OpenStreetMap & OpenStreetMap contributors',
+        fallbackUrls: [
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        ],
         onFallbackUsed: () => setIsUsingFallbackTiles(true),
         onAllFailed: () => setIsAllTilesFailed(true),
       }

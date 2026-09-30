@@ -16,7 +16,8 @@ export class ReconciliationService {
     let paystackBalanceNgn = 0;
     if (env.PAYSTACK_SECRET_KEY && !env.PAYSTACK_SECRET_KEY.startsWith('sk_test_xxx')) {
       try {
-        const response = await fetch('https://api.paystack.co/balance', {
+        const baseUrl = env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
+        const response = await fetch(`${baseUrl}/balance`, {
           headers: {
             Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
             'Content-Type': 'application/json',

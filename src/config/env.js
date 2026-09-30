@@ -23,6 +23,7 @@ const envSchema = z.object({
   CLOUDINARY_API_SECRET: optionalCleanString,
   PAYSTACK_SECRET_KEY: optionalCleanString,
   PAYSTACK_PUBLIC_KEY: optionalCleanString,
+  PAYSTACK_BASE_URL: cleanString.default('https://api.paystack.co'),
   ESCROW_FEE_PERCENT: cleanString.default('5.00'),
 
   // Monad Blockchain Configuration

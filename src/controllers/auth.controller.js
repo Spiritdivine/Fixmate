@@ -138,6 +138,50 @@ export class AuthController {
       next(error);
     }
   }
+
+  static async resendOtp(req, res, next) {
+    try {
+      const { identifier, purpose } = req.body;
+      const result = await AuthService.resendOtp(identifier, purpose);
+      res.status(200).json(new ApiResponse(200, result, result.message));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async sendVerificationEmail(req, res, next) {
+    try {
+      const email = req.body?.email || req.user?.email;
+      if (!email) {
+        return res.status(400).json(new ApiResponse(400, null, 'Email address is required'));
+      }
+      const result = await AuthService.resendOtp(email, 'EMAIL_VERIFICATION');
+      res.status(200).json(new ApiResponse(200, result, 'Verification email dispatched'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async verifyEmailToken(req, res, next) {
+    try {
+      const { email, token } = req.query;
+      const result = await AuthService.verifyEmailToken(email, token);
+      res.status(200).json(new ApiResponse(200, result, 'Email verified successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteAccount(req, res, next) {
+    try {
+      const { password, reason } = req.body;
+      const result = await AuthService.deleteAccount(req.user.id, password, reason);
+      res.status(200).json(new ApiResponse(200, result, 'Account deactivated successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default AuthController;
+

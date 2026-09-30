@@ -26,7 +26,8 @@ export class PaystackService {
     // Call Paystack API if secret key is present
     if (env.PAYSTACK_SECRET_KEY && !env.PAYSTACK_SECRET_KEY.startsWith('sk_test_xxx')) {
       try {
-        const response = await fetch('https://api.paystack.co/transaction/initialize', {
+        const baseUrl = env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
+        const response = await fetch(`${baseUrl}/transaction/initialize`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
@@ -98,7 +99,8 @@ export class PaystackService {
     let paymentGatewayRef = null;
 
     if (env.PAYSTACK_SECRET_KEY && !env.PAYSTACK_SECRET_KEY.startsWith('sk_test_xxx')) {
-      const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      const baseUrl = env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
+      const response = await fetch(`${baseUrl}/transaction/verify/${reference}`, {
         headers: { Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}` },
       });
       const data = await response.json();
@@ -161,8 +163,9 @@ export class PaystackService {
 
     if (env.PAYSTACK_SECRET_KEY && !env.PAYSTACK_SECRET_KEY.startsWith('sk_test_xxx')) {
       try {
+        const baseUrl = env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
         const response = await fetch(
-          `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
+          `${baseUrl}/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
           {
             headers: {
               Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
@@ -204,7 +207,8 @@ export class PaystackService {
   static async createTransferRecipient({ name, accountNumber, bankCode }) {
     if (env.PAYSTACK_SECRET_KEY && !env.PAYSTACK_SECRET_KEY.startsWith('sk_test_xxx')) {
       try {
-        const response = await fetch('https://api.paystack.co/transferrecipient', {
+        const baseUrl = env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
+        const response = await fetch(`${baseUrl}/transferrecipient`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
@@ -237,7 +241,8 @@ export class PaystackService {
   static async initiateTransfer({ amountKobo, recipientCode, reference, reason = 'Fixmate Payout' }) {
     if (env.PAYSTACK_SECRET_KEY && !env.PAYSTACK_SECRET_KEY.startsWith('sk_test_xxx')) {
       try {
-        const response = await fetch('https://api.paystack.co/transfer', {
+        const baseUrl = env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
+        const response = await fetch(`${baseUrl}/transfer`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,

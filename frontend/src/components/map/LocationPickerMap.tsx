@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { LocateFixed, Search, Loader2 } from 'lucide-react';
+import { LocateFixed, Search, Loader2, MapPin, X } from 'lucide-react';
 import { geocodingService, GeocodedAddress } from '../../lib/geocoding';
 import { GeolocationService } from '../../lib/geolocation';
+import { searchNigerianPlaces, SuggestedPlace } from '../../lib/photonGeocoding';
+import { TileLayerWithFallback } from './TileLayerWithFallback';
 
 export interface LocationPickerMapProps {
   initialLat?: number | null;
@@ -34,7 +36,7 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
   const [isDetectingGPS, setIsDetectingGPS] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<GeocodedAddress[]>([]);
+  const [searchResults, setSearchResults] = useState<SuggestedPlace[]>([]);
   const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
 
   // Custom Draggable Artisan Pin Icon
@@ -42,16 +44,16 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
     return L.divIcon({
       html: `
         <div class="relative flex flex-col items-center cursor-grab active:cursor-grabbing">
-          <div class="px-2 py-0.5 mb-1 rounded-full text-[10px] font-bold bg-slate-900 text-white shadow-xl whitespace-nowrap border border-emerald-400">
+          <div class="px-2 py-0.5 mb-1 rounded-full text-[10px] font-bold bg-[#123E2A] text-white shadow-xl whitespace-nowrap border border-emerald-400">
             📍 Drag to workshop
           </div>
-          <div class="w-9 h-9 rounded-full flex items-center justify-center bg-emerald-700 text-white shadow-2xl border-2 border-white ring-4 ring-emerald-500/30">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[#123E2A] text-white shadow-2xl border-2 border-white ring-4 ring-emerald-500/30">
+            <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
               <circle cx="12" cy="10" r="3" />
             </svg>
           </div>
-          <div class="w-2 h-2 -mt-1 rotate-45 bg-emerald-700 border-r border-b border-white shadow-xs"></div>
+          <div class="w-2 h-2 -mt-1 rotate-45 bg-[#123E2A] border-r border-b border-white shadow-xs"></div>
         </div>
       `,
       className: 'custom-artisan-pin-container',
@@ -71,6 +73,15 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
     const suggestion = await geocodingService.reverseGeocode(validLat, validLng);
     if (suggestion) {
       setResolvedAddress(suggestion.formattedAddress);
+      if (markerRef.current) {
+        markerRef.current
+          .unbindTooltip()
+          .bindTooltip(
+            `<div class="font-sans font-semibold text-xs text-stone-900 px-1 py-0.5 max-w-[200px] truncate">📍 ${suggestion.formattedAddress}</div>`,
+            { permanent: true, direction: 'top', offset: [0, -38], className: 'artifix-location-tooltip' }
+          )
+          .openTooltip();
+      }
     }
     onCoordinatesChange({ lat: validLat, lng: validLng, addressSuggestion: suggestion || undefined });
   };
@@ -86,10 +97,18 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
       attributionControl: false,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd',
-    }).addTo(map);
+    const tileLayer = new TileLayerWithFallback(
+      'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+      {
+        maxZoom: 19,
+        attribution: '&copy; Humanitarian OpenStreetMap & OpenStreetMap contributors',
+        fallbackUrls: [
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        ],
+      }
+    );
+    tileLayer.addTo(map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -99,6 +118,19 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
       icon: createDraggablePinIcon(),
       zIndexOffset: 1000,
     }).addTo(map);
+
+    // Initial reverse geocoded location label
+    geocodingService.reverseGeocode(currentLat, currentLng).then((res) => {
+      if (res && markerRef.current) {
+        setResolvedAddress(res.formattedAddress);
+        markerRef.current
+          .bindTooltip(
+            `<div class="font-sans font-semibold text-xs text-stone-900 px-1 py-0.5 max-w-[200px] truncate">📍 ${res.formattedAddress}</div>`,
+            { permanent: true, direction: 'top', offset: [0, -38], className: 'artifix-location-tooltip' }
+          )
+          .openTooltip();
+      }
+    });
 
     // Drag end listener
     marker.on('dragend', (e: any) => {
@@ -115,7 +147,7 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
     // Coverage Radius Circle
     const circle = L.circle([currentLat, currentLng], {
       radius: coverageRadiusKm * 1000,
-      color: '#059669', // Emerald 600
+      color: '#123E2A',
       weight: 1.5,
       fillColor: '#10b981',
       fillOpacity: 0.08,
@@ -157,20 +189,26 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
     setIsDetectingGPS(false);
   };
 
-  // 4. Handle Landmark Search
-  const handleSearchSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+  // 4. Live Photon Autocomplete with debounce
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.trim().length < 3) {
+      setSearchResults([]);
+      return;
+    }
 
-    setIsSearching(true);
-    const results = await geocodingService.forwardGeocode(searchQuery);
-    setSearchResults(results);
-    setIsSearching(false);
-  };
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      const results = await searchNigerianPlaces(searchQuery.trim());
+      setSearchResults(results);
+      setIsSearching(false);
+    }, 300);
 
-  const handleSelectSearchResult = async (result: GeocodedAddress) => {
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSelectSearchResult = async (result: SuggestedPlace) => {
     setSearchResults([]);
-    setSearchQuery('');
+    setSearchQuery(result.name || result.label);
     if (mapRef.current && markerRef.current) {
       mapRef.current.flyTo([result.latitude, result.longitude], 15, { duration: 1.2 });
       markerRef.current.setLatLng([result.latitude, result.longitude]);
@@ -183,36 +221,53 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
       {/* Map Header Controls: Landmark Search & GPS Detection */}
       <div className="absolute top-3 left-3 right-3 z-[1000] flex flex-col sm:flex-row gap-2">
         {/* Search Input */}
-        <form onSubmit={handleSearchSubmit} className="relative flex-1">
+        <div className="relative flex-1">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search landmark (e.g. Allen Avenue, Ikeja)..."
-            className="w-full pl-9 pr-8 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 text-xs font-medium text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            placeholder="Search landmark, street, estate (e.g. Allen Avenue, Ikeja)..."
+            className="w-full pl-9 pr-8 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 text-xs font-medium text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#123E2A]"
           />
-          {isSearching && (
+          {isSearching ? (
             <Loader2 className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 animate-spin" />
-          )}
+          ) : searchQuery ? (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSearchResults([]);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          ) : null}
 
           {/* Autocomplete Dropdown */}
           {searchResults.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden max-h-48 overflow-y-auto z-[2000]">
-              {searchResults.map((res, i) => (
+            <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden z-50 divide-y divide-slate-100 max-h-56 overflow-y-auto">
+              {searchResults.map((item, idx) => (
                 <button
-                  key={i}
+                  key={idx}
                   type="button"
-                  onClick={() => handleSelectSearchResult(res)}
-                  className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 border-b border-slate-100 last:border-0 transition-colors flex items-center gap-2 cursor-pointer"
+                  onClick={() => handleSelectSearchResult(item)}
+                  className="w-full text-left px-4 py-2.5 hover:bg-emerald-50/50 flex items-start gap-2.5 transition cursor-pointer"
                 >
-                  <span className="text-emerald-700">📍</span>
-                  <span className="truncate">{res.formattedAddress}</span>
+                  <MapPin className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-slate-900 block truncate">
+                      {item.name}
+                    </span>
+                    <span className="text-[11px] text-slate-500 block truncate">
+                      {item.label}
+                    </span>
+                  </div>
                 </button>
               ))}
             </div>
           )}
-        </form>
+        </div>
 
         {/* GPS Button */}
         <button

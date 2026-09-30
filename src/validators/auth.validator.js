@@ -35,7 +35,44 @@ export const otpSchema = z.object({
   body: z.object({
     identifier: z.string().min(1, 'Email or Phone is required'),
     otp: z.string().length(6, 'OTP must be 6 digits'),
-    purpose: z.enum(['PHONE_VERIFICATION', 'PASSWORD_RESET', 'WITHDRAWAL_2FA']),
+    purpose: z.enum([
+      'PHONE_VERIFICATION',
+      'EMAIL_VERIFICATION',
+      'PASSWORD_RESET',
+      'WITHDRAWAL_2FA',
+    ]),
+  }),
+});
+
+export const resendOtpSchema = z.object({
+  body: z.object({
+    identifier: z.string().min(1, 'Email or Phone number is required'),
+    purpose: z.enum([
+      'PHONE_VERIFICATION',
+      'EMAIL_VERIFICATION',
+      'PASSWORD_RESET',
+      'WITHDRAWAL_2FA',
+    ]),
+  }),
+});
+
+export const sendVerificationEmailSchema = z.object({
+  body: z.object({
+    email: z.string().email('Valid email address required').optional(),
+  }),
+});
+
+export const verifyEmailQuerySchema = z.object({
+  query: z.object({
+    email: z.string().email('Valid email address required'),
+    token: z.string().min(16, 'Invalid or expired verification token'),
+  }),
+});
+
+export const deleteAccountSchema = z.object({
+  body: z.object({
+    password: z.string().min(1, 'Current password is required to delete account'),
+    reason: z.string().optional(),
   }),
 });
 

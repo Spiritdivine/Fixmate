@@ -29,3 +29,8 @@ export const hashToken = (token) => {
 export const generateOtp = (length = 6) => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
+
+export const generateSecureToken = (bytes = 32) => {
+  return crypto.randomBytes(bytes).toString('hex');
+};
+

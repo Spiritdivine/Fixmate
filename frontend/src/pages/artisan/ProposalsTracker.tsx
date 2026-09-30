@@ -166,9 +166,11 @@ export const ProposalsTracker: React.FC = () => {
  Submitted on {formatDate(proposal.createdAt)}
  </span>
  </div>
- <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 truncate">
+ <Link to={`/artisan/proposals/${proposal.id}`} className="hover:underline">
+ <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 truncate hover:text-emerald-600 transition-colors">
  {proposal.job?.title}
  </h3>
+ </Link>
  <p className="text-xs text-slate-500">
  Category: {proposal.job?.category?.name || 'General Trade'} • Client:{' '}
  {proposal.job?.client?.clientProfile?.firstName || 'Verified Client'}
@@ -235,6 +237,11 @@ export const ProposalsTracker: React.FC = () => {
  </div>
 
  <div className="flex items-center gap-2">
+ <Link to={`/artisan/proposals/${proposal.id}`}>
+ <Button variant="outline" size="sm" leftIcon={<Eye className="w-3.5 h-3.5" />}>
+ View Details
+ </Button>
+ </Link>
  {proposal.status === 'ACCEPTED' && (
  <Link to={`/artisan/contracts/${proposal.contract?.id || ''}`}>
  <Button size="sm" leftIcon={<FileCheck className="w-4 h-4" />}>

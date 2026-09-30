@@ -6,7 +6,7 @@ import { notificationParamSchema, notificationQuerySchema } from '../validators/
 
 const router = Router();
 
-router.get('/push/vapid-key', authenticate, NotificationController.getVapidPublicKey);
+router.get('/push/vapid-key', NotificationController.getVapidPublicKey);
 router.post('/push/subscribe', authenticate, NotificationController.subscribePush);
 router.post('/push/unsubscribe', authenticate, NotificationController.unsubscribePush);
 

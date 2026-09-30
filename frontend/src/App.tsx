@@ -11,7 +11,11 @@ import { Login } from './pages/auth/Login';
 import { AdminLogin } from './pages/auth/AdminLogin';
 import { Register } from './pages/auth/Register';
 import { VerifyOtp } from './pages/auth/VerifyOtp';
+import { VerifyEmailPage } from './pages/auth/VerifyEmailPage';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
+import { ArtisanOnboardingPage } from './pages/onboarding/ArtisanOnboardingPage';
+import { ClientOnboardingPage } from './pages/onboarding/ClientOnboardingPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 // Public Discovery & Marketplace Module
 import { PublicLayout } from './components/layout/PublicLayout';
@@ -37,6 +41,7 @@ import { SubmitProposal } from './pages/artisan/SubmitProposal';
 import { SavedJobs } from './pages/artisan/SavedJobs';
 import { JobInvitations } from './pages/artisan/JobInvitations';
 import { ProposalsTracker } from './pages/artisan/ProposalsTracker';
+import { SubmittedProposalPage } from './pages/artisan/SubmittedProposalPage';
 import { ContractsList } from './pages/artisan/ContractsList';
 import { ContractWorkspace } from './pages/artisan/ContractWorkspace';
 import { WalletPage } from './pages/artisan/WalletPage';
@@ -132,7 +137,10 @@ export function App() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify-otp" element={<VerifyOtp />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/onboarding/artisan" element={<ArtisanOnboardingPage />} />
+            <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
             <Route path="/offline" element={<OfflineFallbackPage />} />
 
             {/* Protected Artisan Dashboard Module */}
@@ -145,6 +153,7 @@ export function App() {
               <Route path="jobs/saved" element={<SavedJobs />} />
               <Route path="jobs/invitations" element={<JobInvitations />} />
               <Route path="proposals" element={<ProposalsTracker />} />
+              <Route path="proposals/:proposalId" element={<SubmittedProposalPage />} />
               <Route path="contracts" element={<ContractsList />} />
               <Route path="contracts/:contractId" element={<ContractWorkspace />} />
               <Route path="wallet" element={<WalletPage />} />
@@ -247,7 +256,7 @@ export function App() {
             {/* Root & Fallback */}
             <Route path="/v2" element={<LandingPageV2 />} />
             <Route path="/" element={<LandingPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PwaInstallBanner />
           <OfflineIndicator />

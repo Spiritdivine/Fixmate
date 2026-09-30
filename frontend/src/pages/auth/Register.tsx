@@ -92,9 +92,9 @@ export const Register: React.FC = () => {
       trackEvent('account_registered', { role });
 
       if (role === 'CLIENT') {
-        navigate('/client/dashboard');
+        navigate('/onboarding/client');
       } else {
-        navigate('/artisan/dashboard');
+        navigate('/onboarding/artisan');
       }
     } catch (err) {
       setError(getErrorMessage(err));

@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_BASE = '/api/v1/notifications';
+import { apiClient } from './api-client';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -46,10 +44,10 @@ export async function subscribeUserToPush(): Promise<{ success: boolean; error?:
       return { success: false, error: 'Notification permission was denied.' };
     }
 
-    // 2. Fetch VAPID public key from backend or env
+    // 2. Fetch VAPID public key from env or backend
     let vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
     if (!vapidKey) {
-      const response = await axios.get(`${API_BASE}/push/vapid-key`);
+      const response = await apiClient.get('/notifications/push/vapid-key');
       vapidKey = response.data?.data?.publicKey;
     }
 
@@ -69,8 +67,8 @@ export async function subscribeUserToPush(): Promise<{ success: boolean; error?:
       });
     }
 
-    // 4. Send subscription to Artifix backend
-    await axios.post(`${API_BASE}/push/subscribe`, {
+    // 4. Send subscription to Artifix backend using authenticated apiClient
+    await apiClient.post('/notifications/push/subscribe', {
       subscription: subscription.toJSON(),
     });
 
@@ -92,7 +90,7 @@ export async function unsubscribeUserFromPush(): Promise<{ success: boolean; err
     if (subscription) {
       const endpoint = subscription.endpoint;
       await subscription.unsubscribe();
-      await axios.post(`${API_BASE}/push/unsubscribe`, { endpoint }).catch(() => {});
+      await apiClient.post('/notifications/push/unsubscribe', { endpoint }).catch(() => {});
     }
 
     return { success: true };
@@ -101,3 +99,4 @@ export async function unsubscribeUserFromPush(): Promise<{ success: boolean; err
     return { success: false, error: message };
   }
 }
+

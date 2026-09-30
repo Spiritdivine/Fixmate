@@ -87,10 +87,10 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Cache Leaflet OpenStreetMap tiles for offline map navigation
-            urlPattern: /^https:\/\/[a-c]\.tile\.openstreetmap\.org\/.*/i,
+            urlPattern: /^https:\/\/(?:[a-c]\.)?tile\.openstreetmap\.(?:org|fr)\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'osm-tiles-cache',
+              cacheName: 'osm-tiles-cache-v2',
               expiration: {
                 maxEntries: 1000,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days

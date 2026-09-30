@@ -8,9 +8,13 @@ import {
   loginSchema,
   refreshTokenSchema,
   otpSchema,
+  resendOtpSchema,
+  sendVerificationEmailSchema,
+  verifyEmailQuerySchema,
   changePasswordSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  deleteAccountSchema,
 } from '../validators/auth.validator.js';
 
 const router = Router();
@@ -20,7 +24,22 @@ router.post('/login', authRateLimiter, validate(loginSchema), AuthController.log
 router.post('/refresh-token', validate(refreshTokenSchema), AuthController.refresh);
 router.post('/logout', AuthController.logout);
 router.post('/verify-otp', authRateLimiter, validate(otpSchema), AuthController.verifyOtp);
+router.post('/resend-otp', authRateLimiter, validate(resendOtpSchema), AuthController.resendOtp);
 router.get('/me', authenticate, AuthController.getMe);
+router.delete('/me', authenticate, validate(deleteAccountSchema), AuthController.deleteAccount);
+
+// Email Verification
+router.post(
+  '/send-verification-email',
+  authRateLimiter,
+  validate(sendVerificationEmailSchema),
+  AuthController.sendVerificationEmail
+);
+router.get(
+  '/verify-email',
+  validate(verifyEmailQuerySchema),
+  AuthController.verifyEmailToken
+);
 
 // Password Management
 router.patch('/change-password', authenticate, validate(changePasswordSchema), AuthController.changePassword);
@@ -34,4 +53,5 @@ router.delete('/sessions/:id', authenticate, AuthController.revokeSession);
 router.delete('/sessions', authenticate, AuthController.revokeOtherSessions);
 
 export default router;
+
 

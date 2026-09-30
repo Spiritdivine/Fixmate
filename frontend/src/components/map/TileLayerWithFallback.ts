@@ -8,8 +8,8 @@ export interface TileFallbackOptions extends L.TileLayerOptions {
 
 /**
  * Enhanced Leaflet TileLayer with resilient multi-CDN failover.
- * If CartoDB CDN tiles encounter network errors or rate limits,
- * it automatically re-routes tile image requests to OpenStreetMap standard tiles.
+ * If OpenStreetMap standard CDN encounters network errors or rate limits,
+ * it automatically re-routes tile image requests to Humanitarian OSM and ArcGIS tiles.
  */
 export class TileLayerWithFallback extends L.TileLayer {
   private fallbackUrls: string[];
@@ -20,8 +20,8 @@ export class TileLayerWithFallback extends L.TileLayer {
   constructor(primaryUrl: string, options: TileFallbackOptions = {}) {
     super(primaryUrl, options);
     this.fallbackUrls = options.fallbackUrls || [
-      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      'https://a.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+      'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
     ];
     this.onFallbackUsed = options.onFallbackUsed;
     this.onAllFailed = options.onAllFailed;

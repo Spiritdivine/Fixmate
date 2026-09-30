@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { getSocket } from '../../lib/socket';
 import { Notification } from '../../types';
 import { Bell } from 'lucide-react';
+import { UnverifiedEmailBanner } from '../auth/UnverifiedEmailBanner';
 
 export const ClientLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -81,6 +82,7 @@ export const ClientLayout: React.FC = () => {
       <ClientSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <UnverifiedEmailBanner />
         <ClientHeader onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <div className="max-w-[1400px] w-full mx-auto">

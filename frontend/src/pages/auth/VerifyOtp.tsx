@@ -66,8 +66,9 @@ export const VerifyOtp: React.FC = () => {
       setIsResending(true);
       setError(null);
 
-      await apiClient.post('/auth/forgot-password', {
+      await apiClient.post('/auth/resend-otp', {
         identifier: identifier.trim(),
+        purpose,
       });
 
       setSuccess('A fresh 6-digit verification code has been dispatched.');
