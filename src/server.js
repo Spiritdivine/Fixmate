@@ -14,9 +14,20 @@ const PORT = env.PORT || 5050;
 
 const startServer = async () => {
   try {
-    // Verify database connection
-    await prisma.$connect();
-    console.log('✅ Connected to PostgreSQL Database via Prisma');
+    // Verify database connection with retry for serverless DB cold starts (e.g. Neon)
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        await prisma.$connect();
+        console.log('✅ Connected to PostgreSQL Database via Prisma');
+        break;
+      } catch (err) {
+        retries -= 1;
+        if (retries === 0) throw err;
+        console.warn(`⏳ Database connection attempt failed (${err.message}). Retrying in 2 seconds (${retries} retries left)...`);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
 
     server.listen(PORT, () => {
       console.log(`🚀 Artisan Escrow Backend API running on http://localhost:${PORT}`);

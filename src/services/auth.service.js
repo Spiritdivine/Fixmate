@@ -1,5 +1,5 @@
 import { env } from '../config/env.js';
-import prisma from '../config/db.js';
+import prisma, { PRISMA_TX_OPTIONS } from '../config/db.js';
 import { hashPassword, comparePassword } from '../utils/hash.util.js';
 import {
   generateAccessToken,
@@ -29,61 +29,63 @@ export class AuthService {
 
     const passwordHash = await hashPassword(data.password);
 
-    // Atomic creation of User + Profile + Wallet
-    const result = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          email: data.email,
-          phoneNumber: data.phoneNumber,
-          passwordHash,
-          role: data.role,
-          wallet: {
-            create: {
-              currency: 'NGN',
-              availableBalance: 0.0,
-              escrowLockedBalance: 0.0,
+    // Pre-generate initial verification OTP
+    const otpCode = generateOtp();
+    const hashedOtp = hashToken(otpCode);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    // Atomic creation of User + Profile + Wallet + OTP in a resilient transaction
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            email: data.email,
+            phoneNumber: data.phoneNumber,
+            passwordHash,
+            role: data.role,
+            wallet: {
+              create: {
+                currency: 'NGN',
+                availableBalance: 0.0,
+                escrowLockedBalance: 0.0,
+              },
             },
-          },
-        },
-      });
-
-      if (data.role === 'ARTISAN') {
-        await tx.artisanProfile.create({
-          data: {
-            userId: user.id,
-            businessName: data.businessName || `${data.firstName || ''} Services`.trim(),
-            state: data.state,
-            lgaCity: data.lgaCity,
+            ...(data.role === 'ARTISAN'
+              ? {
+                  artisanProfile: {
+                    create: {
+                      businessName: data.businessName || `${data.firstName || ''} Services`.trim(),
+                      state: data.state,
+                      lgaCity: data.lgaCity,
+                    },
+                  },
+                }
+              : {
+                  clientProfile: {
+                    create: {
+                      firstName: data.firstName || 'Client',
+                      lastName: data.lastName || 'User',
+                      state: data.state,
+                      city: data.lgaCity,
+                    },
+                  },
+                }),
           },
         });
-      } else {
-        await tx.clientProfile.create({
+
+        await tx.otpVerification.create({
           data: {
-            userId: user.id,
-            firstName: data.firstName || 'Client',
-            lastName: data.lastName || 'User',
-            state: data.state,
-            city: data.lgaCity,
+            identifier: user.phoneNumber,
+            otpHash: hashedOtp,
+            purpose: 'PHONE_VERIFICATION',
+            expiresAt,
           },
         });
-      }
 
-      // Generate initial verification OTP
-      const otpCode = generateOtp();
-      const hashedOtp = hashToken(otpCode);
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
-
-      await tx.otpVerification.create({
-        data: {
-          identifier: user.phoneNumber,
-          otpHash: hashedOtp,
-          purpose: 'PHONE_VERIFICATION',
-          expiresAt,
-        },
-      });
-
-      return { user, otpCode };
-    });
+        return { user, otpCode };
+      },
+      PRISMA_TX_OPTIONS
+    );
 
     // Dispatch OTP via SMS
     await SmsService.sendOtp(result.user.phoneNumber, result.otpCode, 'Phone Verification');
@@ -204,19 +206,22 @@ export class AuthService {
       throw ApiError.badRequest('Invalid or expired OTP code');
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.otpVerification.update({
-        where: { id: record.id },
-        data: { isUsed: true },
-      });
-
-      if (purpose === 'PHONE_VERIFICATION') {
-        await tx.user.updateMany({
-          where: { phoneNumber: identifier },
-          data: { isPhoneVerified: true },
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.otpVerification.update({
+          where: { id: record.id },
+          data: { isUsed: true },
         });
-      }
-    });
+
+        if (purpose === 'PHONE_VERIFICATION') {
+          await tx.user.updateMany({
+            where: { phoneNumber: identifier },
+            data: { isPhoneVerified: true },
+          });
+        }
+      },
+      PRISMA_TX_OPTIONS
+    );
 
     return { verified: true };
   }
@@ -309,21 +314,24 @@ export class AuthService {
 
     const passwordHash = await hashPassword(newPassword);
 
-    await prisma.$transaction(async (tx) => {
-      await tx.otpVerification.update({
-        where: { id: record.id },
-        data: { isUsed: true },
-      });
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.otpVerification.update({
+          where: { id: record.id },
+          data: { isUsed: true },
+        });
 
-      await tx.user.update({
-        where: { id: user.id },
-        data: { passwordHash },
-      });
+        await tx.user.update({
+          where: { id: user.id },
+          data: { passwordHash },
+        });
 
-      await tx.refreshToken.deleteMany({
-        where: { userId: user.id },
-      });
-    });
+        await tx.refreshToken.deleteMany({
+          where: { userId: user.id },
+        });
+      },
+      PRISMA_TX_OPTIONS
+    );
 
     return { message: 'Password has been reset successfully' };
   }
