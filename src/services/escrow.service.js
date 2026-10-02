@@ -55,7 +55,7 @@ export class EscrowService {
             startedAt: milestone.contract.startedAt || new Date(),
             escrowFundedAmount: { increment: milestoneAmount },
             onChainEscrowId: verifiedOnChain.onChainEscrowId,
-            smartContractAddr: MonadEscrowService.contractAddress,
+            smartContractAddr: MonadEscrowService.loadArtifact().address,
             fundingTxHash: verifiedOnChain.txHash,
             cryptoAmount: cryptoAmount ? cryptoAmount : parseFloat(verifiedOnChain.amountUsdc || verifiedOnChain.amountMon),
             cryptoCurrency,

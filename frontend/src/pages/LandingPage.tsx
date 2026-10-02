@@ -23,6 +23,7 @@ import {
 import confetti from 'canvas-confetti';
 import { trackEvent } from '../lib/posthog';
 import { LANDING_IMAGES } from '../assets/landing-assets';
+import { WAITLIST_SHEET_URL } from '../config/env';
 import { WAITLIST_HERO_ASSETS } from '../assets/waitlist-curated-assets';
 import { ArtisanDoodles } from '../components/ui/ArtisanDoodles';
 import {
@@ -42,7 +43,7 @@ import {
 } from '../components/ui/HugeIcons';
 import { SeoHead } from '../components/seo/SeoHead';
 
-export const FixmateLogo: React.FC<{ light?: boolean; className?: string }> = ({ light = false, className = '' }) => (
+export const ArtifixLogo: React.FC<{ light?: boolean; className?: string }> = ({ light = false, className = '' }) => (
   <div className={`flex items-center gap-3 ${className}`}>
     <div className="relative w-10 h-10 shrink-0">
       <svg viewBox="0 0 44 44" fill="none" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -58,7 +59,7 @@ export const FixmateLogo: React.FC<{ light?: boolean; className?: string }> = ({
     </div>
     <div className="flex flex-col">
       <span className={`text-2xl font-black tracking-tight leading-none ${light ? 'text-white' : 'text-[#0A261B] dark:text-white'}`}>
-        Fixmate
+        Artifix
       </span>
       <span className={`text-[10px] font-bold tracking-wider uppercase mt-1 ${light ? 'text-emerald-300' : 'text-[#0D6D4C] dark:text-emerald-400'}`}>
         Find <span className="mx-1">•</span> Connect <span className="mx-1">•</span> Fix
@@ -66,6 +67,8 @@ export const FixmateLogo: React.FC<{ light?: boolean; className?: string }> = ({
     </div>
   </div>
 );
+
+export const FixmateLogo = ArtifixLogo;
 
 export const XSocialIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
@@ -165,7 +168,7 @@ export const LandingPage: React.FC = () => {
     };
 
     // Forward to Google Sheets Web App if configured
-    const sheetUrl = import.meta.env.VITE_WAITLIST_SHEET_URL;
+    const sheetUrl = WAITLIST_SHEET_URL;
     if (sheetUrl) {
       try {
         await fetch(sheetUrl, {

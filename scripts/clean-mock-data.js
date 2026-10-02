@@ -6,6 +6,7 @@ const PRESERVED_EMAILS = [
   '01spiritdivine@gmail.com',
   'spiritdivine777@gmail.com',
   'admin@artisanplatform.com',
+  'treasury@artifixhq.xyz',
   'treasury@fixmate.ng',
 ];
 

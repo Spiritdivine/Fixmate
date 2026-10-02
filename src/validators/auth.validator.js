@@ -6,11 +6,16 @@ export const registerSchema = z.object({
     phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
     password: z.string().min(8, 'Password must be at least 8 characters long'),
     role: z.enum(['CLIENT', 'ARTISAN']),
-    firstName: z.string().min(1, 'First name is required').optional(),
-    lastName: z.string().min(1, 'Last name is required').optional(),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
     businessName: z.string().optional(),
-    state: z.string().min(1, 'State is required'),
-    lgaCity: z.string().min(1, 'City/LGA is required'),
+    state: z.string().optional(),
+    lgaCity: z.string().optional(),
+    walletAddress: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid EVM wallet address format')
+      .optional(),
+    privyAuthToken: z.string().optional(),
   }),
 });
 

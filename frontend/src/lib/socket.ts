@@ -1,17 +1,13 @@
 import { io, Socket } from 'socket.io-client';
+import { SOCKET_URL } from '../config/env';
 
 let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
     const token = localStorage.getItem('access_token');
-    const socketUrl =
-      import.meta.env.VITE_SOCKET_URL ||
-      (import.meta.env.VITE_API_URL
-        ? import.meta.env.VITE_API_URL.replace(/\/api\/v1\/?$/, '')
-        : '/');
 
-    socket = io(socketUrl, {
+    socket = io(SOCKET_URL, {
       auth: { token },
       autoConnect: false,
       reconnection: true,

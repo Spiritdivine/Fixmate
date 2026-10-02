@@ -1,6 +1,6 @@
-# 🚀 Deploying Fixmate Backend to Render
+# 🚀 Deploying Artifix Backend to Render
 
-This guide provides step-by-step instructions for deploying the **Fixmate Backend API** to [Render](https://render.com).
+This guide provides step-by-step instructions for deploying the **Artifix Backend API** to [Render](https://render.com).
 
 ---
 
@@ -16,7 +16,7 @@ This guide provides step-by-step instructions for deploying the **Fixmate Backen
 
 ### Step 1: Create a PostgreSQL Database (if you don't already have one)
 1. On Render Dashboard, click **New +** -> **PostgreSQL**.
-2. Name: `fixmate-db`.
+2. Name: `Artifix-db`.
 3. Plan: **Free** or **Starter**.
 4. Once created, copy the **Internal Database URL** (or External Database URL).
 
@@ -26,7 +26,7 @@ This guide provides step-by-step instructions for deploying the **Fixmate Backen
 1. On Render Dashboard, click **New +** -> **Web Service**.
 2. Connect your GitHub repository: `Spiritdivine/Fixmate`.
 3. Configure the service settings:
-   - **Name:** `fixmate-backend`
+   - **Name:** `artifix-backend`
    - **Region:** Same region as your database (e.g., `Oregon (US West)` or `Frankfurt (EU)`)
    - **Branch:** `main`
    - **Root Directory:** *(leave blank)*
@@ -78,7 +78,7 @@ Under **Environment Variables**, add the following keys:
 3. Render will pull your repo, install dependencies, generate Prisma client, compile contracts, run migrations, and launch the server.
 4. Your API will be live at:
    ```
-   https://fixmate-backend.onrender.com
+   https://artifix-backend.onrender.com
    ```
 
 ---

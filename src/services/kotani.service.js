@@ -349,7 +349,7 @@ export class KotaniService {
       paymentInstructions: paymentInstructions || {
         bankName: 'Wema Bank (Kotani Virtual Sandbox)',
         accountNumber: '0981248921',
-        accountName: `Fixmate - ${user.email}`,
+        accountName: `Artifix - ${user.email}`,
       },
       status: isLiveApi ? 'PENDING' : 'SUCCESS',
       isSimulated: !isLiveApi,

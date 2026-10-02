@@ -12,6 +12,7 @@ import {
 import { ApiError } from '../utils/api-error.js';
 import { SmsService } from './sms.service.js';
 import { EmailService } from './email.service.js';
+import { PrivyService } from './privy.service.js';
 
 export class AuthService {
   static async register(data) {
@@ -43,6 +44,41 @@ export class AuthService {
     const phoneExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
     const emailExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
+    // Resolve embedded EVM wallet address from direct input or Privy auth token
+    let resolvedWalletAddress = data.walletAddress ? data.walletAddress.trim() : null;
+    if (!resolvedWalletAddress && data.privyAuthToken) {
+      try {
+        const claims = await PrivyService.verifyAuthToken(data.privyAuthToken);
+        if (claims && claims.userId) {
+          resolvedWalletAddress = await PrivyService.getEmbeddedWalletAddress(claims.userId);
+        }
+      } catch (privyErr) {
+        console.warn('[AuthService.register] Privy token verification deferred:', privyErr.message);
+      }
+    }
+
+    if (resolvedWalletAddress) {
+      const existingWalletUser = await prisma.user.findFirst({
+        where: { walletAddress: { equals: resolvedWalletAddress, mode: 'insensitive' } },
+      });
+      if (existingWalletUser) {
+        resolvedWalletAddress = null; // Prevent duplicate collision, fallback to fresh Privy embedded wallet
+      }
+    }
+
+    // Automatically provision a non-custodial EVM embedded wallet via Privy Server API if not yet present
+    if (!resolvedWalletAddress && PrivyService.isConfigured()) {
+      try {
+        const serverWallet = await PrivyService.createServerWallet();
+        if (serverWallet?.address) {
+          resolvedWalletAddress = serverWallet.address;
+          console.log(`[AuthService.register] Automatically provisioned Privy wallet for ${data.email}: ${resolvedWalletAddress}`);
+        }
+      } catch (privyCreateErr) {
+        console.warn('[AuthService.register] Automatic Privy wallet creation deferred:', privyCreateErr.message);
+      }
+    }
+
     // Atomic creation of User + Profile + Wallet + OTPs in a resilient transaction
     const result = await prisma.$transaction(
       async (tx) => {
@@ -54,6 +90,7 @@ export class AuthService {
             role: data.role,
             isEmailVerified: false,
             isPhoneVerified: false,
+            walletAddress: resolvedWalletAddress,
             wallet: {
               create: {
                 currency: 'NGN',
@@ -65,19 +102,19 @@ export class AuthService {
               ? {
                   artisanProfile: {
                     create: {
-                      businessName: data.businessName || `${data.firstName || ''} Services`.trim(),
-                      state: data.state,
-                      lgaCity: data.lgaCity,
+                      businessName: data.businessName?.trim() || 'New Artisan Service',
+                      state: data.state?.trim() || 'Lagos',
+                      lgaCity: data.lgaCity?.trim() || 'Ikeja',
                     },
                   },
                 }
               : {
                   clientProfile: {
                     create: {
-                      firstName: data.firstName || 'Client',
-                      lastName: data.lastName || 'User',
-                      state: data.state,
-                      city: data.lgaCity,
+                      firstName: data.firstName?.trim() || '',
+                      lastName: data.lastName?.trim() || '',
+                      state: data.state?.trim() || 'Lagos',
+                      city: (data.lgaCity || data.city)?.trim() || 'Ikeja',
                     },
                   },
                 }),
@@ -149,6 +186,7 @@ export class AuthService {
         role: result.user.role,
         isEmailVerified: false,
         isPhoneVerified: false,
+        walletAddress: result.user.walletAddress,
       },
       tokens,
       ...(env.NODE_ENV !== 'production' && {
@@ -197,7 +235,10 @@ export class AuthService {
         email: user.email,
         phoneNumber: user.phoneNumber,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        isPhoneVerified: user.isPhoneVerified,
         isKycVerified: user.isKycVerified,
+        walletAddress: user.walletAddress,
         artisanProfile: user.artisanProfile,
         clientProfile: user.clientProfile,
         wallet: user.wallet,
@@ -244,11 +285,13 @@ export class AuthService {
   }
 
   static async verifyOtp(identifier, otp, purpose) {
+    const cleanIdentifier =
+      purpose === 'EMAIL_VERIFICATION' ? identifier.toLowerCase().trim() : identifier.trim();
     const hashedOtp = hashToken(otp);
 
     const record = await prisma.otpVerification.findFirst({
       where: {
-        identifier,
+        identifier: cleanIdentifier,
         otpHash: hashedOtp,
         purpose,
         isUsed: false,
@@ -269,12 +312,12 @@ export class AuthService {
 
         if (purpose === 'PHONE_VERIFICATION') {
           await tx.user.updateMany({
-            where: { phoneNumber: identifier },
+            where: { phoneNumber: cleanIdentifier },
             data: { isPhoneVerified: true },
           });
         } else if (purpose === 'EMAIL_VERIFICATION') {
           await tx.user.updateMany({
-            where: { email: identifier.toLowerCase().trim() },
+            where: { email: cleanIdentifier },
             data: { isEmailVerified: true },
           });
         }

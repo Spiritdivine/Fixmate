@@ -28,12 +28,14 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { useUnifiedWallet } from '../../lib/privy-provider';
+import { useAuthStore } from '../../stores/authStore';
 import { getUsdcBalance, mintTestUsdc, MONAD_EXPLORER_URL } from '../../lib/monad-web3';
 import { trackEvent } from '../../lib/posthog';
 
 export const ClientWalletPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { address, isConnected, isEmbedded, connect, unlinkWallet } = useUnifiedWallet();
+  const { user: appUser, updateUser } = useAuthStore();
 
   const [depositModalOpen, setDepositModalOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState('50000');
@@ -86,6 +88,14 @@ export const ClientWalletPage: React.FC = () => {
       return (data.data as any)?.availableBalance !== undefined ? (data.data as Wallet) : (data.data as any)?.wallet;
     },
   });
+
+  // Sync wallet address if auto-provisioned on backend
+  useEffect(() => {
+    const backendAddr = (wallet as any)?.walletAddress;
+    if (backendAddr && (!appUser?.walletAddress || appUser.walletAddress !== backendAddr)) {
+      updateUser({ walletAddress: backendAddr });
+    }
+  }, [wallet, appUser?.walletAddress, updateUser]);
 
   // 2. Fetch Live Rates
   useEffect(() => {
@@ -855,7 +865,7 @@ export const ClientWalletPage: React.FC = () => {
         isOpen={isUnlinkModalOpen}
         onClose={() => !isUnlinkingWallet && setIsUnlinkModalOpen(false)}
         title="Unlink Web3 Wallet"
-        description="Disconnect and unbind your Monad EVM address from your Fixmate profile."
+        description="Disconnect and unbind your Monad EVM address from your Artifix profile."
         maxWidth="md"
       >
         <div className="space-y-4">
@@ -883,7 +893,7 @@ export const ClientWalletPage: React.FC = () => {
           </div>
 
           <p className="text-xs text-slate-500 leading-relaxed">
-            Unlinking removes this wallet address from your Fixmate profile and disconnects the Web3 session. You can reconnect or link a new wallet anytime. Any funds held in already-funded smart contract escrows remain secure on-chain.
+            Unlinking removes this wallet address from your Artifix profile and disconnects the Web3 session. You can reconnect or link a new wallet anytime. Any funds held in already-funded smart contract escrows remain secure on-chain.
           </p>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">

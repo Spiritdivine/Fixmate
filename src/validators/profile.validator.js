@@ -14,6 +14,7 @@ export const updateArtisanProfileSchema = z.object({
     longitude: z.number().optional(),
     isAvailable: z.boolean().optional(),
     skillIds: z.array(z.number().int()).optional(),
+    skills: z.array(z.string()).optional(),
   }),
 });
 

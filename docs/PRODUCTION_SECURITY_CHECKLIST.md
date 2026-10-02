@@ -1,20 +1,20 @@
-# Fixmate Wallet & Escrow Infrastructure — Production Security Checklist
+# Artifix Wallet & Escrow Infrastructure — Production Security Checklist
 
-This document details the enterprise-grade security architecture, smart contract safeguards, database constraints, and operational runbooks for running Fixmate's dual-rail (Fiat NGN + Monad USDC) wallet and escrow infrastructure in production.
+This document details the enterprise-grade security architecture, smart contract safeguards, database constraints, and operational runbooks for running Artifix's dual-rail (Fiat NGN + Monad USDC) wallet and escrow infrastructure in production.
 
 ---
 
 ## 1. Smart Contract Multi-Sig & Monad Deployment
 
 ### Multi-Sig Ownership via Gnosis Safe
-In production, smart contracts (`FixmateEscrow.sol`) **must never be owned by a single private key / EOA (Externally Owned Account)**.
+In production, smart contracts (`ArtifixEscrow.sol`) **must never be owned by a single private key / EOA (Externally Owned Account)**.
 
 1. **Deploy a Gnosis Safe on Monad**:
    - Set up a minimum **3-of-5** or **2-of-3** multi-signature threshold.
    - Safe signers should be distributed across hardware wallets (e.g. Ledger / Trezor) owned by corporate officers and lead engineering staff.
 2. **Transfer Contract Ownership**:
    ```solidity
-   // Transfer ownership of deployed FixmateEscrow to Safe
+   // Transfer ownership of deployed ArtifixEscrow to Safe
    escrowContract.transferOwnership(GNOSIS_SAFE_ADDRESS);
    ```
 3. **Admin & Dispute Resolver Roles**:
@@ -24,7 +24,7 @@ In production, smart contracts (`FixmateEscrow.sol`) **must never be owned by a 
    - In case of an on-chain anomaly or external exploit, the Gnosis Safe multi-sig can execute `pause()` to halt `createEscrow`, `fundEscrow`, and `releaseEscrow` until audited.
 
 ### Circle USDC Token Binding
-- On Monad Testnet, Fixmate utilizes `MockUSDC` (`0x8E12F5e6D857Ea2c1C68673322E7eF061F5B0F75`) with 6 decimals.
+- On Monad Testnet, Artifix utilizes `MockUSDC` (`0x8E12F5e6D857Ea2c1C68673322E7eF061F5B0F75`) with 6 decimals.
 - For Monad Mainnet:
   - Verify the official bridged or native Circle USDC contract address.
   - Set `usdcToken` address in constructor or via `updateTokenAddress()`.
@@ -34,7 +34,7 @@ In production, smart contracts (`FixmateEscrow.sol`) **must never be owned by a 
 
 ## 2. Webhook Hardening & Replay Attack Defense
 
-Both Paystack (Fiat) and Kotani Pay (Crypto On/Off-Ramp) communicate with Fixmate via asynchronous webhooks.
+Both Paystack (Fiat) and Kotani Pay (Crypto On/Off-Ramp) communicate with Artifix via asynchronous webhooks.
 
 ### A. HMAC-SHA256 Signature Verification
 - Paystack: Header `x-paystack-signature` verified against `PAYSTACK_SECRET_KEY`.
@@ -119,11 +119,11 @@ Withdrawal attempts sum all completed and pending payouts in `payout_requests` w
 ## 5. Privy Embedded Wallet Security
 
 1. **Domain Allowlisting**:
-   - In Privy Dashboard, configure `Allowed Domains` strictly to production URLs (e.g. `https://fixmate.ng`, `https://app.fixmate.ng`).
+   - In Privy Dashboard, configure `Allowed Domains` strictly to production URLs (e.g. `https://Artifixhq.xyz`, `https://app.Artifixhq.xyz`).
    - Disable localhost / wildcard wildcards in production.
 2. **Session Signers & Scoped Delegation**:
    - Do not request full unlimited private key export permissions.
-   - Use Privy embedded wallet session keys scoped strictly to `FixmateEscrow` contract calls.
+   - Use Privy embedded wallet session keys scoped strictly to `ArtifixEscrow` contract calls.
 3. **Paymaster Gas Tank**:
    - For a seamless Web2 UX, configure Biconomy / ZeroDev / Pimlico paymasters on Monad to sponsor gas for users, or require minimal native MON for direct gas payments.
 
@@ -138,7 +138,7 @@ Withdrawal attempts sum all completed and pending payouts in `payout_requests` w
 - [x] Tiered KYC daily limits enforced on Kotani Pay USDC off-ramps.
 - [x] Webhook replay protection window (300 seconds) enforced in Kotani & Paystack handlers.
 - [x] On-chain USDC settlement decoupled from fiat balances (zero double-crediting).
-- [ ] Gnosis Safe multi-sig deployed on Monad Mainnet and set as `FixmateEscrow` owner.
+- [ ] Gnosis Safe multi-sig deployed on Monad Mainnet and set as `ArtifixEscrow` owner.
 - [ ] Official Circle USDC mainnet address configured in environment and contract.
 - [ ] Cloudflare WAF IP allowlisting configured for `/api/v1/payments/webhook/*`.
 - [ ] Production Privy App ID and Client Secret configured with strict domain allowlists.

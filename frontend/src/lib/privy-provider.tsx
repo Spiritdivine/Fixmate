@@ -1,14 +1,28 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { PrivyProvider as BasePrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
+import {
+  PrivyProvider as BasePrivyProvider,
+  usePrivy,
+  useWallets,
+  useCreateWallet,
+} from '@privy-io/react-auth';
 import { connectWallet, switchToMonadTestnet, hasWeb3Provider } from './monad-web3';
 import { apiClient } from './api-client';
 import { useAuthStore } from '../stores/authStore';
+import {
+  MONAD_CHAIN_ID,
+  MONAD_RPC_URL,
+  MONAD_EXPLORER_URL,
+  MONAD_NETWORK,
+  PRIVY_APP_ID,
+} from '../config/env';
 
-// Monad Testnet Chain Definition
-export const monadTestnet = {
-  id: 10143,
-  name: 'Monad Testnet',
-  network: 'monad-testnet',
+// Monad Active Chain Definition (dynamically adapts to Mainnet or Testnet)
+export const isMainnet = MONAD_CHAIN_ID === 143 || MONAD_NETWORK === 'mainnet';
+
+export const activeMonadChain = {
+  id: MONAD_CHAIN_ID,
+  name: isMainnet ? 'Monad Mainnet' : 'Monad Testnet',
+  network: isMainnet ? 'monad-mainnet' : 'monad-testnet',
   nativeCurrency: {
     name: 'Monad',
     symbol: 'MON',
@@ -16,19 +30,39 @@ export const monadTestnet = {
   },
   rpcUrls: {
     default: {
-      http: ['https://testnet-rpc.monad.xyz'],
+      http: [MONAD_RPC_URL],
     },
     public: {
-      http: ['https://testnet-rpc.monad.xyz'],
+      http: [MONAD_RPC_URL],
     },
   },
   blockExplorers: {
     default: {
-      name: 'MonadVision',
-      url: 'https://testnet.monadvision.com',
+      name: isMainnet ? 'MonadExplorer' : 'MonadVision',
+      url: MONAD_EXPLORER_URL,
     },
   },
-  testnet: true,
+  testnet: !isMainnet,
+};
+
+export const monadTestnet = activeMonadChain;
+
+const WALLET_UNLINKED_KEYS = ['artifix_wallet_unlinked', 'Artifix_wallet_unlinked', 'fixmate_wallet_unlinked'];
+
+const isWalletExplicitlyUnlinked = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return WALLET_UNLINKED_KEYS.some((key) => localStorage.getItem(key) === 'true');
+};
+
+const setWalletExplicitlyUnlinked = (unlinked: boolean): void => {
+  if (typeof window === 'undefined') return;
+  WALLET_UNLINKED_KEYS.forEach((key) => {
+    if (unlinked) {
+      localStorage.setItem(key, 'true');
+    } else {
+      localStorage.removeItem(key);
+    }
+  });
 };
 
 interface UnifiedWalletContextType {
@@ -39,8 +73,11 @@ interface UnifiedWalletContextType {
   connect: () => Promise<{ address: string }>;
   disconnect: () => Promise<void>;
   syncWithBackend: (address: string | null) => Promise<void>;
+  createEmbeddedWallet: () => Promise<string | null>;
   setManualWalletAddress: (address: string) => Promise<void>;
   unlinkWallet: () => Promise<void>;
+  sponsorGas: () => Promise<{ success: boolean; message: string }>;
+  checkGas: () => Promise<{ balanceMon: number; isSponsorshipEligible: boolean }>;
 }
 
 const UnifiedWalletContext = createContext<UnifiedWalletContextType>({
@@ -51,8 +88,11 @@ const UnifiedWalletContext = createContext<UnifiedWalletContextType>({
   connect: async () => ({ address: '' }),
   disconnect: async () => {},
   syncWithBackend: async () => {},
+  createEmbeddedWallet: async () => null,
   setManualWalletAddress: async () => {},
   unlinkWallet: async () => {},
+  sponsorGas: async () => ({ success: false, message: 'Not supported' }),
+  checkGas: async () => ({ balanceMon: 0, isSponsorshipEligible: false }),
 });
 
 export const useUnifiedWallet = () => useContext(UnifiedWalletContext);
@@ -61,11 +101,13 @@ export const useUnifiedWallet = () => useContext(UnifiedWalletContext);
 const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user: privyUser, authenticated, login, logout, ready } = usePrivy();
   const { wallets } = useWallets();
+  const { createWallet } = useCreateWallet();
   const { user: appUser, updateUser } = useAuthStore();
   const isConnectingRef = React.useRef(false);
+  const isAutoSyncingRef = React.useRef(false);
 
-  // The single source of truth for the user's linked wallet is their Fixmate profile
-  const isExplicitlyUnlinked = typeof window !== 'undefined' && localStorage.getItem('fixmate_wallet_unlinked') === 'true';
+  // The single source of truth for the user's linked wallet is their Artifix profile
+  const isExplicitlyUnlinked = isWalletExplicitlyUnlinked();
   const currentAddress = isExplicitlyUnlinked ? null : (appUser?.walletAddress || null);
 
   const embeddedWallet = wallets?.find(
@@ -88,7 +130,7 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
       await apiClient.patch('/profiles/wallet-address', { walletAddress: addr });
       updateUser({ walletAddress: addr || undefined });
       if (addr) {
-        localStorage.removeItem('fixmate_wallet_unlinked');
+        setWalletExplicitlyUnlinked(false);
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to sync wallet address';
@@ -96,23 +138,54 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   };
 
-  // Only bind wallet if the user explicitly clicked Connect Wallet and completed Privy login
+  const createEmbeddedWallet = async (): Promise<string | null> => {
+    try {
+      const existing = wallets?.find((w) => w.walletClientType === 'privy');
+      if (existing?.address) {
+        await syncWithBackend(existing.address);
+        return existing.address;
+      }
+      const newWallet = await createWallet();
+      if (newWallet?.address) {
+        await syncWithBackend(newWallet.address);
+        return newWallet.address;
+      }
+      return null;
+    } catch (err: any) {
+      console.warn('[PrivyBridge] createEmbeddedWallet error:', err?.message || err);
+      return null;
+    }
+  };
+
+  // Auto-sync or provision embedded wallet when user is logged in
   useEffect(() => {
-    if (!ready || !authenticated) return;
-    if (!isConnectingRef.current) return;
+    if (!ready || !authenticated || !appUser || isExplicitlyUnlinked || isAutoSyncingRef.current) return;
 
     const embedded = wallets?.find((w) => w.walletClientType === 'privy');
     const primary = embedded || wallets?.[0];
-    if (primary?.address) {
+
+    // If an embedded or primary wallet already exists, auto-sync to backend
+    if (primary?.address && (!appUser.walletAddress || isConnectingRef.current)) {
       isConnectingRef.current = false;
-      syncWithBackend(primary.address).catch((err) => {
-        console.warn('Failed to bind authenticated Privy wallet:', err);
+      isAutoSyncingRef.current = true;
+      syncWithBackend(primary.address)
+        .catch((err) => {
+          console.warn('[PrivyBridge] Auto-sync embedded wallet error:', err);
+        })
+        .finally(() => {
+          isAutoSyncingRef.current = false;
+        });
+    } else if (!appUser.walletAddress && (!wallets || wallets.length === 0)) {
+      // If user has no wallet yet, attempt lazy creation of an embedded wallet
+      isAutoSyncingRef.current = true;
+      createEmbeddedWallet().finally(() => {
+        isAutoSyncingRef.current = false;
       });
     }
-  }, [ready, authenticated, wallets]);
+  }, [ready, authenticated, wallets, appUser?.walletAddress, isExplicitlyUnlinked]);
 
   const handleConnect = async () => {
-    localStorage.removeItem('fixmate_wallet_unlinked');
+    setWalletExplicitlyUnlinked(false);
     if (ready && !authenticated) {
       isConnectingRef.current = true;
       login();
@@ -130,7 +203,7 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const setManualWalletAddress = async (addr: string) => {
-    localStorage.removeItem('fixmate_wallet_unlinked');
+    setWalletExplicitlyUnlinked(false);
     const trimmed = addr.trim();
     if (!/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
       throw new Error('Invalid EVM address format. Address must start with 0x followed by 40 hex characters.');
@@ -139,7 +212,7 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const unlinkWallet = async () => {
-    localStorage.setItem('fixmate_wallet_unlinked', 'true');
+    setWalletExplicitlyUnlinked(true);
     isConnectingRef.current = false;
 
     try {
@@ -168,6 +241,24 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   };
 
+  const sponsorGas = async () => {
+    try {
+      const res = await apiClient.post('/wallets/sponsor-gas', { walletAddress: currentAddress });
+      return { success: res.data?.data?.success ?? true, message: res.data?.message || 'Gas sponsored' };
+    } catch (err: any) {
+      return { success: false, message: err?.response?.data?.message || err?.message || 'Gas sponsorship unavailable' };
+    }
+  };
+
+  const checkGas = async () => {
+    try {
+      const res = await apiClient.get('/wallets/gas-balance', { params: { address: currentAddress } });
+      return res.data?.data || { balanceMon: 0, isSponsorshipEligible: true };
+    } catch {
+      return { balanceMon: 0, isSponsorshipEligible: false };
+    }
+  };
+
   return (
     <UnifiedWalletContext.Provider
       value={{
@@ -178,8 +269,11 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
         connect: handleConnect,
         disconnect: handleDisconnect,
         syncWithBackend,
+        createEmbeddedWallet,
         setManualWalletAddress,
         unlinkWallet,
+        sponsorGas,
+        checkGas,
       }}
     >
       {children}
@@ -197,7 +291,7 @@ const FallbackBrowserBridge: React.FC<{ children: React.ReactNode }> = ({ childr
       await apiClient.patch('/profiles/wallet-address', { walletAddress: addr });
       updateUser({ walletAddress: addr || undefined });
       if (addr) {
-        localStorage.removeItem('fixmate_wallet_unlinked');
+        setWalletExplicitlyUnlinked(false);
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to update wallet address';
@@ -230,13 +324,31 @@ const FallbackBrowserBridge: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const unlinkWallet = async () => {
-    localStorage.setItem('fixmate_wallet_unlinked', 'true');
+    setWalletExplicitlyUnlinked(true);
     try {
       await apiClient.patch('/profiles/wallet-address', { walletAddress: null });
       updateUser({ walletAddress: undefined });
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to unlink wallet address';
       throw new Error(msg);
+    }
+  };
+
+  const sponsorGas = async () => {
+    try {
+      const res = await apiClient.post('/wallets/sponsor-gas', { walletAddress: address });
+      return { success: res.data?.data?.success ?? true, message: res.data?.message || 'Gas sponsored' };
+    } catch (err: any) {
+      return { success: false, message: err?.response?.data?.message || err?.message || 'Gas sponsorship unavailable' };
+    }
+  };
+
+  const checkGas = async () => {
+    try {
+      const res = await apiClient.get('/wallets/gas-balance', { params: { address } });
+      return res.data?.data || { balanceMon: 0, isSponsorshipEligible: true };
+    } catch {
+      return { balanceMon: 0, isSponsorshipEligible: false };
     }
   };
 
@@ -250,8 +362,11 @@ const FallbackBrowserBridge: React.FC<{ children: React.ReactNode }> = ({ childr
         connect: handleConnect,
         disconnect: handleDisconnect,
         syncWithBackend,
+        createEmbeddedWallet: async () => null,
         setManualWalletAddress,
         unlinkWallet,
+        sponsorGas,
+        checkGas,
       }}
     >
       {children}
@@ -260,7 +375,7 @@ const FallbackBrowserBridge: React.FC<{ children: React.ReactNode }> = ({ childr
 };
 
 export const PrivyProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const privyAppId = import.meta.env.VITE_PRIVY_APP_ID;
+  const privyAppId = PRIVY_APP_ID;
   const isPrivyConfigured = Boolean(
     privyAppId &&
     typeof privyAppId === 'string' &&

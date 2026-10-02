@@ -1,5 +1,6 @@
 import { WalletService } from '../services/wallet.service.js';
 import { PaystackService } from '../services/paystack.service.js';
+import { GasRelayerService } from '../services/gas-relayer.service.js';
 import { ApiResponse } from '../utils/api-response.js';
 
 export class WalletController {
@@ -126,6 +127,29 @@ export class WalletController {
     try {
       await WalletService.deletePaymentMethod(req.user.id, req.params.id);
       res.status(200).json(new ApiResponse(200, null, 'Payment card removed'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Monad Gas Sponsorship (Phase 3)
+   */
+  static async checkGas(req, res, next) {
+    try {
+      const address = req.query.address || req.user.walletAddress;
+      const result = await GasRelayerService.getNativeGasBalance(address);
+      res.status(200).json(new ApiResponse(200, result, 'Gas balance retrieved'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async sponsorGas(req, res, next) {
+    try {
+      const targetAddress = req.body?.walletAddress || req.user.walletAddress;
+      const result = await GasRelayerService.sponsorUserGas(req.user.id, targetAddress);
+      res.status(200).json(new ApiResponse(200, result, result.message || 'Gas sponsorship processed'));
     } catch (error) {
       next(error);
     }

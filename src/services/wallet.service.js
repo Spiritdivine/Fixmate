@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import { ApiError } from '../utils/api-error.js';
 import { PaystackService } from './paystack.service.js';
+import { PrivyService } from './privy.service.js';
 import crypto from 'crypto';
 
 export class WalletService {
@@ -32,11 +33,29 @@ export class WalletService {
       }),
       prisma.user.findUnique({
         where: { id: userId },
-        select: { isKycVerified: true },
+        select: { id: true, email: true, walletAddress: true, isKycVerified: true },
       }),
     ]);
 
     if (!wallet) throw ApiError.notFound('Wallet not found');
+
+    // Auto-hydrate missing embedded wallet on Monad if not yet provisioned
+    let resolvedWalletAddress = user?.walletAddress || null;
+    if (!resolvedWalletAddress && PrivyService.isConfigured()) {
+      try {
+        const serverWallet = await PrivyService.createServerWallet();
+        if (serverWallet?.address) {
+          resolvedWalletAddress = serverWallet.address;
+          await prisma.user.update({
+            where: { id: userId },
+            data: { walletAddress: serverWallet.address },
+          });
+          console.log(`[WalletService.getWallet] Auto-hydrated Privy wallet for ${user?.email || userId}: ${serverWallet.address}`);
+        }
+      } catch (err) {
+        console.warn('[WalletService.getWallet] Auto-hydration warning:', err.message);
+      }
+    }
 
     const totalWithdrawn24hNgn = past24hPayouts
       .filter((p) => (p.sourceCurrency || 'NGN') === 'NGN')
@@ -48,6 +67,7 @@ export class WalletService {
 
     return {
       ...wallet,
+      walletAddress: resolvedWalletAddress,
       tierLimits: {
         isKycVerified,
         dailyLimitNgn,
@@ -311,7 +331,7 @@ export class WalletService {
         amountKobo,
         recipientCode,
         reference: ref,
-        reason: `Fixmate Payout to ${bankAccount.accountName}`,
+        reason: `Artifix Payout to ${bankAccount.accountName}`,
       });
 
       if (transferResult.status === 'success' || transferResult.status === 'pending' || transferResult.status === 'otp') {

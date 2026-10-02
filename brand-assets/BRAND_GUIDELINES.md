@@ -67,10 +67,10 @@ All production assets are saved in [brand-assets](file:///Users/mac/Artisan/bran
 ## 6. Frontend Code Integration
 
 The brand logo is directly available as a React component in:
-[frontend/src/components/ui/FixmateLogo.tsx](file:///Users/mac/Artisan/frontend/src/components/ui/FixmateLogo.tsx)
+[frontend/src/components/ui/ArtifixLogo.tsx](file:///Users/mac/Artisan/frontend/src/components/ui/ArtifixLogo.tsx)
 
 ```tsx
-import { ArtifixLogo, ArtifixLogoMark } from '@/components/ui/FixmateLogo';
+import { ArtifixLogo, ArtifixLogoMark } from '@/components/ui/ArtifixLogo';
 
 // Full lockup (Icon + "Artifix" Wordmark)
 <ArtifixLogo size="md" />

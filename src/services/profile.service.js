@@ -6,7 +6,7 @@ import { spatialCache } from '../utils/spatial-cache.js';
 
 export class ProfileService {
   static async updateArtisanProfile(userId, data) {
-    const { skillIds, ...profileData } = data;
+    const { skillIds, skills, ...profileData } = data;
 
     const profile = await prisma.artisanProfile.findUnique({
       where: { userId },
@@ -16,15 +16,29 @@ export class ProfileService {
       throw ApiError.notFound('Artisan profile not found');
     }
 
+    let resolvedSkillIds = Array.isArray(skillIds) ? [...skillIds] : [];
+    if (Array.isArray(skills) && skills.length > 0) {
+      const matched = await prisma.skill.findMany({
+        where: {
+          OR: [
+            { name: { in: skills, mode: 'insensitive' } },
+            { slug: { in: skills.map((s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-')) } },
+          ],
+        },
+        select: { id: true },
+      });
+      resolvedSkillIds = [...new Set([...resolvedSkillIds, ...matched.map((m) => m.id)])];
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
-      if (skillIds && Array.isArray(skillIds)) {
+      if (resolvedSkillIds.length > 0 || Array.isArray(skillIds) || Array.isArray(skills)) {
         await tx.artisanSkill.deleteMany({
           where: { artisanProfileId: profile.id },
         });
 
-        if (skillIds.length > 0) {
+        if (resolvedSkillIds.length > 0) {
           await tx.artisanSkill.createMany({
-            data: skillIds.map((skillId) => ({
+            data: resolvedSkillIds.map((skillId) => ({
               artisanProfileId: profile.id,
               skillId,
             })),

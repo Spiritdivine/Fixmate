@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Wrench,
@@ -20,7 +20,17 @@ import { Button } from '../../components/ui/Button';
 
 export const ArtisanOnboardingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, isInitialized } = useAuthStore();
+
+  useEffect(() => {
+    if (isInitialized) {
+      if (!user) {
+        navigate('/login');
+      } else if (!user.isEmailVerified) {
+        navigate(`/verify-email?email=${encodeURIComponent(user.email)}`, { replace: true });
+      }
+    }
+  }, [user, isInitialized, navigate]);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,6 +98,7 @@ export const ArtisanOnboardingPage: React.FC = () => {
         latitude,
         longitude,
         isAvailable: isAvailable247,
+        skills: selectedSkills.length > 0 ? selectedSkills : undefined,
       };
 
       await apiClient.put('/profile/artisan', payload).catch(() => {
@@ -96,10 +107,11 @@ export const ArtisanOnboardingPage: React.FC = () => {
       });
 
       if (user?.artisanProfile) {
+        const { skills: _skills, ...profilePayload } = payload;
         updateUser({
           artisanProfile: {
             ...user.artisanProfile,
-            ...payload,
+            ...profilePayload,
           },
         });
       }
@@ -111,6 +123,14 @@ export const ArtisanOnboardingPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (!isInitialized || !user || !user.isEmailVerified) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FAF7F0] dark:bg-[#141A16]">
+        <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div

@@ -26,6 +26,7 @@ import { Textarea } from '../../components/ui/Textarea';
 import { Stepper } from '../../components/ui/Stepper';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { formatNgn, formatDate, formatDateTime, shortenAddress } from '../../lib/formatters';
+import { MONAD_EXPLORER_URL, MONAD_CHAIN_NAME } from '../../lib/monad-web3';
 import { Contract, Milestone, MilestoneStatus } from '../../types';
 
 export const ContractWorkspace: React.FC = () => {
@@ -259,7 +260,7 @@ export const ContractWorkspace: React.FC = () => {
  <div className="p-4 rounded-[24px] bg-purple-950/20 border border-purple-800/30 text-xs space-y-2">
  <div className="flex items-center justify-between">
  <span className="font-bold text-purple-400 flex items-center gap-1.5">
-  Monad Testnet On-Chain Verification
+  {MONAD_CHAIN_NAME} On-Chain Verification
  </span>
  <span className="text-slate-400 font-mono">
  Smart Contract: {shortenAddress(contract.smartContractAddr)}
@@ -268,7 +269,7 @@ export const ContractWorkspace: React.FC = () => {
  <div className="flex flex-wrap gap-4 text-slate-300 pt-1">
  {contract.fundingTxHash && (
  <a
- href={`https://testnet.monadexplorer.com/tx/${contract.fundingTxHash}`}
+ href={`${MONAD_EXPLORER_URL}/tx/${contract.fundingTxHash}`}
  target="_blank"
  rel="noopener noreferrer"
  className="hover:text-purple-400 flex items-center gap-1 underline"
@@ -278,7 +279,7 @@ export const ContractWorkspace: React.FC = () => {
  )}
  {contract.releaseTxHash && (
  <a
- href={`https://testnet.monadexplorer.com/tx/${contract.releaseTxHash}`}
+ href={`${MONAD_EXPLORER_URL}/tx/${contract.releaseTxHash}`}
  target="_blank"
  rel="noopener noreferrer"
  className="hover:text-emerald-400 flex items-center gap-1 underline text-emerald-400"

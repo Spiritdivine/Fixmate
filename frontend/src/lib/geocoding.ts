@@ -27,7 +27,7 @@ export interface IGeocodingStrategy {
  * Zero monthly billing risk, global coverage, robust Nigerian LGA & State resolution.
  */
 export class NominatimGeocodingStrategy implements IGeocodingStrategy {
-  private userAgent = 'FixmateArtisanPlatform/1.0';
+  private userAgent = 'ArtifixArtisanPlatform/1.0';
   private cache = new Map<string, GeocodedAddress>();
 
   /**

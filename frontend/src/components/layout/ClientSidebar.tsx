@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../stores/authStore';
-import { FixmateLogo } from '../ui/FixmateLogo';
+import { ArtifixLogo } from '../ui/ArtifixLogo';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -77,7 +77,7 @@ export const ClientSidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="flex-1 flex flex-col overflow-y-auto px-6">
           {/* Brand Header */}
           <div className="py-7 flex items-center">
-            <FixmateLogo size="lg" />
+            <ArtifixLogo size="lg" />
           </div>
 
           {/* Navigation Links - MENU */}

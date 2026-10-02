@@ -194,7 +194,7 @@ export class PaystackService {
     // Sandbox / Development fallback
     return {
       accountNumber,
-      accountName: 'Fixmate Verified Account',
+      accountName: 'Artifix Verified Account',
       bankCode,
       isResolved: true,
       note: 'Simulated resolution in sandbox environment',
@@ -238,7 +238,7 @@ export class PaystackService {
   /**
    * Initiate an autonomous transfer via Paystack
    */
-  static async initiateTransfer({ amountKobo, recipientCode, reference, reason = 'Fixmate Payout' }) {
+  static async initiateTransfer({ amountKobo, recipientCode, reference, reason = 'Artifix Payout' }) {
     if (env.PAYSTACK_SECRET_KEY && !env.PAYSTACK_SECRET_KEY.startsWith('sk_test_xxx')) {
       try {
         const baseUrl = env.PAYSTACK_BASE_URL || 'https://api.paystack.co';

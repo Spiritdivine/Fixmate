@@ -102,7 +102,7 @@ export const ArtisanMarkerCluster: React.FC<ArtisanMarkerClusterProps> = ({
 
         const popupContent = createArtisanPopupElement(artisan);
         marker.bindPopup(popupContent, {
-          className: 'fixmate-custom-popup',
+          className: 'artifix-custom-popup',
           closeButton: false,
           offset: [0, -32],
           maxWidth: 290,
@@ -162,7 +162,7 @@ export const ArtisanMarkerCluster: React.FC<ArtisanMarkerClusterProps> = ({
 
           const popupContent = createArtisanPopupElement(artisan);
           marker.bindPopup(popupContent, {
-            className: 'fixmate-custom-popup',
+            className: 'artifix-custom-popup',
             closeButton: false,
             offset: [0, -32],
             maxWidth: 290,

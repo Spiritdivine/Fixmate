@@ -335,7 +335,7 @@ export class AdminService {
       await NotificationService.createNotification(
         userId,
         isKycVerified ? 'Account KYC Verified' : 'Account Verification Updated',
-        `Your verification status has been updated by Fixmate Administration: "${reason}"`,
+        `Your verification status has been updated by Artifix Administration: "${reason}"`,
         '/kyc'
       );
 
@@ -680,7 +680,7 @@ export class AdminService {
           amountKobo: Math.round(Number(payout.amount) * 100),
           recipientCode,
           reference: payout.reference,
-          reason: `Fixmate Payout to ${payout.bankAccount.accountName}`,
+          reason: `Artifix Payout to ${payout.bankAccount.accountName}`,
         });
 
         if (transferResult?.transferCode) {

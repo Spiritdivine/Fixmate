@@ -1,7 +1,7 @@
 import prisma from '../config/db.js';
 import crypto from 'crypto';
 
-export const SYSTEM_TREASURY_EMAIL = 'treasury@fixmate.ng';
+export const SYSTEM_TREASURY_EMAIL = process.env.SYSTEM_TREASURY_EMAIL || 'treasury@artifixhq.xyz';
 
 export class TreasuryService {
   static cachedTreasuryWallet = null;
@@ -14,8 +14,10 @@ export class TreasuryService {
       return this.cachedTreasuryWallet;
     }
 
-    let treasuryUser = await tx.user.findUnique({
-      where: { email: SYSTEM_TREASURY_EMAIL },
+    let treasuryUser = await tx.user.findFirst({
+      where: {
+        email: { in: [SYSTEM_TREASURY_EMAIL, 'treasury@fixmate.ng'] },
+      },
       include: { wallet: true },
     });
 
@@ -93,7 +95,7 @@ export class TreasuryService {
         status: 'SUCCESS',
         balanceBefore,
         balanceAfter,
-        description: description || `Fixmate Platform Fee (Contract #${contractId || 'N/A'})`,
+        description: description || `Artifix Platform Fee (Contract #${contractId || 'N/A'})`,
         metadata: {
           ...metadata,
           source: 'PLATFORM_FEE',

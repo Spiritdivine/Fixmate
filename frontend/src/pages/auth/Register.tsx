@@ -1,35 +1,19 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Wallet, Sparkles } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { useAuthStore } from '../../stores/authStore';
+import { useUnifiedWallet } from '../../lib/privy-provider';
 import { ApiResponse, AuthResponse } from '../../types';
 import { trackEvent } from '../../lib/posthog';
-
-const statesList = [
-  { value: 'Lagos', label: 'Lagos State' },
-  { value: 'Abuja (FCT)', label: 'Abuja (FCT)' },
-  { value: 'Rivers', label: 'Rivers (Port Harcourt)' },
-  { value: 'Oyo', label: 'Oyo (Ibadan)' },
-  { value: 'Enugu', label: 'Enugu State' },
-  { value: 'Kano', label: 'Kano State' },
-  { value: 'Ogun', label: 'Ogun State' },
-  { value: 'Delta', label: 'Delta State' },
-];
 
 export const Register: React.FC = () => {
   const [role, setRole] = useState<'CLIENT' | 'ARTISAN'>('CLIENT');
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    businessName: '',
-    companyName: '',
     email: '',
     phoneNumber: '',
-    state: 'Lagos',
-    lgaCity: 'Ikeja',
     password: '',
     confirmPassword: '',
   });
@@ -37,6 +21,7 @@ export const Register: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const { login } = useAuthStore();
+  const { address: preconnectedWallet, createEmbeddedWallet } = useUnifiedWallet();
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -61,22 +46,10 @@ export const Register: React.FC = () => {
         phoneNumber: formData.phoneNumber.trim(),
         password: formData.password,
         role,
-        state: formData.state,
-        lgaCity: formData.lgaCity.trim(),
       };
 
-      if (role === 'CLIENT') {
-        payload.firstName = formData.firstName.trim() || 'Client';
-        payload.lastName = formData.lastName.trim() || 'User';
-        if (formData.companyName.trim()) {
-          payload.companyName = formData.companyName.trim();
-        }
-      } else {
-        payload.businessName =
-          formData.businessName.trim() ||
-          `${formData.firstName.trim() || 'Artisan'} Services`;
-        payload.firstName = formData.firstName.trim() || 'Artisan';
-        payload.lastName = formData.lastName.trim() || 'Pro';
+      if (preconnectedWallet) {
+        payload.walletAddress = preconnectedWallet;
       }
 
       const { data } = await apiClient.post<ApiResponse<AuthResponse>>(
@@ -91,11 +64,15 @@ export const Register: React.FC = () => {
       login(accessToken, refreshToken, user);
       trackEvent('account_registered', { role });
 
-      if (role === 'CLIENT') {
-        navigate('/onboarding/client');
-      } else {
-        navigate('/onboarding/artisan');
+      // Automatically provision or link embedded non-custodial wallet on Monad
+      if (!user?.walletAddress && !preconnectedWallet) {
+        createEmbeddedWallet().catch((walletErr) => {
+          console.warn('[Register] Embedded wallet auto-provision deferred to post-login:', walletErr);
+        });
       }
+
+      // Navigate immediately to email verification page
+      navigate(`/verify-email?email=${encodeURIComponent(formData.email.trim())}`);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -163,69 +140,6 @@ export const Register: React.FC = () => {
 
         {/* Registration Form */}
         <form onSubmit={handleRegister} className="space-y-4">
-          {/* First & Last name or Business name */}
-          {role === 'CLIENT' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <AuthInput
-                label="First name"
-                type="text"
-                placeholder="Kwesi"
-                value={formData.firstName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firstName: e.target.value })
-                }
-                required
-                autoComplete="given-name"
-              />
-              <AuthInput
-                label="Last name"
-                type="text"
-                placeholder="Danso"
-                value={formData.lastName}
-                onChange={(e) =>
-                  setFormData({ ...formData, lastName: e.target.value })
-                }
-                required
-                autoComplete="family-name"
-              />
-            </div>
-          ) : (
-            <div className="space-y-3.5">
-              <AuthInput
-                label="Business or Trade Name"
-                type="text"
-                placeholder="e.g. Apex Electrical & Solar Services"
-                value={formData.businessName}
-                onChange={(e) =>
-                  setFormData({ ...formData, businessName: e.target.value })
-                }
-                required
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <AuthInput
-                  label="First name"
-                  type="text"
-                  placeholder="Kwesi"
-                  value={formData.firstName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, firstName: e.target.value })
-                  }
-                  required
-                />
-                <AuthInput
-                  label="Last name"
-                  type="text"
-                  placeholder="Danso"
-                  value={formData.lastName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lastName: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            </div>
-          )}
-
           {/* Email Address */}
           <AuthInput
             label="Work email"
@@ -251,60 +165,6 @@ export const Register: React.FC = () => {
             required
             autoComplete="tel"
           />
-
-          {/* State & City / LGA */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div className="space-y-1.5 text-left font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
-              <label
-                htmlFor="state-select"
-                className="text-xs sm:text-[13px] font-semibold text-stone-800 tracking-normal block select-none"
-              >
-                State
-              </label>
-              <div className="relative">
-                <select
-                  id="state-select"
-                  value={formData.state}
-                  onChange={(e) =>
-                    setFormData({ ...formData, state: e.target.value })
-                  }
-                  className="w-full appearance-none rounded-2xl border border-stone-200 bg-white text-stone-900 text-sm px-4 py-3.5 pr-10 transition-all outline-none hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-200/50 cursor-pointer"
-                >
-                  {statesList.map((st) => (
-                    <option key={st.value} value={st.value}>
-                      {st.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-stone-400">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <AuthInput
-              label="City / LGA"
-              type="text"
-              placeholder="Ikeja"
-              value={formData.lgaCity}
-              onChange={(e) =>
-                setFormData({ ...formData, lgaCity: e.target.value })
-              }
-              required
-            />
-          </div>
 
           {/* Password */}
           <AuthInput
@@ -338,6 +198,27 @@ export const Register: React.FC = () => {
             required
             autoComplete="new-password"
           />
+
+          {/* Monad Embedded Wallet Trust Callout */}
+          <div className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-800 text-xs font-medium">
+            <div className="w-6 h-6 rounded-lg bg-emerald-600/10 flex items-center justify-center text-emerald-700 shrink-0">
+              <Wallet className="w-3.5 h-3.5" />
+            </div>
+            <div className="flex-1 leading-snug">
+              <span className="font-semibold text-emerald-950">Automated Monad Escrow Wallet:</span>{' '}
+              {preconnectedWallet ? (
+                <>
+                  Pre-connected wallet{' '}
+                  <span className="font-mono text-[11px] font-semibold">
+                    {preconnectedWallet.slice(0, 6)}...{preconnectedWallet.slice(-4)}
+                  </span>{' '}
+                  will be bound to your account.
+                </>
+              ) : (
+                <>A secure non-custodial embedded wallet is automatically generated and secured for your account.</>
+              )}
+            </div>
+          </div>
 
           <div className="pt-2">
             <button

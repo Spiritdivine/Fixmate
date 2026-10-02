@@ -39,6 +39,11 @@ export const Login: React.FC = () => {
 
       login(accessToken, refreshToken, user);
 
+      if (!user.isEmailVerified) {
+        navigate(`/verify-email?email=${encodeURIComponent(user.email)}`);
+        return;
+      }
+
       if (user.role === 'CLIENT') {
         navigate('/client/dashboard');
       } else if (user.role === 'ARTISAN') {

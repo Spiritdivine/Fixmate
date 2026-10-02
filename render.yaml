@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: fixmate-backend
+    name: artifix-backend
     runtime: node
     plan: starter # or free
     region: oregon

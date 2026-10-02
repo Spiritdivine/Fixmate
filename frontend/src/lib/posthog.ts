@@ -1,7 +1,5 @@
 import posthog from 'posthog-js';
-
-const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
-const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST;
+import { POSTHOG_KEY, POSTHOG_HOST, IS_DEV } from '../config/env';
 
 let isInitialized = false;
 
@@ -9,7 +7,7 @@ export const initPostHog = () => {
   if (isInitialized) return;
 
   if (!POSTHOG_KEY) {
-    if (import.meta.env.DEV) {
+    if (IS_DEV) {
       throw new Error(
         'VITE_POSTHOG_KEY variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_POSTHOG_KEY is configured'
       );
@@ -18,7 +16,7 @@ export const initPostHog = () => {
   }
 
   if (!POSTHOG_HOST) {
-    if (import.meta.env.DEV) {
+    if (IS_DEV) {
       throw new Error(
         'VITE_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_POSTHOG_HOST is configured'
       );
@@ -44,7 +42,7 @@ export const initPostHog = () => {
       },
     },
     loaded: (ph) => {
-      if (import.meta.env.DEV) {
+      if (IS_DEV) {
         ph.debug();
       }
     },

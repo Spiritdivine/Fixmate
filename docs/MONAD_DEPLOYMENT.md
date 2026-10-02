@@ -1,79 +1,88 @@
-# Monad Testnet Deployment Guide: Artisan Escrow
+# Monad Deployment Guide: Artisan Escrow (Production & Mainnet Ready)
 
-This guide provides step-by-step instructions to deploy the **`ArtisanEscrow.sol`** smart contract to the live **Monad Testnet**.
-
----
-
-## 1. Network Configuration
-
-| Parameter | Value |
-| :--- | :--- |
-| **Network Name** | Monad Testnet |
-| **RPC URL** | `https://testnet-rpc.monad.xyz` |
-| **Chain ID** | `10143` |
-| **Currency Symbol** | `MON` |
-| **Block Explorer** | `https://testnet.monadexplorer.com` |
+This guide provides instructions to deploy and operate the **`ArtisanEscrow.sol`** smart contract on **Monad Mainnet** and **Monad Testnet**.
 
 ---
 
-## 2. Prerequisites
+## 1. Network Configuration Reference
 
-1. An EVM-compatible wallet (e.g. MetaMask, Rabby, or Coinbase Wallet).
-2. Testnet `MON` tokens obtained from the official Monad Faucet.
-3. Export your deployer wallet private key.
+| Parameter | Monad Testnet | Monad Mainnet |
+| :--- | :--- | :--- |
+| **Network Name** | Monad Testnet | Monad Mainnet |
+| **RPC URL** | `https://testnet-rpc.monad.xyz` | `https://rpc.monad.xyz` (or private Infura/Alchemy endpoint) |
+| **Chain ID** | `10143` | `143` *(or official mainnet chain ID upon launch)* |
+| **Currency Symbol**| `MON` | `MON` |
+| **Block Explorer** | `https://testnet.monadexplorer.com` | `https://monadexplorer.com` |
+| **USDC Token** | Mintable `MockUSDC.sol` (Faucet) | Official Canonical Circle USDC (`6 decimals`) |
+
+---
+
+## 2. Smart Contract Architecture & SOLID Principles
+
+The smart contract layer adheres to modern software engineering best practices:
+
+* **Single Responsibility Principle (SRP):** [contracts/ArtisanEscrow.sol](file:///Users/mac/Artisan/contracts/ArtisanEscrow.sol) focuses strictly on escrow state transitions, safe token custody, and event emissions.
+* **Interface Segregation Principle (ISP):** [contracts/interfaces/IArtisanEscrow.sol](file:///Users/mac/Artisan/contracts/interfaces/IArtisanEscrow.sol) cleanly isolates types, events, custom errors, and method signatures from contract storage.
+* **Liskov Substitution Principle (LSP):** Powered by OpenZeppelin's `SafeERC20` (`safeTransfer`, `safeTransferFrom`), supporting any standard or non-standard compliant ERC-20 token seamlessly.
+* **Dependency Inversion Principle (DIP):** Contracts depend on the `IERC20` abstraction rather than concrete implementations.
+* **Two-Step Ownership (`Ownable2Step`):** Protects against catastrophic accidental transfers of contract ownership.
+* **Reentrancy & Circuit Breakers:** OpenZeppelin `ReentrancyGuard` and `Pausable` for emergency operational controls.
 
 ---
 
 ## 3. Environment Setup
 
-Add your private key to your `.env` file in the root directory:
+Configure your `.env` file according to the target network:
 
+### For Monad Testnet:
 ```env
-# Monad Blockchain Settings
+MONAD_NETWORK="testnet"
 MONAD_RPC_URL="https://testnet-rpc.monad.xyz"
 MONAD_CHAIN_ID=10143
-DEPLOYER_PRIVATE_KEY="0x_your_private_key_here"
-ESCROW_ARBITER_ADDRESS="0x_your_arbiter_wallet_address"
-ESCROW_FEE_RECIPIENT="0x_your_fee_collector_address"
+DEPLOYER_PRIVATE_KEY="0x_your_private_key"
+ESCROW_ARBITER_ADDRESS="0x_your_arbiter_wallet"
+ESCROW_FEE_RECIPIENT="0x_your_fee_collector"
+# Optional on testnet: leave empty to auto-deploy MockUSDC
+STABLECOIN_CONTRACT_ADDRESS=""
+```
+
+### For Monad Mainnet (Production):
+```env
+MONAD_NETWORK="mainnet"
+MONAD_RPC_URL="https://rpc.monad.xyz"
+MONAD_CHAIN_ID=143
+DEPLOYER_PRIVATE_KEY="0x_mainnet_deployer_key"
+ESCROW_ARBITER_ADDRESS="0x_dedicated_arbiter_wallet"
+ESCROW_FEE_RECIPIENT="0x_cold_multisig_vault"
+# Mandatory on mainnet: Canonical Circle USDC address
+STABLECOIN_CONTRACT_ADDRESS="0x_canonical_usdc_mainnet_address"
 ```
 
 ---
 
-## 4. Compile & Deploy
-
-Run the deployment script:
+## 4. Compilation & Deployment
 
 ```bash
-# 1. Compile the Solidity contract
+# 1. Compile with optimizer & OpenZeppelin resolution
 npm run compile
 
-# 2. Deploy to Monad Testnet
+# 2. Deploy to Monad (automatically detects testnet vs mainnet)
 npm run deploy:escrow
 ```
 
-The script will automatically:
-1. Connect to Monad RPC.
-2. Check your wallet balance.
-3. Deploy `ArtisanEscrow.sol`.
-4. Save deployment metadata to `src/config/contracts/deployment.json`.
-5. Automatically update `ESCROW_CONTRACT_ADDRESS` in `.env`.
+The script will:
+1. Validate connectivity and deployer MON gas balance.
+2. If on Mainnet: Enforce canonical USDC presence and check `decimals() == 6`.
+3. If on Testnet: Deploy or bind to existing testnet stablecoin.
+4. Deploy `ArtisanEscrow.sol` with `Ownable2Step`, `ReentrancyGuard`, and `Pausable`.
+5. Write receipt metadata to [src/config/contracts/deployment.json](file:///Users/mac/Artisan/src/config/contracts/deployment.json).
+6. Update `ESCROW_CONTRACT_ADDRESS` and `STABLECOIN_CONTRACT_ADDRESS` in `.env`.
 
 ---
 
-## 5. Live Deployment Verification & Links
+## 5. Verification & Test Suite
 
-The contract is live on Monad Testnet:
-
-| Parameter | Value / Explorer Link |
-| :--- | :--- |
-| **Contract Address** | [`0x088D3083a2873BB4D72B6Fde542736A4dD8D55de`](https://testnet.monadvision.com/address/0x088D3083a2873BB4D72B6Fde542736A4dD8D55de) |
-| **Deployment Tx Hash** | [`0x05e4a210f95e811d27e70ef24c7da2909928928fff780c27d4a62cc1f9e9a28f`](https://testnet.monadvision.com/tx/0x05e4a210f95e811d27e70ef24c7da2909928928fff780c27d4a62cc1f9e9a28f) |
-| **MonadExplorer** | [testnet.monadexplorer.com](https://testnet.monadexplorer.com/address/0x088D3083a2873BB4D72B6Fde542736A4dD8D55de) |
-| **Deployer / Arbiter** | [`0x9A979F4f6C24cBB96a2c4f7bd1fa2fdAb60173eB`](https://testnet.monadvision.com/address/0x9A979F4f6C24cBB96a2c4f7bd1fa2fdAb60173eB) |
-| **Block Number** | `55585857` |
-
-Run the automated Monad test suite:
+Verify complete end-to-end functionality:
 ```bash
 npm run test:monad
 ```
-

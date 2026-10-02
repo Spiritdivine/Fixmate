@@ -39,4 +39,8 @@ router.get('/saved-cards', authenticate, WalletController.getCards);
 router.patch('/saved-cards/:id/default', authenticate, validate(cardParamSchema), WalletController.setDefaultCard);
 router.delete('/saved-cards/:id', authenticate, validate(cardParamSchema), WalletController.deleteCard);
 
+// Monad Gas Sponsorship (Phase 3)
+router.get('/gas-balance', authenticate, WalletController.checkGas);
+router.post('/sponsor-gas', authenticate, WalletController.sponsorGas);
+
 export default router;

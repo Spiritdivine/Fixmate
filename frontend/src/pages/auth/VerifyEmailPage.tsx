@@ -9,10 +9,19 @@ import { useAuthStore } from '../../stores/authStore';
 export const VerifyEmailPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, isInitialized } = useAuthStore();
 
   const emailParam = searchParams.get('email') || user?.email || '';
   const tokenParam = searchParams.get('token') || '';
+
+  // If user is already verified, immediately redirect to dashboard
+  useEffect(() => {
+    if (isInitialized && user?.isEmailVerified) {
+      const destination =
+        user.role === 'ARTISAN' ? '/artisan/dashboard' : '/client/dashboard';
+      navigate(destination, { replace: true });
+    }
+  }, [user?.isEmailVerified, user?.role, isInitialized, navigate]);
 
   const [email, setEmail] = useState(emailParam);
   const [otp, setOtp] = useState('');
@@ -38,11 +47,11 @@ export const VerifyEmailPage: React.FC = () => {
         });
 
         if (isMounted) {
-          setSuccess(data.message || 'Email successfully verified! Redirecting...');
+          setSuccess(data.message || 'Email successfully verified! Redirecting to setup...');
           updateUser({ isEmailVerified: true });
           setTimeout(() => {
             const redirectUrl =
-              user?.role === 'ARTISAN' ? '/artisan/dashboard' : '/client/dashboard';
+              user?.role === 'ARTISAN' ? '/onboarding/artisan' : '/onboarding/client';
             navigate(redirectUrl);
           }, 2000);
         }
@@ -95,12 +104,12 @@ export const VerifyEmailPage: React.FC = () => {
         purpose: 'EMAIL_VERIFICATION',
       });
 
-      setSuccess(data.message || 'Email verified successfully! Redirecting...');
+      setSuccess(data.message || 'Email verified successfully! Redirecting to setup...');
       updateUser({ isEmailVerified: true });
 
       setTimeout(() => {
         const redirectUrl =
-          user?.role === 'ARTISAN' ? '/artisan/dashboard' : '/client/dashboard';
+          user?.role === 'ARTISAN' ? '/onboarding/artisan' : '/onboarding/client';
         navigate(redirectUrl);
       }, 1500);
     } catch (err) {
@@ -130,6 +139,14 @@ export const VerifyEmailPage: React.FC = () => {
       setIsResending(false);
     }
   };
+
+  if (isInitialized && user?.isEmailVerified) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FAF7F0] dark:bg-[#141A16]">
+        <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <AuthLayout
@@ -273,12 +290,13 @@ export const VerifyEmailPage: React.FC = () => {
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Go Back</span>
           </button>
-          <Link
-            to={user?.role === 'ARTISAN' ? '/artisan/dashboard' : '/client/dashboard'}
-            className="font-semibold text-[#123E2A] hover:underline transition-colors"
+          <button
+            type="button"
+            onClick={() => navigate('/login')}
+            className="font-semibold text-stone-600 hover:text-stone-900 hover:underline transition-colors cursor-pointer"
           >
-            Skip for now &rarr;
-          </Link>
+            Use different account
+          </button>
         </div>
       </div>
     </AuthLayout>

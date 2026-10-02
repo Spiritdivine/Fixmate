@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -16,7 +16,17 @@ import { Button } from '../../components/ui/Button';
 
 export const ClientOnboardingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, isInitialized } = useAuthStore();
+
+  useEffect(() => {
+    if (isInitialized) {
+      if (!user) {
+        navigate('/login');
+      } else if (!user.isEmailVerified) {
+        navigate(`/verify-email?email=${encodeURIComponent(user.email)}`, { replace: true });
+      }
+    }
+  }, [user, isInitialized, navigate]);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [firstName, setFirstName] = useState(user?.clientProfile?.firstName || '');
@@ -63,6 +73,14 @@ export const ClientOnboardingPage: React.FC = () => {
       setCurrentStep(3);
     }
   };
+
+  if (!isInitialized || !user || !user.isEmailVerified) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FAF7F0] dark:bg-[#141A16]">
+        <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div

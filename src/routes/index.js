@@ -56,6 +56,7 @@ router.get('/health', async (req, res) => {
 // Mount modules
 router.use('/auth', authRoutes);
 router.use('/profiles', profileRoutes);
+router.use('/profile', profileRoutes);
 router.use('/jobs', jobRoutes);
 router.use('/proposals', proposalRoutes);
 router.use('/contracts', contractRoutes);

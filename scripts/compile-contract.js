@@ -13,6 +13,24 @@ if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
 
+function findImports(importPath) {
+  try {
+    if (importPath.startsWith('@openzeppelin/')) {
+      const ozPath = path.resolve(__dirname, '../node_modules', importPath);
+      if (fs.existsSync(ozPath)) {
+        return { contents: fs.readFileSync(ozPath, 'utf8') };
+      }
+    }
+    const localPath = path.resolve(contractsDir, importPath);
+    if (fs.existsSync(localPath)) {
+      return { contents: fs.readFileSync(localPath, 'utf8') };
+    }
+    return { error: 'File not found: ' + importPath };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
 console.log('🔨 Compiling smart contracts...');
 
 const contractFiles = ['ArtisanEscrow.sol', 'MockUSDC.sol'];
@@ -41,7 +59,7 @@ const input = {
   },
 };
 
-const output = JSON.parse(solc.compile(JSON.stringify(input)));
+const output = JSON.parse(solc.compile(JSON.stringify(input), { import: findImports }));
 
 if (output.errors) {
   let hasFatalError = false;

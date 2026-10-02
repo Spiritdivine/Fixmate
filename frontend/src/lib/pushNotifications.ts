@@ -1,4 +1,5 @@
 import { apiClient } from './api-client';
+import { VAPID_PUBLIC_KEY } from '../config/env';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -45,7 +46,7 @@ export async function subscribeUserToPush(): Promise<{ success: boolean; error?:
     }
 
     // 2. Fetch VAPID public key from env or backend
-    let vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    let vapidKey = VAPID_PUBLIC_KEY;
     if (!vapidKey) {
       const response = await apiClient.get('/notifications/push/vapid-key');
       vapidKey = response.data?.data?.publicKey;

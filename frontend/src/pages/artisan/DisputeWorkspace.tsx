@@ -19,6 +19,7 @@ import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { formatNgn, formatDateTime, formatDate } from '../../lib/formatters';
+import { MONAD_EXPLORER_URL } from '../../lib/monad-web3';
 import { useAuthStore } from '../../stores/authStore';
 import { Dispute, DisputeEvidence, DisputeMessage } from '../../types';
 
@@ -207,7 +208,7 @@ export const DisputeWorkspace: React.FC = () => {
  )}
  {dispute.onChainResolutionTxHash && (
  <a
- href={`https://testnet.monadexplorer.com/tx/${dispute.onChainResolutionTxHash}`}
+ href={`${MONAD_EXPLORER_URL}/tx/${dispute.onChainResolutionTxHash}`}
  target="_blank"
  rel="noopener noreferrer"
  className="text-purple-400 hover:underline flex items-center gap-1"

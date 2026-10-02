@@ -1,7 +1,7 @@
 import React from 'react';
 import { WifiOff, FileText, MapPin, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { ArtifixLogo } from '../ui/FixmateLogo';
+import { ArtifixLogo } from '../ui/ArtifixLogo';
 
 export const OfflineFallbackPage: React.FC = () => {
   const navigate = useNavigate();

@@ -24,8 +24,12 @@ export const ClientLayout: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (isInitialized && (!user || (user.role !== 'CLIENT' && user.role !== 'ADMIN'))) {
-      navigate('/login');
+    if (isInitialized) {
+      if (!user || (user.role !== 'CLIENT' && user.role !== 'ADMIN')) {
+        navigate('/login');
+      } else if (!user.isEmailVerified) {
+        navigate(`/verify-email?email=${encodeURIComponent(user.email)}`, { replace: true });
+      }
     }
   }, [user, isInitialized, navigate]);
 
@@ -43,7 +47,7 @@ export const ClientLayout: React.FC = () => {
     };
   }, []);
 
-  if (!isInitialized) {
+  if (!isInitialized || !user || !user.isEmailVerified) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#f4f7f6] text-slate-900 font-dashboard">
         <div className="flex flex-col items-center gap-3">

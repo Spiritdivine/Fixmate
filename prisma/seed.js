@@ -109,7 +109,7 @@ async function main() {
   }
 
   // 4. Seed Default Artisan User
-  const artisanEmail = 'artisan@fixmate.ng';
+  const artisanEmail = 'artisan@artifixhq.xyz';
   const artisanPhone = '+2348077778888';
   let existingArtisan = await prisma.user.findFirst({
     where: { OR: [{ email: artisanEmail }, { phoneNumber: artisanPhone }] },
@@ -193,11 +193,11 @@ async function main() {
         },
       },
     });
-    console.log('✅ Created default Artisan account: artisan@fixmate.ng (Password: Password123!)');
+    console.log('✅ Created default Artisan account: artisan@artifixhq.xyz (Password: Password123!)');
   }
 
   // 5. Seed Default Client & Sample Job
-  const clientEmail = 'client@fixmate.ng';
+  const clientEmail = 'client@artifixhq.xyz';
   const clientPhone = '+2348099990000';
   let existingClient = await prisma.user.findFirst({
     where: { OR: [{ email: clientEmail }, { phoneNumber: clientPhone }] },
@@ -231,7 +231,7 @@ async function main() {
         },
       },
     });
-    console.log('✅ Created default Client account: client@fixmate.ng (Password: Password123!)');
+    console.log('✅ Created default Client account: client@artifixhq.xyz (Password: Password123!)');
 
     // Create Sample Open Job
     const electricalCat = await prisma.jobCategory.findFirst({ where: { slug: 'electrical-and-wiring' } });

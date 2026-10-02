@@ -1,4 +1,12 @@
 import { ethers, BrowserProvider, Contract } from 'ethers';
+import {
+  MONAD_CHAIN_ID as ENV_CHAIN_ID,
+  MONAD_RPC_URL as ENV_RPC_URL,
+  MONAD_NETWORK as ENV_NETWORK,
+  MONAD_EXPLORER_URL as ENV_EXPLORER_URL,
+  ESCROW_CONTRACT_ADDRESS as ENV_ESCROW,
+  STABLECOIN_ADDRESS as ENV_STABLECOIN,
+} from '../config/env';
 
 // Declare window.ethereum for TypeScript
 declare global {
@@ -7,15 +15,25 @@ declare global {
   }
 }
 
-export const MONAD_CHAIN_ID = 10143;
-export const MONAD_CHAIN_HEX = '0x279f';
-export const MONAD_RPC_URL = 'https://testnet-rpc.monad.xyz';
-export const MONAD_EXPLORER_URL = 'https://testnet.monadvision.com';
+export const MONAD_CHAIN_ID = ENV_CHAIN_ID;
+export const MONAD_CHAIN_HEX = `0x${ENV_CHAIN_ID.toString(16)}`;
+export const MONAD_RPC_URL = ENV_RPC_URL;
+export const MONAD_EXPLORER_URL = ENV_EXPLORER_URL;
+export const IS_MONAD_MAINNET = MONAD_CHAIN_ID === 143 || ENV_NETWORK === 'mainnet';
+export const MONAD_CHAIN_NAME = IS_MONAD_MAINNET ? 'Monad Mainnet' : 'Monad Testnet';
 
-// Deployed addresses on Monad Testnet
-export const ESCROW_CONTRACT_ADDRESS = '0xfD5aE7dC6f46D43A6f216caf681430A6d7dace7A';
-export const STABLECOIN_ADDRESS = '0x4079e33893Fb59B8aD3C618CBEBa06511D6525DD';
+// Deployed addresses on Monad
+export const ESCROW_CONTRACT_ADDRESS = ENV_ESCROW;
+export const STABLECOIN_ADDRESS = ENV_STABLECOIN;
 export const USDC_DECIMALS = 6;
+
+export function getExplorerTxUrl(txHash: string): string {
+  return `${MONAD_EXPLORER_URL}/tx/${txHash}`;
+}
+
+export function getExplorerAddressUrl(address: string): string {
+  return `${MONAD_EXPLORER_URL}/address/${address}`;
+}
 
 export const USDC_ABI = [
   'function balanceOf(address account) view returns (uint256)',
@@ -46,7 +64,7 @@ export function hasWeb3Provider(): boolean {
 }
 
 /**
- * Requests wallet connection and ensures user is on Monad Testnet
+ * Requests wallet connection and ensures user is on Monad (Mainnet or Testnet)
  */
 export async function connectWallet() {
   if (!hasWeb3Provider()) {
@@ -59,11 +77,11 @@ export async function connectWallet() {
     throw new Error('No accounts selected in wallet.');
   }
 
-  // Gracefully attempt network switch to Monad Testnet without crashing wallet connection
+  // Gracefully attempt network switch to configured Monad network without crashing wallet connection
   try {
-    await switchToMonadTestnet();
+    await switchToMonadNetwork();
   } catch (err: any) {
-    console.warn('Monad Testnet network switch deferred or skipped by user:', err?.message || err);
+    console.warn('Monad network switch deferred or skipped by user:', err?.message || err);
   }
 
   const signer = await provider.getSigner();
@@ -73,9 +91,9 @@ export async function connectWallet() {
 }
 
 /**
- * Switches the connected wallet to Monad Testnet (Chain ID: 10143) or prompts addition
+ * Switches the connected wallet to the configured Monad Network (Mainnet or Testnet)
  */
-export async function switchToMonadTestnet(): Promise<void> {
+export async function switchToMonadNetwork(): Promise<void> {
   if (!hasWeb3Provider()) return;
 
   try {
@@ -94,7 +112,7 @@ export async function switchToMonadTestnet(): Promise<void> {
         params: [
           {
             chainId: MONAD_CHAIN_HEX,
-            chainName: 'Monad Testnet',
+            chainName: MONAD_CHAIN_NAME,
             nativeCurrency: {
               name: 'Monad',
               symbol: 'MON',
@@ -109,6 +127,13 @@ export async function switchToMonadTestnet(): Promise<void> {
       throw switchError;
     }
   }
+}
+
+/**
+ * Backward compatibility alias for switchToMonadNetwork
+ */
+export async function switchToMonadTestnet(): Promise<void> {
+  return switchToMonadNetwork();
 }
 
 /**
@@ -145,9 +170,19 @@ export async function getUsdcAllowance(userAddress: string): Promise<string> {
  * Approves the Escrow contract to spend USDC on behalf of the client
  */
 export async function approveUsdc(amountUsdc: number | string): Promise<string> {
-  const { signer } = await connectWallet();
+  const { signer, address } = await connectWallet();
   const token = new Contract(STABLECOIN_ADDRESS, USDC_ABI, signer);
   const amountUnits = ethers.parseUnits(Number(amountUsdc).toFixed(USDC_DECIMALS), USDC_DECIMALS);
+
+  // Skip approval transaction if existing allowance already suffices
+  try {
+    const allowance = await token.allowance(address, ESCROW_CONTRACT_ADDRESS);
+    if (BigInt(allowance) >= BigInt(amountUnits)) {
+      return 'ALREADY_APPROVED';
+    }
+  } catch {
+    // continue with approval
+  }
 
   const tx = await token.approve(ESCROW_CONTRACT_ADDRESS, amountUnits);
   const receipt = await tx.wait(1);

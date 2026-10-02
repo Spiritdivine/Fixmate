@@ -22,7 +22,7 @@ import { clsx } from 'clsx';
 import { useAuthStore } from '../../stores/authStore';
 import { useAdminStore } from '../../stores/adminStore';
 import { Avatar } from '../ui/Avatar';
-import { FixmateLogo } from '../ui/FixmateLogo';
+import { ArtifixLogo } from '../ui/ArtifixLogo';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -111,7 +111,7 @@ export const AdminSidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       >
         {/* Brand Header */}
         <div className="flex items-center gap-3 px-6 h-18 border-b border-slate-800 shrink-0 bg-slate-950/80">
-          <FixmateLogo size="md" showWordmark={false} theme="dark" />
+          <ArtifixLogo size="md" showWordmark={false} theme="dark" />
           <div>
             <span className="text-base font-bold text-white tracking-tight">Arti<span className="text-sky-400">fix</span> Admin</span>
             <div className="flex items-center gap-1.5 mt-0.5">

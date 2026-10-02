@@ -1,4 +1,4 @@
-# 🛠️ Fixmate — Decentralized Artisan Marketplace & Smart Escrow
+# 🛠️ Artifix — Decentralized Artisan Marketplace & Smart Escrow
 
 [![Monad Testnet](https://img.shields.io/badge/Network-Monad_Testnet_(10143)-8A2BE2.svg)](https://testnet.monadvision.com)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.20+-363636.svg)](https://soliditylang.org/)
@@ -7,7 +7,7 @@
 [![Prisma](https://img.shields.io/badge/Prisma-6.x-2D3748.svg)](https://www.prisma.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Fixmate** is a high-performance, decentralized artisan marketplace that bridges Web2 fiat trust with Web3 smart contract escrow guarantees on the **Monad Blockchain**. Clients hire verified artisans (electricians, plumbers, carpenters, solar technicians) with 100% milestone-based escrow protection, dual payment rails (Fiat NGN & Crypto MON), before/after proof verification, and real-time chat.
+**Artifix** is a high-performance, decentralized artisan marketplace that bridges Web2 fiat trust with Web3 smart contract escrow guarantees on the **Monad Blockchain**. Clients hire verified artisans (electricians, plumbers, carpenters, solar technicians) with 100% milestone-based escrow protection, dual payment rails (Fiat NGN & Crypto MON), before/after proof verification, and real-time chat.
 
 ---
 
@@ -15,7 +15,7 @@
 
 | Resource | Environment | Link / Explorer |
 | :--- | :--- | :--- |
-| **Frontend Web App** | **Vercel** | [fixmate-ashy.vercel.app](https://fixmate-ashy.vercel.app) |
+| **Frontend Web App** | **Production** | [artifixhq.xyz](https://artifixhq.xyz) |
 | **Backend REST & Socket API** | **Render** | [fixmate-backend-a6t1.onrender.com](https://fixmate-backend-a6t1.onrender.com) |
 | **Monad Deployment Tx Hash** | **MonadVision** | [`0x05e4a2...e9a28f`](https://testnet.monadvision.com/tx/0x05e4a210f95e811d27e70ef24c7da2909928928fff780c27d4a62cc1f9e9a28f) |
 | **Monad Deployment Tx (Alt)** | **MonadExplorer** | [`0x05e4a2...e9a28f`](https://testnet.monadexplorer.com/tx/0x05e4a210f95e811d27e70ef24c7da2909928928fff780c27d4a62cc1f9e9a28f) |
@@ -43,13 +43,13 @@
 
 ```
                                ┌──────────────────────────────────────────────┐
-                               │           Fixmate Client & Artisan App       │
+                               │           Artifix Client & Artisan App       │
                                │        React 19 • Vite • Tailwind • SPA      │
                                └──────────────────────┬───────────────────────┘
                                                       │ HTTPS / WSS
                                                       ▼
                                ┌──────────────────────────────────────────────┐
-                               │           Fixmate Backend Gateway            │
+                               │           Artifix Backend Gateway            │
                                │         Express 5 • Socket.IO • Zod          │
                                └──────────────┬────────────────┬──────────────┘
                                               │                │
@@ -134,8 +134,8 @@ Artisan/
 
 ### 1. Clone & Install Dependencies
 ```bash
-git clone https://github.com/Spiritdivine/Fixmate.git
-cd Fixmate
+git clone https://github.com/Spiritdivine/Fixmate.git artifix
+cd artifix
 
 # Install backend dependencies
 npm install

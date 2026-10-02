@@ -31,6 +31,7 @@ import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { formatNgn, formatDate, formatDateTime } from '../../lib/formatters';
 import { Wallet, BankAccount, Transaction, PayoutRequest } from '../../types';
 import { useUnifiedWallet } from '../../lib/privy-provider';
+import { useAuthStore } from '../../stores/authStore';
 import { getUsdcBalance, mintTestUsdc, transferUsdc, MONAD_EXPLORER_URL } from '../../lib/monad-web3';
 import { trackEvent } from '../../lib/posthog';
 
@@ -44,6 +45,7 @@ export const WalletPage: React.FC = () => {
     setManualWalletAddress,
     unlinkWallet,
   } = useUnifiedWallet();
+  const { user: appUser, updateUser } = useAuthStore();
 
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -155,6 +157,9 @@ export const WalletPage: React.FC = () => {
       ]);
 
       setWallet(walletRes.data.data);
+      if (walletRes.data.data?.walletAddress && (!appUser?.walletAddress || appUser.walletAddress !== walletRes.data.data.walletAddress)) {
+        updateUser({ walletAddress: walletRes.data.data.walletAddress });
+      }
       setTransactions(walletRes.data.data.transactions || []);
       setPayoutRequests(walletRes.data.data.payoutRequests || []);
       setBankAccounts(banksRes.data.data || []);
@@ -1524,7 +1529,7 @@ export const WalletPage: React.FC = () => {
         isOpen={isUnlinkModalOpen}
         onClose={() => !isLinkingWallet && setIsUnlinkModalOpen(false)}
         title="Unlink Web3 Wallet"
-        description="Disconnect and unbind your Monad EVM address from your Fixmate profile."
+        description="Disconnect and unbind your Monad EVM address from your Artifix profile."
         maxWidth="md"
       >
         <div className="space-y-4">
@@ -1555,7 +1560,7 @@ export const WalletPage: React.FC = () => {
           </div>
 
           <p className="text-xs text-gray-500 leading-relaxed">
-            Unlinking removes this wallet address from your Fixmate profile. You will not receive automatic on-chain milestone escrow payouts to this wallet until you connect or link an address again. Already completed or pending bank withdrawals are unaffected.
+            Unlinking removes this wallet address from your Artifix profile. You will not receive automatic on-chain milestone escrow payouts to this wallet until you connect or link an address again. Already completed or pending bank withdrawals are unaffected.
           </p>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">

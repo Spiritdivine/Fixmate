@@ -27,8 +27,12 @@ const envSchema = z.object({
   ESCROW_FEE_PERCENT: cleanString.default('5.00'),
 
   // Monad Blockchain Configuration
+  MONAD_NETWORK: cleanString.default('testnet'),
   MONAD_RPC_URL: cleanString.default('https://testnet-rpc.monad.xyz'),
+  MONAD_FALLBACK_RPC_URL: optionalCleanString,
   MONAD_CHAIN_ID: cleanString.default('10143'),
+  MONAD_CONFIRMATION_BLOCKS: cleanString.default('2'),
+  MONAD_POLL_INTERVAL_MS: cleanString.default('3000'),
   DEPLOYER_PRIVATE_KEY: optionalCleanString,
   ESCROW_CONTRACT_ADDRESS: optionalCleanString,
   ESCROW_ARBITER_ADDRESS: optionalCleanString,

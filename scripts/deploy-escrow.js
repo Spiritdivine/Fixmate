@@ -41,17 +41,16 @@ function updateEnvAddresses(newEscrowAddress, newStablecoinAddress) {
 
 async function main() {
   console.log('\n============================================================');
-  console.log('🚀 ArtisanEscrow (Stablecoin USDC) Deployment Tool — Monad');
+  console.log('🚀 ArtisanEscrow (Production USDC) Deployment Tool — Monad');
   console.log('============================================================\n');
 
-  if (!fs.existsSync(artifactPath) || !fs.existsSync(usdcArtifactPath)) {
+  if (!fs.existsSync(artifactPath)) {
     console.error('❌ Compiled artifacts not found. Running compilation first...');
     const { execSync } = await import('child_process');
     execSync('node scripts/compile-contract.js', { stdio: 'inherit' });
   }
 
   const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
-  const usdcArtifact = JSON.parse(fs.readFileSync(usdcArtifactPath, 'utf8'));
   const rpcUrl = process.env.MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz';
   const privateKey = process.env.DEPLOYER_PRIVATE_KEY || process.env.ARBITER_PRIVATE_KEY;
 
@@ -67,8 +66,19 @@ async function main() {
     console.warn(`⚠️ Could not reach live Monad RPC at ${rpcUrl}. (${err.message})`);
   }
 
+  const chainIdNum = network ? Number(network.chainId) : Number(process.env.MONAD_CHAIN_ID || 10143);
+  const isMainnet = chainIdNum !== 10143 || process.env.MONAD_NETWORK === 'mainnet';
+  const networkName = isMainnet ? 'monad-mainnet' : 'monad-testnet';
+
+  console.log(`🏷️ Target Network: ${networkName.toUpperCase()} (Chain ID: ${chainIdNum})\n`);
+
   if (!privateKey || privateKey === '0x_your_private_key_here' || privateKey.length < 32) {
-    console.log('\n⚠️  No funded DEPLOYER_PRIVATE_KEY found in .env.');
+    if (isMainnet) {
+      console.error('❌ FATAL: Cannot run simulation deployment on Monad Mainnet. Valid DEPLOYER_PRIVATE_KEY required.');
+      process.exit(1);
+    }
+
+    console.log('⚠️  No funded DEPLOYER_PRIVATE_KEY found in .env.');
     console.log('⚙️  Generating a simulation deployment record for local development...\n');
 
     const mockDeployer = ethers.Wallet.createRandom();
@@ -76,8 +86,8 @@ async function main() {
     const mockUsdcAddr = '0x' + Array(40).fill('7').join('');
 
     const deploymentRecord = {
-      network: 'monad-testnet',
-      chainId: network ? Number(network.chainId) : 10143,
+      network: networkName,
+      chainId: chainIdNum,
       contractAddress: mockEscrowAddr,
       paymentTokenAddress: mockUsdcAddr,
       tokenSymbol: 'USDC',
@@ -87,7 +97,7 @@ async function main() {
       feeRecipient: mockDeployer.address,
       deployedAt: new Date().toISOString(),
       simulated: true,
-      notes: 'Set DEPLOYER_PRIVATE_KEY in .env to deploy live to Monad Testnet.',
+      notes: 'Simulation deployment for local development.',
     };
 
     fs.writeFileSync(deploymentPath, JSON.stringify(deploymentRecord, null, 2));
@@ -106,21 +116,51 @@ async function main() {
   console.log(`💰 Account Native Balance:  ${ethers.formatEther(balance)} MON`);
 
   if (balance === 0n) {
-    console.error('❌ Deployer account balance is 0 MON. Please fund your wallet via the Monad Testnet Faucet.');
+    console.error(`❌ Deployer account balance is 0 MON on ${networkName}. Please fund your wallet.`);
     process.exit(1);
   }
 
-  // 1. Deploy or resolve MockUSDC
+  // 1. Resolve Canonical USDC or deploy MockUSDC strictly on testnet
   let usdcAddress = process.env.STABLECOIN_CONTRACT_ADDRESS;
-  if (!usdcAddress || !ethers.isAddress(usdcAddress)) {
-    console.log(`\n⏳ Deploying MockUSDC Stablecoin contract...`);
-    const usdcFactory = new ethers.ContractFactory(usdcArtifact.abi, usdcArtifact.bytecode, wallet);
-    const usdcContract = await usdcFactory.deploy();
-    await usdcContract.waitForDeployment();
-    usdcAddress = await usdcContract.getAddress();
-    console.log(`🎉 MockUSDC deployed at: ${usdcAddress}`);
+
+  if (isMainnet) {
+    if (!usdcAddress || !ethers.isAddress(usdcAddress)) {
+      console.error('❌ FATAL ERROR FOR MAINNET: STABLECOIN_CONTRACT_ADDRESS must be set to the official Canonical USDC contract address.');
+      process.exit(1);
+    }
+
+    // Verify token on-chain
+    console.log(`🔍 Verifying Canonical USDC on Mainnet at: ${usdcAddress}...`);
+    const erc20Abi = [
+      'function decimals() view returns (uint8)',
+      'function symbol() view returns (string)',
+    ];
+    const tokenContract = new ethers.Contract(usdcAddress, erc20Abi, provider);
+    try {
+      const decimals = await tokenContract.decimals();
+      const symbol = await tokenContract.symbol();
+      if (Number(decimals) !== 6) {
+        console.error(`❌ Error: Expected USDC decimals to be 6, but found ${decimals}.`);
+        process.exit(1);
+      }
+      console.log(`✅ Verified Token: ${symbol} (${decimals} decimals)`);
+    } catch (err) {
+      console.error(`❌ Could not verify ERC20 token at ${usdcAddress}:`, err.message);
+      process.exit(1);
+    }
   } else {
-    console.log(`💵 Using existing Stablecoin at: ${usdcAddress}`);
+    // Testnet path
+    if (!usdcAddress || !ethers.isAddress(usdcAddress)) {
+      console.log(`\n⏳ Deploying MockUSDC Stablecoin contract for Testnet...`);
+      const usdcArtifact = JSON.parse(fs.readFileSync(usdcArtifactPath, 'utf8'));
+      const usdcFactory = new ethers.ContractFactory(usdcArtifact.abi, usdcArtifact.bytecode, wallet);
+      const usdcContract = await usdcFactory.deploy();
+      await usdcContract.waitForDeployment();
+      usdcAddress = await usdcContract.getAddress();
+      console.log(`🎉 MockUSDC deployed at: ${usdcAddress}`);
+    } else {
+      console.log(`💵 Using existing Stablecoin at: ${usdcAddress}`);
+    }
   }
 
   // 2. Resolve Arbiter and Fee Recipient
@@ -136,7 +176,7 @@ async function main() {
   console.log(`💳 Fee Collector Address: ${feeRecipientAddress}`);
 
   // 3. Deploy ArtisanEscrow
-  console.log(`\n⏳ Deploying ArtisanEscrow contract (with Stablecoin paymentToken)...`);
+  console.log(`\n⏳ Deploying ArtisanEscrow contract to ${networkName}...`);
   const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
   const contract = await factory.deploy(arbiterAddress, feeRecipientAddress, usdcAddress);
 
@@ -148,8 +188,8 @@ async function main() {
   console.log(`\n🎉 SUCCESS! ArtisanEscrow deployed at: ${contractAddress}`);
 
   const deploymentInfo = {
-    network: 'monad-testnet',
-    chainId: Number(network?.chainId || 10143),
+    network: networkName,
+    chainId: chainIdNum,
     rpcUrl,
     contractAddress,
     paymentTokenAddress: usdcAddress,
