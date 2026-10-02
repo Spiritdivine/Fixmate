@@ -33,22 +33,16 @@ const PROTECTED_EMAILS = [
   'admin@artisanplatform.com',
   'treasury@artifixhq.xyz',
   'artisan@fixmate.ng',
-  'client@fixmate.ng',
-  'spiritdivine777@gmail.com',
-  'topgarner99@gmail.com',
-  '01spiritdivine@gmail.com',
-  'liljoekentix24@gmail.com',
-  'muhammadsuleimanjibril22@gmail.com'
+  'client@fixmate.ng'
 ];
 
 async function main() {
-  console.log('🧹 Starting cleanup of test accounts and related test artifacts...');
+  console.log('🧹 Starting cleanup of non-seeded accounts and related artifacts...');
 
-  // 1. Fetch test users
+  // 1. Fetch non-seeded users
   const testUsers = await prisma.user.findMany({
     where: {
-      email: { in: TEST_ACCOUNT_EMAILS },
-      NOT: { email: { in: PROTECTED_EMAILS } }
+      email: { notIn: PROTECTED_EMAILS }
     },
     select: {
       id: true,
@@ -238,7 +232,7 @@ async function main() {
     await tx.refreshToken.deleteMany({ where: { userId: { in: testUserIds } } });
     await tx.otpVerification.deleteMany({
       where: {
-        identifier: { in: TEST_ACCOUNT_EMAILS }
+        identifier: { in: testUsers.map(u => u.email) }
       }
     });
 

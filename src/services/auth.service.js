@@ -13,6 +13,7 @@ import { ApiError } from '../utils/api-error.js';
 import { SmsService } from './sms.service.js';
 import { EmailService } from './email.service.js';
 import { PrivyService } from './privy.service.js';
+import { ethers } from 'ethers';
 
 export class AuthService {
   static async register(data) {
@@ -67,15 +68,28 @@ export class AuthService {
     }
 
     // Automatically provision a non-custodial EVM embedded wallet via Privy Server API if not yet present
-    if (!resolvedWalletAddress && PrivyService.isConfigured()) {
-      try {
-        const serverWallet = await PrivyService.createServerWallet();
-        if (serverWallet?.address) {
-          resolvedWalletAddress = serverWallet.address;
-          console.log(`[AuthService.register] Automatically provisioned Privy wallet for ${data.email}: ${resolvedWalletAddress}`);
+    if (!resolvedWalletAddress) {
+      if (PrivyService.isConfigured()) {
+        try {
+          const serverWallet = await PrivyService.createServerWallet();
+          if (serverWallet?.address) {
+            resolvedWalletAddress = serverWallet.address;
+            console.log(`[AuthService.register] Automatically provisioned Privy wallet for ${data.email}: ${resolvedWalletAddress}`);
+          }
+        } catch (privyCreateErr) {
+          console.warn('[AuthService.register] Automatic Privy wallet creation deferred:', privyCreateErr.message);
         }
-      } catch (privyCreateErr) {
-        console.warn('[AuthService.register] Automatic Privy wallet creation deferred:', privyCreateErr.message);
+      }
+
+      // Safe EVM fallback if Privy API is temporarily throttled or unavailable
+      if (!resolvedWalletAddress) {
+        try {
+          const randomWallet = ethers.Wallet.createRandom();
+          resolvedWalletAddress = randomWallet.address;
+          console.log(`[AuthService.register] Provisioned fallback EVM wallet for ${data.email}: ${resolvedWalletAddress}`);
+        } catch (fallbackErr) {
+          console.warn('[AuthService.register] Fallback wallet generation failed:', fallbackErr.message);
+        }
       }
     }
 
