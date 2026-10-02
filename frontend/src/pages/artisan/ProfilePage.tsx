@@ -28,6 +28,8 @@ export const ProfilePage: React.FC = () => {
  const { user, updateUser } = useAuthStore();
  const profile = user?.artisanProfile;
 
+ const [firstName, setFirstName] = useState(profile?.firstName || '');
+ const [lastName, setLastName] = useState(profile?.lastName || '');
  const [businessName, setBusinessName] = useState(profile?.businessName || '');
  const [tagline, setTagline] = useState(profile?.tagline || '');
  const [bio, setBio] = useState(profile?.bio || '');
@@ -117,6 +119,8 @@ export const ProfilePage: React.FC = () => {
  setError(null);
 
  const { data } = await apiClient.patch('/profiles/artisan', {
+ firstName: firstName.trim() || undefined,
+ lastName: lastName.trim() || undefined,
  businessName,
  tagline,
  bio,
@@ -218,6 +222,22 @@ export const ProfilePage: React.FC = () => {
  </div>
 
  <div className="flex-1 space-y-4 w-full">
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <Input
+ label="First Name"
+ placeholder="e.g. Babatunde"
+ value={firstName}
+ onChange={(e) => setFirstName(e.target.value)}
+ required
+ />
+ <Input
+ label="Last Name"
+ placeholder="e.g. Adeleke"
+ value={lastName}
+ onChange={(e) => setLastName(e.target.value)}
+ />
+ </div>
+
  <Input
  label="Business or Workshop Name"
  placeholder="e.g. Masterfix Electricals & Solar"

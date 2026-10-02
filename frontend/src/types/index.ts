@@ -46,6 +46,8 @@ export interface User {
 export interface ArtisanProfile {
   id: string;
   userId: string;
+  firstName?: string | null;
+  lastName?: string | null;
   businessName?: string | null;
   tagline?: string | null;
   bio?: string | null;

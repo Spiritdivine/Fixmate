@@ -37,6 +37,12 @@ export const ArtisanOnboardingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Step 1: Identity & Bio
+  const [firstName, setFirstName] = useState(
+    user?.artisanProfile?.firstName || ''
+  );
+  const [lastName, setLastName] = useState(
+    user?.artisanProfile?.lastName || ''
+  );
   const [businessName, setBusinessName] = useState(
     user?.artisanProfile?.businessName || ''
   );
@@ -75,7 +81,15 @@ export const ArtisanOnboardingPage: React.FC = () => {
   };
 
   const handleSaveAndContinue = async () => {
+    if (currentStep === 1) {
+      if (!firstName.trim()) {
+        setError('Please enter your first name');
+        return;
+      }
+    }
+
     if (currentStep < 5) {
+      setError(null);
       setCurrentStep(currentStep + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -87,6 +101,8 @@ export const ArtisanOnboardingPage: React.FC = () => {
       setError(null);
 
       const payload = {
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
         businessName: businessName.trim() || undefined,
         tagline: tagline.trim() || undefined,
         bio: bio.trim() || undefined,
@@ -202,6 +218,35 @@ export const ArtisanOnboardingPage: React.FC = () => {
             </div>
 
             <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
+                    First Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Babatunde"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 rounded-2xl bg-stone-50 dark:bg-[#151c17] border border-stone-300 dark:border-stone-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#123E2A]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Adeleke"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-stone-50 dark:bg-[#151c17] border border-stone-300 dark:border-stone-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#123E2A]"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
                   Business or Trade Name

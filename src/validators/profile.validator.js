@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 export const updateArtisanProfileSchema = z.object({
   body: z.object({
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
     businessName: z.string().optional(),
     tagline: z.string().optional(),
     bio: z.string().optional(),

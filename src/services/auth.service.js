@@ -102,6 +102,8 @@ export class AuthService {
               ? {
                   artisanProfile: {
                     create: {
+                      firstName: data.firstName?.trim() || null,
+                      lastName: data.lastName?.trim() || null,
                       businessName: data.businessName?.trim() || 'New Artisan Service',
                       state: data.state?.trim() || 'Lagos',
                       lgaCity: data.lgaCity?.trim() || 'Ikeja',
