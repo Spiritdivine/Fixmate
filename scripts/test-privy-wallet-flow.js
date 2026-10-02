@@ -105,25 +105,22 @@ async function runPrivyWalletFlowTest() {
     console.log('✅ Step 4 Passed: Duplicate wallet collisions are resolved without crashing sign-up.\n');
 
     // -------------------------------------------------------------
-    // Test 5: Profile Wallet Address Update & Unlink Flow
+    // Test 5: Verify Wallet Address Immutability (Unlink/Edit Disabled)
     // -------------------------------------------------------------
-    console.log('Step 5: Testing Profile wallet address update and unlinking...');
-    const newEmbeddedAddress = '0x8888888888888888888888888888888888888888';
-    
-    // Update to new address
-    const updatedProfile = await ProfileService.updateWalletAddress(fetchedUser2.id, newEmbeddedAddress);
-    if (!updatedProfile.walletAddress || updatedProfile.walletAddress.toLowerCase() !== newEmbeddedAddress.toLowerCase()) {
-      throw new Error(`Failed to update user 2 wallet to ${newEmbeddedAddress}`);
+    console.log('Step 5: Verifying wallet address immutability and protection against tampering...');
+    let rejectedAsExpected = false;
+    try {
+      await ProfileService.updateWalletAddress(fetchedUser2.id, '0x8888888888888888888888888888888888888888');
+    } catch (err) {
+      if (err.statusCode === 400 || err.message.includes('disabled')) {
+        rejectedAsExpected = true;
+      }
     }
-    console.log(`   Updated wallet to: ${updatedProfile.walletAddress}`);
-
-    // Unlink wallet (pass null)
-    const unlinkedProfile = await ProfileService.updateWalletAddress(fetchedUser2.id, null);
-    if (unlinkedProfile.walletAddress !== null) {
-      throw new Error('Failed to unlink user wallet address');
+    if (!rejectedAsExpected) {
+      throw new Error('Expected ProfileService.updateWalletAddress to reject modification, but it did not');
     }
-    console.log('   Unlinked wallet successfully (set to null)');
-    console.log('✅ Step 5 Passed: Profile wallet address sync and unlink working as designed.\n');
+    console.log('   Successfully rejected wallet modification (immutable permanent Privy wallet)');
+    console.log('✅ Step 5 Passed: Wallet immutability and user protection working as designed.\n');
 
     // Clean up test users
     await prisma.user.deleteMany({

@@ -19,7 +19,7 @@ import {
   Zap,
   Download,
   Send,
-  Unlink,
+  Key,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -42,8 +42,7 @@ export const WalletPage: React.FC = () => {
     isEmbedded,
     walletType,
     connect,
-    setManualWalletAddress,
-    unlinkWallet,
+    exportWallet,
   } = useUnifiedWallet();
   const { user: appUser, updateUser } = useAuthStore();
 
@@ -61,10 +60,8 @@ export const WalletPage: React.FC = () => {
   const [isMintingUsdc, setIsMintingUsdc] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  // Link / Manage Monad EVM Wallet Modal State
+  // Manage Monad EVM Wallet Modal State
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
-  const [isUnlinkModalOpen, setIsUnlinkModalOpen] = useState(false);
-  const [inputWalletAddress, setInputWalletAddress] = useState('');
   const [isLinkingWallet, setIsLinkingWallet] = useState(false);
   const [walletModalError, setWalletModalError] = useState<string | null>(null);
   const [walletModalSuccess, setWalletModalSuccess] = useState<string | null>(null);
@@ -273,62 +270,12 @@ export const WalletPage: React.FC = () => {
     }
   };
 
-  const handleConnectWeb3 = async () => {
+  const handleExportWallet = async () => {
     try {
-      setIsLinkingWallet(true);
       setWalletModalError(null);
-      setWalletModalSuccess(null);
-      const res = await connect();
-      setWalletModalSuccess(`Wallet ${res.address.slice(0, 6)}...${res.address.slice(-4)} connected successfully!`);
-      await fetchUsdcBalance();
-      setTimeout(() => {
-        setIsWalletModalOpen(false);
-        setWalletModalSuccess(null);
-      }, 1500);
+      await exportWallet();
     } catch (err: any) {
       setWalletModalError(getErrorMessage(err));
-    } finally {
-      setIsLinkingWallet(false);
-    }
-  };
-
-  const handleManualLinkWallet = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setIsLinkingWallet(true);
-      setWalletModalError(null);
-      setWalletModalSuccess(null);
-      await setManualWalletAddress(inputWalletAddress);
-      setWalletModalSuccess('Monad EVM wallet address linked successfully!');
-      setInputWalletAddress('');
-      await fetchUsdcBalance();
-      setTimeout(() => {
-        setIsWalletModalOpen(false);
-        setWalletModalSuccess(null);
-      }, 1500);
-    } catch (err: any) {
-      setWalletModalError(getErrorMessage(err));
-    } finally {
-      setIsLinkingWallet(false);
-    }
-  };
-
-  const handleUnlinkWallet = async () => {
-    try {
-      setIsLinkingWallet(true);
-      setWalletModalError(null);
-      await unlinkWallet();
-      setUsdcBalance('0.00');
-      setWalletModalSuccess('Wallet address unlinked successfully.');
-      setTimeout(() => {
-        setIsUnlinkModalOpen(false);
-        setIsWalletModalOpen(false);
-        setWalletModalSuccess(null);
-      }, 1200);
-    } catch (err: any) {
-      setWalletModalError(getErrorMessage(err));
-    } finally {
-      setIsLinkingWallet(false);
     }
   };
 
@@ -673,16 +620,12 @@ export const WalletPage: React.FC = () => {
                 {address && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setWalletModalError(null);
-                      setWalletModalSuccess(null);
-                      setIsUnlinkModalOpen(true);
-                    }}
-                    className="text-xs text-red-600 hover:text-red-700 font-medium px-2.5 py-1 rounded-full border border-red-200 hover:bg-red-50 flex items-center gap-1 cursor-pointer transition-colors"
-                    title="Unlink Monad EVM Wallet"
+                    onClick={handleExportWallet}
+                    className="text-xs text-indigo-600 hover:text-indigo-700 font-medium px-2.5 py-1 rounded-full border border-indigo-200 hover:bg-indigo-50 flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Export Private Key for Self-Custody"
                   >
-                    <Unlink className="h-3 w-3" />
-                    <span>Unlink Wallet</span>
+                    <Key className="h-3 w-3" />
+                    <span>Export Key</span>
                   </button>
                 )}
                 <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs px-2 py-0.5">
@@ -702,22 +645,7 @@ export const WalletPage: React.FC = () => {
 
               <div>
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-xs text-gray-500 font-medium">Linked Wallet</span>
-                  {address && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setWalletModalError(null);
-                        setWalletModalSuccess(null);
-                        setIsUnlinkModalOpen(true);
-                      }}
-                      className="text-[10px] font-semibold text-red-600 hover:text-red-800 flex items-center gap-0.5 cursor-pointer sm:hidden"
-                      title="Unlink Wallet"
-                    >
-                      <Unlink className="h-2.5 w-2.5" />
-                      Unlink
-                    </button>
-                  )}
+                  <span className="text-xs text-gray-500 font-medium">Permanent Account</span>
                 </div>
                 {address ? (
                   <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-700 font-mono bg-white/80 p-1.5 rounded-lg border border-gray-200">
@@ -1437,7 +1365,7 @@ export const WalletPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500 font-medium">Currently Linked Address:</span>
                 <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0 border-0">
-                  {walletType === 'EXTERNAL_METAMASK' ? 'MetaMask' : 'Linked EVM'}
+                  {isEmbedded ? 'Privy Embedded' : 'Monad Account'}
                 </Badge>
               </div>
               <div className="font-mono text-xs text-gray-800 break-all p-2.5 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between gap-2">
@@ -1454,57 +1382,16 @@ export const WalletPage: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setWalletModalError(null);
-                  setWalletModalSuccess(null);
-                  setIsUnlinkModalOpen(true);
-                }}
-                isLoading={isLinkingWallet}
-                className="w-full text-xs text-red-600 border-red-200 hover:bg-red-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                onClick={handleExportWallet}
+                className="w-full text-xs text-indigo-700 border-indigo-200 hover:bg-indigo-50 flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Unlink className="w-3.5 h-3.5" />
-                Unlink This Address
+                <Key className="w-3.5 h-3.5" />
+                Export Private Key for Self-Custody
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
-              <Button
-                onClick={handleConnectWeb3}
-                isLoading={isLinkingWallet}
-                className="w-full text-xs font-semibold py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2"
-              >
-                <WalletIcon className="w-4 h-4" />
-                Connect via MetaMask / Browser Wallet
-              </Button>
-
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-gray-200"></div>
-                <span className="flex-shrink mx-3 text-gray-400 text-xs uppercase font-medium">Or paste manually</span>
-                <div className="flex-grow border-t border-gray-200"></div>
-              </div>
-
-              <form onSubmit={handleManualLinkWallet} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Monad EVM Address (0x...)
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="0x71C...3a9B (42 characters)"
-                    value={inputWalletAddress}
-                    onChange={(e) => setInputWalletAddress(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  isLoading={isLinkingWallet}
-                  variant="outline"
-                  className="w-full text-xs font-semibold py-2 text-indigo-700 border-indigo-300 hover:bg-indigo-50"
-                >
-                  Save & Bind Wallet Address
-                </Button>
-              </form>
+            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 text-xs text-gray-500 text-center">
+              Provisioning your permanent Privy embedded wallet...
             </div>
           )}
 
@@ -1521,68 +1408,6 @@ export const WalletPage: React.FC = () => {
               <span>{walletModalSuccess}</span>
             </div>
           )}
-        </div>
-      </Modal>
-
-      {/* Unlink Wallet Confirmation Modal */}
-      <Modal
-        isOpen={isUnlinkModalOpen}
-        onClose={() => !isLinkingWallet && setIsUnlinkModalOpen(false)}
-        title="Unlink Web3 Wallet"
-        description="Disconnect and unbind your Monad EVM address from your Artifix profile."
-        maxWidth="md"
-      >
-        <div className="space-y-4">
-          {walletModalError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center justify-between">
-              <span>{walletModalError}</span>
-              <button onClick={() => setWalletModalError(null)} className="font-bold ml-2">×</button>
-            </div>
-          )}
-
-          {walletModalSuccess && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
-              <span>{walletModalSuccess}</span>
-            </div>
-          )}
-
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-2">
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>Currently Linked:</span>
-              <span className="font-semibold text-gray-700">
-                {isEmbedded ? 'Privy Embedded' : walletType === 'EXTERNAL_METAMASK' ? 'MetaMask' : 'Linked EVM'}
-              </span>
-            </div>
-            <div className="font-mono text-xs text-gray-800 break-all p-2.5 bg-white rounded-lg border border-gray-200">
-              {address}
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-500 leading-relaxed">
-            Unlinking removes this wallet address from your Artifix profile. You will not receive automatic on-chain milestone escrow payouts to this wallet until you connect or link an address again. Already completed or pending bank withdrawals are unaffected.
-          </p>
-
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsUnlinkModalOpen(false)}
-              disabled={isLinkingWallet}
-              className="rounded-xl text-xs font-semibold px-4 py-2 border-gray-200 text-gray-600 hover:bg-gray-50 cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleUnlinkWallet}
-              isLoading={isLinkingWallet}
-              className="rounded-xl text-xs font-semibold px-4 py-2 bg-red-600 hover:bg-red-500 text-white flex items-center gap-1.5 cursor-pointer"
-            >
-              <Unlink className="w-3.5 h-3.5" />
-              <span>Confirm Unlink</span>
-            </Button>
-          </div>
         </div>
       </Modal>
 

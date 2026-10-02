@@ -18,7 +18,7 @@ import {
   Coins,
   Zap,
   Download,
-  Unlink,
+  Key,
 } from 'lucide-react';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { Wallet, Transaction, SavedPaymentMethod, ApiResponse } from '../../types';
@@ -34,7 +34,7 @@ import { trackEvent } from '../../lib/posthog';
 
 export const ClientWalletPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { address, isConnected, isEmbedded, connect, unlinkWallet } = useUnifiedWallet();
+  const { address, isConnected, isEmbedded, connect, exportWallet } = useUnifiedWallet();
   const { user: appUser, updateUser } = useAuthStore();
 
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -44,12 +44,6 @@ export const ClientWalletPage: React.FC = () => {
   const [searchRef, setSearchRef] = useState('');
   const [receiptTx, setReceiptTx] = useState<Transaction | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-
-  // Unlink Wallet State
-  const [isUnlinkModalOpen, setIsUnlinkModalOpen] = useState(false);
-  const [isUnlinkingWallet, setIsUnlinkingWallet] = useState(false);
-  const [unlinkError, setUnlinkError] = useState<string | null>(null);
-  const [unlinkSuccess, setUnlinkSuccess] = useState<string | null>(null);
 
   // Kotani On-Ramp
   const [onRampModalOpen, setOnRampModalOpen] = useState(false);
@@ -62,21 +56,12 @@ export const ClientWalletPage: React.FC = () => {
   const [isMintingUsdc, setIsMintingUsdc] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  const handleUnlinkWallet = async () => {
+  const handleExportWallet = async () => {
     try {
-      setIsUnlinkingWallet(true);
-      setUnlinkError(null);
-      await unlinkWallet();
-      setUsdcBalance('0.00');
-      setUnlinkSuccess('Wallet address unlinked successfully.');
-      setTimeout(() => {
-        setIsUnlinkModalOpen(false);
-        setUnlinkSuccess(null);
-      }, 1200);
+      setErrorMessage('');
+      await exportWallet();
     } catch (err: any) {
-      setUnlinkError(getErrorMessage(err));
-    } finally {
-      setIsUnlinkingWallet(false);
+      setErrorMessage(getErrorMessage(err));
     }
   };
 
@@ -427,16 +412,12 @@ export const ClientWalletPage: React.FC = () => {
               {address && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setUnlinkError(null);
-                    setUnlinkSuccess(null);
-                    setIsUnlinkModalOpen(true);
-                  }}
-                  className="text-xs text-rose-600 hover:text-rose-700 font-medium px-2.5 py-1 rounded-full border border-rose-200 hover:bg-rose-50 flex items-center gap-1 cursor-pointer transition-colors"
-                  title="Unlink Web3 Wallet"
+                  onClick={handleExportWallet}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium px-2.5 py-1 rounded-full border border-indigo-200 hover:bg-indigo-50 flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Export Private Key for Self-Custody"
                 >
-                  <Unlink className="h-3 w-3" />
-                  <span>Unlink Wallet</span>
+                  <Key className="h-3 w-3" />
+                  <span>Export Key</span>
                 </button>
               )}
               <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs px-2.5 py-0.5 rounded-full font-semibold">
@@ -456,22 +437,7 @@ export const ClientWalletPage: React.FC = () => {
 
             <div>
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-xs text-slate-500 font-medium">Linked Wallet</span>
-                {address && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUnlinkError(null);
-                      setUnlinkSuccess(null);
-                      setIsUnlinkModalOpen(true);
-                    }}
-                    className="text-[10px] font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-0.5 cursor-pointer sm:hidden"
-                    title="Unlink Wallet"
-                  >
-                    <Unlink className="h-2.5 w-2.5" />
-                    Unlink
-                  </button>
-                )}
+                <span className="text-xs text-slate-500 font-medium">Permanent Account</span>
               </div>
               {address ? (
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-700 font-mono bg-slate-50 p-2 rounded-xl border border-slate-200">
@@ -855,65 +821,6 @@ export const ClientWalletPage: React.FC = () => {
               className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold"
             >
               Proceed with Kotani Pay
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Unlink Wallet Confirmation Modal */}
-      <Modal
-        isOpen={isUnlinkModalOpen}
-        onClose={() => !isUnlinkingWallet && setIsUnlinkModalOpen(false)}
-        title="Unlink Web3 Wallet"
-        description="Disconnect and unbind your Monad EVM address from your Artifix profile."
-        maxWidth="md"
-      >
-        <div className="space-y-4">
-          {unlinkError && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center justify-between">
-              <span>{unlinkError}</span>
-              <button onClick={() => setUnlinkError(null)} className="font-bold ml-2">×</button>
-            </div>
-          )}
-
-          {unlinkSuccess && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 font-medium">
-              {unlinkSuccess}
-            </div>
-          )}
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>Active Address:</span>
-              <span className="font-semibold text-slate-700">{isEmbedded ? 'Privy Embedded' : 'External Wallet'}</span>
-            </div>
-            <div className="font-mono text-xs text-slate-800 break-all p-2.5 bg-white rounded-lg border border-slate-200">
-              {address}
-            </div>
-          </div>
-
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Unlinking removes this wallet address from your Artifix profile and disconnects the Web3 session. You can reconnect or link a new wallet anytime. Any funds held in already-funded smart contract escrows remain secure on-chain.
-          </p>
-
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsUnlinkModalOpen(false)}
-              disabled={isUnlinkingWallet}
-              className="rounded-full text-xs font-semibold px-4 py-2 border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleUnlinkWallet}
-              isLoading={isUnlinkingWallet}
-              className="rounded-full text-xs font-semibold px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 cursor-pointer"
-            >
-              <Unlink className="w-3.5 h-3.5" />
-              <span>Confirm Unlink</span>
             </Button>
           </div>
         </div>

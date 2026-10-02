@@ -199,8 +199,7 @@ export class ProfileController {
 
   static async updateWalletAddress(req, res, next) {
     try {
-      const result = await ProfileService.updateWalletAddress(req.user.id, req.body.walletAddress);
-      res.status(200).json(new ApiResponse(200, result, 'Wallet address linked successfully'));
+      await ProfileService.updateWalletAddress(req.user.id, req.body.walletAddress);
     } catch (error) {
       next(error);
     }

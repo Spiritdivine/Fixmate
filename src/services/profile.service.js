@@ -471,30 +471,9 @@ export class ProfileService {
   }
 
   static async updateWalletAddress(userId, walletAddress) {
-    if (walletAddress) {
-      const existingUser = await prisma.user.findFirst({
-        where: {
-          walletAddress: { equals: walletAddress, mode: 'insensitive' },
-          id: { not: userId },
-        },
-      });
-
-      if (existingUser) {
-        throw ApiError.conflict('This wallet address is already linked to another account');
-      }
-    }
-
-    return prisma.user.update({
-      where: { id: userId },
-      data: { walletAddress: walletAddress || null },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        walletAddress: true,
-        updatedAt: true,
-      },
-    });
+    throw ApiError.badRequest(
+      'Wallet address modification is disabled. Your account is permanently bound to your Privy embedded wallet.'
+    );
   }
 }
 

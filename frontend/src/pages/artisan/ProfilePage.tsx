@@ -12,6 +12,10 @@ import {
  ExternalLink,
  Layers,
  ShoppingBag,
+ Copy,
+ CheckCircle,
+ ShieldCheck,
+ Wallet,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -48,7 +52,6 @@ export const ProfilePage: React.FC = () => {
    ? Number(profile.longitude)
    : null
  );
- const [walletAddress, setWalletAddress] = useState(user?.walletAddress || '');
  const [categories, setCategories] = useState<JobCategory[]>([]);
  const [selectedSkills, setSelectedSkills] = useState<number[]>(
   (profile?.skills || []).map((s) => s.skill.id)
@@ -79,12 +82,6 @@ export const ProfilePage: React.FC = () => {
  };
  fetchCategories();
  }, []);
-
- useEffect(() => {
- if (user?.walletAddress) {
- setWalletAddress(user.walletAddress);
- }
- }, [user?.walletAddress]);
 
  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
  const file = e.target.files?.[0];
@@ -131,13 +128,8 @@ export const ProfilePage: React.FC = () => {
  address,
  latitude: latitude !== null && !isNaN(latitude) ? Number(latitude) : undefined,
  longitude: longitude !== null && !isNaN(longitude) ? Number(longitude) : undefined,
- skillIds: selectedSkills,
+  skillIds: selectedSkills,
  });
-
- if (walletAddress !== user?.walletAddress) {
- await apiClient.patch('/profiles/wallet-address', { walletAddress: walletAddress.trim() || null });
- updateUser({ walletAddress: walletAddress.trim() || undefined });
- }
 
  updateUser({ artisanProfile: data.data });
  setMessage('Artisan profile details updated successfully!');
@@ -337,24 +329,56 @@ export const ProfilePage: React.FC = () => {
           onAddressChange={setAddress}
         />
 
- {/* Monad Web3 Blockchain Address Binding */}
+ {/* Monad Web3 Blockchain Account (Read-Only Permanent Privy Embedded Wallet) */}
  <Card className="space-y-4 border-purple-500/30">
  <CardHeader>
+ <div className="flex items-center justify-between">
  <div className="flex items-center gap-2">
-
+ <Wallet className="w-5 h-5 text-purple-400" />
  <div>
- <CardTitle className="text-purple-400">Monad Testnet EVM Wallet</CardTitle>
- <CardDescription>Link your EVM address to receive direct smart contract escrow payouts.</CardDescription>
+ <CardTitle className="text-purple-400">Monad Payout Account</CardTitle>
+ <CardDescription>Your permanent, self-custodial Monad address for direct smart contract escrow payouts.</CardDescription>
  </div>
+ </div>
+ <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+ <ShieldCheck className="w-3.5 h-3.5" />
+ Privy Embedded
+ </span>
  </div>
  </CardHeader>
 
- <Input
- label="Monad EVM Wallet Address (0x...)"
- placeholder="0x71C...3a9B"
- value={walletAddress}
- onChange={(e) => setWalletAddress(e.target.value)}
- />
+ <div className="px-6 pb-6">
+ <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
+ Permanent EVM Address
+ </label>
+ <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-700/60 bg-slate-900/60 text-sm font-mono text-slate-200 break-all">
+ <span>{user?.walletAddress || 'Provisioning embedded wallet...'}</span>
+ {user?.walletAddress && (
+ <div className="flex items-center gap-2 shrink-0 ml-3">
+ <button
+ type="button"
+ onClick={() => {
+ navigator.clipboard.writeText(user.walletAddress || '');
+ setMessage('Wallet address copied to clipboard!');
+ }}
+ className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer border border-transparent hover:border-slate-700"
+ title="Copy Address"
+ >
+ <Copy className="w-4 h-4" />
+ </button>
+ <a
+ href={`https://testnet.monadvision.com/address/${user.walletAddress}`}
+ target="_blank"
+ rel="noopener noreferrer"
+ className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-purple-400 transition-colors cursor-pointer border border-transparent hover:border-slate-700"
+ title="View on MonadVision"
+ >
+ <ExternalLink className="w-4 h-4" />
+ </a>
+ </div>
+ )}
+ </div>
+ </div>
  </Card>
 
  <Button

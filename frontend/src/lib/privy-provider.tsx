@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import {
   PrivyProvider as BasePrivyProvider,
   usePrivy,
   useWallets,
   useCreateWallet,
+  useExportWallet,
 } from '@privy-io/react-auth';
-import { connectWallet, switchToMonadTestnet, hasWeb3Provider } from './monad-web3';
 import { apiClient } from './api-client';
 import { useAuthStore } from '../stores/authStore';
 import {
@@ -47,34 +47,15 @@ export const activeMonadChain = {
 
 export const monadTestnet = activeMonadChain;
 
-const WALLET_UNLINKED_KEYS = ['artifix_wallet_unlinked', 'Artifix_wallet_unlinked', 'fixmate_wallet_unlinked'];
-
-const isWalletExplicitlyUnlinked = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  return WALLET_UNLINKED_KEYS.some((key) => localStorage.getItem(key) === 'true');
-};
-
-const setWalletExplicitlyUnlinked = (unlinked: boolean): void => {
-  if (typeof window === 'undefined') return;
-  WALLET_UNLINKED_KEYS.forEach((key) => {
-    if (unlinked) {
-      localStorage.setItem(key, 'true');
-    } else {
-      localStorage.removeItem(key);
-    }
-  });
-};
-
-interface UnifiedWalletContextType {
+export interface UnifiedWalletContextType {
   address: string | null;
   isConnected: boolean;
   isEmbedded: boolean;
-  walletType: 'PRIVY_EMBEDDED' | 'EXTERNAL_METAMASK' | 'MANUAL_LINK' | 'NONE';
+  walletType: 'PRIVY_EMBEDDED' | 'NONE';
   connect: () => Promise<{ address: string }>;
   disconnect: () => Promise<void>;
-  syncWithBackend: (address: string | null) => Promise<void>;
   createEmbeddedWallet: () => Promise<string | null>;
-  setManualWalletAddress: (address: string) => Promise<void>;
+  exportWallet: () => Promise<void>;
   unlinkWallet: () => Promise<void>;
   sponsorGas: () => Promise<{ success: boolean; message: string }>;
   checkGas: () => Promise<{ balanceMon: number; isSponsorshipEligible: boolean }>;
@@ -87,9 +68,8 @@ const UnifiedWalletContext = createContext<UnifiedWalletContextType>({
   walletType: 'NONE',
   connect: async () => ({ address: '' }),
   disconnect: async () => {},
-  syncWithBackend: async () => {},
   createEmbeddedWallet: async () => null,
-  setManualWalletAddress: async () => {},
+  exportWallet: async () => {},
   unlinkWallet: async () => {},
   sponsorGas: async () => ({ success: false, message: 'Not supported' }),
   checkGas: async () => ({ balanceMon: 0, isSponsorshipEligible: false }),
@@ -99,147 +79,103 @@ export const useUnifiedWallet = () => useContext(UnifiedWalletContext);
 
 // Active Privy Bridge Component
 const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user: privyUser, authenticated, login, logout, ready } = usePrivy();
+  const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const { createWallet } = useCreateWallet();
+  const { exportWallet: privyExportWallet } = useExportWallet();
   const { user: appUser, updateUser } = useAuthStore();
-  const isConnectingRef = React.useRef(false);
   const isAutoSyncingRef = React.useRef(false);
 
-  // The single source of truth for the user's linked wallet is their Artifix profile
-  const isExplicitlyUnlinked = isWalletExplicitlyUnlinked();
-  const currentAddress = isExplicitlyUnlinked ? null : (appUser?.walletAddress || null);
+  // Single source of truth: User's permanent embedded EVM wallet address from their profile
+  const currentAddress = appUser?.walletAddress || null;
+  const isEmbedded = Boolean(currentAddress);
+  const walletType = isEmbedded ? 'PRIVY_EMBEDDED' : 'NONE';
 
-  const embeddedWallet = wallets?.find(
-    (w) => w.walletClientType === 'privy' && (!currentAddress || w.address?.toLowerCase() === currentAddress.toLowerCase())
-  );
-  const isEmbedded = Boolean(
-    currentAddress && embeddedWallet && embeddedWallet.address?.toLowerCase() === currentAddress.toLowerCase()
-  );
+  // Auto-sync or provision embedded wallet when user is logged in
+  useEffect(() => {
+    if (!ready || !appUser || isAutoSyncingRef.current) return;
 
-  const walletType = !currentAddress
-    ? 'NONE'
-    : isEmbedded
-    ? 'PRIVY_EMBEDDED'
-    : hasWeb3Provider()
-    ? 'EXTERNAL_METAMASK'
-    : 'MANUAL_LINK';
+    // Check if Privy has an embedded wallet ready
+    const embedded = wallets?.find((w) => w.walletClientType === 'privy');
 
-  const syncWithBackend = async (addr: string | null) => {
-    try {
-      await apiClient.patch('/profiles/wallet-address', { walletAddress: addr });
-      updateUser({ walletAddress: addr || undefined });
-      if (addr) {
-        setWalletExplicitlyUnlinked(false);
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to sync wallet address';
-      throw new Error(msg);
+    if (embedded?.address && !appUser.walletAddress) {
+      isAutoSyncingRef.current = true;
+      updateUser({ walletAddress: embedded.address });
+      isAutoSyncingRef.current = false;
+    } else if (!appUser.walletAddress && authenticated && (!wallets || wallets.length === 0)) {
+      // Lazy creation of an embedded wallet via Privy React SDK
+      isAutoSyncingRef.current = true;
+      createWallet()
+        .then((newWallet) => {
+          if (newWallet?.address) {
+            updateUser({ walletAddress: newWallet.address });
+          }
+        })
+        .catch((err) => {
+          console.warn('[PrivyBridge] Lazy createWallet notice:', err?.message || err);
+        })
+        .finally(() => {
+          isAutoSyncingRef.current = false;
+        });
     }
+  }, [ready, authenticated, wallets, appUser?.walletAddress]);
+
+  const handleConnect = async () => {
+    if (currentAddress) {
+      return { address: currentAddress };
+    }
+    if (ready && authenticated) {
+      try {
+        const newWallet = await createWallet();
+        if (newWallet?.address) {
+          updateUser({ walletAddress: newWallet.address });
+          return { address: newWallet.address };
+        }
+      } catch (err: any) {
+        console.warn('[PrivyBridge] Manual createWallet error:', err?.message || err);
+      }
+    }
+    return { address: currentAddress || '' };
   };
 
   const createEmbeddedWallet = async (): Promise<string | null> => {
     try {
       const existing = wallets?.find((w) => w.walletClientType === 'privy');
       if (existing?.address) {
-        await syncWithBackend(existing.address);
+        updateUser({ walletAddress: existing.address });
         return existing.address;
       }
       const newWallet = await createWallet();
       if (newWallet?.address) {
-        await syncWithBackend(newWallet.address);
+        updateUser({ walletAddress: newWallet.address });
         return newWallet.address;
       }
-      return null;
+      return currentAddress;
     } catch (err: any) {
       console.warn('[PrivyBridge] createEmbeddedWallet error:', err?.message || err);
-      return null;
+      return currentAddress;
     }
   };
 
-  // Auto-sync or provision embedded wallet when user is logged in
-  useEffect(() => {
-    if (!ready || !authenticated || !appUser || isExplicitlyUnlinked || isAutoSyncingRef.current) return;
-
-    const embedded = wallets?.find((w) => w.walletClientType === 'privy');
-    const primary = embedded || wallets?.[0];
-
-    // If an embedded or primary wallet already exists, auto-sync to backend
-    if (primary?.address && (!appUser.walletAddress || isConnectingRef.current)) {
-      isConnectingRef.current = false;
-      isAutoSyncingRef.current = true;
-      syncWithBackend(primary.address)
-        .catch((err) => {
-          console.warn('[PrivyBridge] Auto-sync embedded wallet error:', err);
-        })
-        .finally(() => {
-          isAutoSyncingRef.current = false;
-        });
-    } else if (!appUser.walletAddress && (!wallets || wallets.length === 0)) {
-      // If user has no wallet yet, attempt lazy creation of an embedded wallet
-      isAutoSyncingRef.current = true;
-      createEmbeddedWallet().finally(() => {
-        isAutoSyncingRef.current = false;
-      });
+  const handleExportWallet = async () => {
+    if (!privyExportWallet) {
+      throw new Error('Wallet export is not available in the current session.');
     }
-  }, [ready, authenticated, wallets, appUser?.walletAddress, isExplicitlyUnlinked]);
-
-  const handleConnect = async () => {
-    setWalletExplicitlyUnlinked(false);
-    if (ready && !authenticated) {
-      isConnectingRef.current = true;
-      login();
-      return { address: '' };
-    }
-    const res = await connectWallet();
-    if (res.address) {
-      await syncWithBackend(res.address);
-    }
-    return { address: res.address };
-  };
-
-  const handleDisconnect = async () => {
-    await unlinkWallet();
-  };
-
-  const setManualWalletAddress = async (addr: string) => {
-    setWalletExplicitlyUnlinked(false);
-    const trimmed = addr.trim();
-    if (!/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
-      throw new Error('Invalid EVM address format. Address must start with 0x followed by 40 hex characters.');
-    }
-    await syncWithBackend(trimmed);
-  };
-
-  const unlinkWallet = async () => {
-    setWalletExplicitlyUnlinked(true);
-    isConnectingRef.current = false;
-
     try {
-      if (wallets && wallets.length > 0) {
-        for (const w of wallets) {
-          try {
-            await (w as any).disconnect?.();
-          } catch {
-            // ignore disconnect error
-          }
-        }
+      if (currentAddress) {
+        await privyExportWallet({ address: currentAddress });
+      } else {
+        await privyExportWallet();
       }
-      if (authenticated) {
-        await logout();
-      }
-    } catch (e) {
-      console.warn('Privy disconnect/logout warning during unlink:', e);
-    }
-
-    try {
-      await apiClient.patch('/profiles/wallet-address', { walletAddress: null });
-      updateUser({ walletAddress: undefined });
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to unlink wallet address';
-      throw new Error(msg);
+      console.warn('[PrivyBridge] Export wallet notice:', err?.message || err);
+      throw err;
     }
   };
+
+  // Safe no-op disconnect/unlink for backwards compatibility with any remaining caller
+  const handleDisconnect = async () => {};
+  const handleUnlinkWallet = async () => {};
 
   const sponsorGas = async () => {
     try {
@@ -268,10 +204,9 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
         walletType,
         connect: handleConnect,
         disconnect: handleDisconnect,
-        syncWithBackend,
         createEmbeddedWallet,
-        setManualWalletAddress,
-        unlinkWallet,
+        exportWallet: handleExportWallet,
+        unlinkWallet: handleUnlinkWallet,
         sponsorGas,
         checkGas,
       }}
@@ -281,58 +216,10 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 };
 
-// Fallback Browser Provider (When Privy App ID is not configured or in dev)
+// Fallback Browser Provider (When Privy App ID is not configured or in offline dev)
 const FallbackBrowserBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user: appUser, updateUser } = useAuthStore();
+  const { user: appUser } = useAuthStore();
   const address = appUser?.walletAddress || null;
-
-  const syncWithBackend = async (addr: string | null) => {
-    try {
-      await apiClient.patch('/profiles/wallet-address', { walletAddress: addr });
-      updateUser({ walletAddress: addr || undefined });
-      if (addr) {
-        setWalletExplicitlyUnlinked(false);
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to update wallet address';
-      throw new Error(msg);
-    }
-  };
-
-  const handleConnect = async () => {
-    if (!hasWeb3Provider()) {
-      throw new Error('No Web3 wallet extension detected in your browser. You can manually enter or paste your EVM address below.');
-    }
-
-    const res = await connectWallet();
-    if (res.address) {
-      await syncWithBackend(res.address);
-    }
-    return { address: res.address };
-  };
-
-  const handleDisconnect = async () => {
-    await unlinkWallet();
-  };
-
-  const setManualWalletAddress = async (addr: string) => {
-    const trimmed = addr.trim();
-    if (!/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
-      throw new Error('Invalid EVM address format. Address must start with 0x followed by 40 hex characters.');
-    }
-    await syncWithBackend(trimmed);
-  };
-
-  const unlinkWallet = async () => {
-    setWalletExplicitlyUnlinked(true);
-    try {
-      await apiClient.patch('/profiles/wallet-address', { walletAddress: null });
-      updateUser({ walletAddress: undefined });
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to unlink wallet address';
-      throw new Error(msg);
-    }
-  };
 
   const sponsorGas = async () => {
     try {
@@ -357,14 +244,13 @@ const FallbackBrowserBridge: React.FC<{ children: React.ReactNode }> = ({ childr
       value={{
         address,
         isConnected: Boolean(address),
-        isEmbedded: false,
-        walletType: address ? (hasWeb3Provider() ? 'EXTERNAL_METAMASK' : 'MANUAL_LINK') : 'NONE',
-        connect: handleConnect,
-        disconnect: handleDisconnect,
-        syncWithBackend,
-        createEmbeddedWallet: async () => null,
-        setManualWalletAddress,
-        unlinkWallet,
+        isEmbedded: Boolean(address),
+        walletType: address ? 'PRIVY_EMBEDDED' : 'NONE',
+        connect: async () => ({ address: address || '' }),
+        disconnect: async () => {},
+        createEmbeddedWallet: async () => address,
+        exportWallet: async () => {},
+        unlinkWallet: async () => {},
         sponsorGas,
         checkGas,
       }}
@@ -376,6 +262,7 @@ const FallbackBrowserBridge: React.FC<{ children: React.ReactNode }> = ({ childr
 
 export const PrivyProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const privyAppId = PRIVY_APP_ID;
+
   const isPrivyConfigured = Boolean(
     privyAppId &&
     typeof privyAppId === 'string' &&
@@ -396,9 +283,9 @@ export const PrivyProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ 
           accentColor: '#186644',
           logo: '/brand/artifix-icon-transparent.png',
           showWalletLoginFirst: false,
-          walletList: ['metamask', 'detected_wallets', 'rainbow', 'wallet_connect'],
+          walletList: [], // Pure embedded wallet: external connectors disabled
         },
-        loginMethods: ['email', 'google', 'wallet'],
+        loginMethods: ['email', 'google'],
         embeddedWallets: {
           ethereum: {
             createOnLogin: 'all-users',

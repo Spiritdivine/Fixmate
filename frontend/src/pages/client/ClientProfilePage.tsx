@@ -13,6 +13,9 @@ import {
   Wallet as WalletIcon,
   ShieldCheck,
   AlertCircle,
+  Copy,
+  CheckCircle,
+  ExternalLink,
 } from 'lucide-react';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { useAuthStore } from '../../stores/authStore';
@@ -73,24 +76,14 @@ export const ClientProfilePage: React.FC = () => {
     },
   });
 
-  // 2. Update Monad Wallet Address Mutation
-  const updateWalletMutation = useMutation({
-    mutationFn: async () => {
-      setErrorMessage('');
-      setSuccessMessage('');
-      const { data } = await apiClient.patch('/profiles/wallet-address', {
-        walletAddress,
-      });
-      return data.data;
-    },
-    onSuccess: () => {
-      updateUser({ walletAddress });
-      setSuccessMessage('Monad wallet address updated successfully.');
-    },
-    onError: (err) => {
-      setErrorMessage(getErrorMessage(err));
-    },
-  });
+  // Copy Address Handler
+  const [isCopied, setIsCopied] = useState(false);
+  const handleCopyAddress = () => {
+    if (!user?.walletAddress) return;
+    navigator.clipboard.writeText(user.walletAddress);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
 
   // 3. Avatar Upload Handler
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -300,39 +293,51 @@ export const ClientProfilePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Monad Web3 Integration Card */}
+      {/* Monad Web3 Integration Card (Read-Only Permanent Privy Embedded Wallet) */}
       <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-5">
-        <div className="flex items-center gap-2.5 text-purple-700">
-          
-          <h3 className="text-base font-bold">Monad Blockchain Integration</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 text-purple-700">
+            <WalletIcon className="w-5 h-5 text-purple-600" />
+            <h3 className="text-base font-bold">Monad Blockchain Account</h3>
+          </div>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Privy Embedded
+          </span>
         </div>
 
         <p className="text-xs text-slate-500 leading-relaxed font-normal">
-          Connect your Monad Testnet EVM wallet address to execute on-chain escrow deposits and instant smart contract authorizations.
+          This is your permanent, self-custodial Monad address generated for your account. It is automatically used for escrow funding, milestone approvals, and smart contract settlements.
         </p>
 
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            EVM Wallet Address (0x...)
+            Permanent EVM Address
           </label>
-          <input
-            type="text"
-            value={walletAddress}
-            onChange={(e) => setWalletAddress(e.target.value)}
-            placeholder="0x1234567890abcdef1234567890abcdef12345678"
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-sm font-mono focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-slate-900 outline-none transition-all"
-          />
-        </div>
-
-        <div className="flex justify-end pt-3 border-t border-slate-100">
-          <button
-            type="button"
-            disabled={updateWalletMutation.isPending}
-            onClick={() => updateWalletMutation.mutate()}
-            className="px-7 py-2.5 rounded-full bg-purple-700 hover:bg-purple-600 text-white text-sm font-semibold shadow-md shadow-purple-900/10 transition-all disabled:opacity-50"
-          >
-            {updateWalletMutation.isPending ? 'Binding...' : 'Update Wallet Address'}
-          </button>
+          <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/80 text-sm font-mono text-slate-800 break-all">
+            <span>{user?.walletAddress || 'Provisioning embedded wallet...'}</span>
+            {user?.walletAddress && (
+              <div className="flex items-center gap-2 shrink-0 ml-3">
+                <button
+                  type="button"
+                  onClick={handleCopyAddress}
+                  className="p-1.5 hover:bg-white rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer border border-transparent hover:border-slate-200"
+                  title="Copy Address"
+                >
+                  {isCopied ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                </button>
+                <a
+                  href={`https://testnet.monadvision.com/address/${user.walletAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 hover:bg-white rounded-lg text-slate-500 hover:text-purple-700 transition-colors cursor-pointer border border-transparent hover:border-slate-200"
+                  title="View on MonadVision"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

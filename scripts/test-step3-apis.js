@@ -27,7 +27,7 @@ async function main() {
   }
   console.log('✅ Valid EVM address accepted, invalid address correctly rejected.');
 
-  // Test ProfileService.updateWalletAddress
+  // Test ProfileService.updateWalletAddress (Immutability check)
   const passwordHash = await bcrypt.hash('Password123!', 10);
   const testUser = await prisma.user.create({
     data: {
@@ -38,11 +38,18 @@ async function main() {
     },
   });
 
-  const updatedUser = await ProfileService.updateWalletAddress(testUser.id, validWallet);
-  if (updatedUser.walletAddress !== validWallet) {
-    throw new Error('ProfileService did not update wallet address!');
+  let immutabilityProtected = false;
+  try {
+    await ProfileService.updateWalletAddress(testUser.id, validWallet);
+  } catch (err) {
+    if (err.statusCode === 400 || err.message.includes('disabled')) {
+      immutabilityProtected = true;
+    }
   }
-  console.log(`✅ ProfileService updated user wallet to: ${updatedUser.walletAddress}\n`);
+  if (!immutabilityProtected) {
+    throw new Error('Expected ProfileService.updateWalletAddress to reject direct modification');
+  }
+  console.log(`✅ ProfileService correctly rejected direct modification to preserve embedded Privy wallet.\n`);
 
   // -------------------------------------------------------------
   // Test 2: Review Schema Validation & ReviewService
