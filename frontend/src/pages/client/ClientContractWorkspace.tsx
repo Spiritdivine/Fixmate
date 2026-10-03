@@ -136,9 +136,20 @@ export const ClientContractWorkspace: React.FC = () => {
   const handleConnectWallet = async () => {
     try {
       setIsConnectingWallet(true);
-      const { address } = await connectWallet();
-      setConnectedWallet(address);
-      await refreshWalletState(address);
+      if (unifiedAddress) {
+        setConnectedWallet(unifiedAddress);
+        await refreshWalletState(unifiedAddress);
+        return;
+      }
+      const { address } = await connectUnified();
+      if (address) {
+        setConnectedWallet(address);
+        await refreshWalletState(address);
+        return;
+      }
+      const { address: externalAddress } = await connectWallet();
+      setConnectedWallet(externalAddress);
+      await refreshWalletState(externalAddress);
     } catch (err: any) {
       alert(`Wallet connection failed: ${err.message}`);
     } finally {
@@ -906,7 +917,7 @@ export const ClientContractWorkspace: React.FC = () => {
                           disabled={isConnectingWallet}
                           className="w-full text-xs font-bold border-purple-500/50 text-purple-600 hover:bg-purple-50"
                         >
-                          {isConnectingWallet ? 'Connecting...' : 'Connect MetaMask / Browser Wallet'}
+                          {isConnectingWallet ? 'Connecting...' : 'Connect Privy Embedded / Web3 Account'}
                         </Button>
                       </div>
                     )}
@@ -932,9 +943,9 @@ export const ClientContractWorkspace: React.FC = () => {
                     <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2.5">
                       <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold">Artisan Has Not Linked a Web3 Wallet</p>
+                        <p className="font-bold">Artisan Monad EVM Account Pending</p>
                         <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5 leading-relaxed">
-                          The artisan has not yet configured their Monad EVM address. You can ask them to link a wallet in their profile, or switch to the <strong>In-App Wallet (₦)</strong> tab to fund with Naira Escrow.
+                          The artisan's Monad EVM account is being provisioned. You can ask them to view their profile, or switch to the <strong>In-App Wallet (₦)</strong> tab to fund with Naira Escrow.
                         </p>
                       </div>
                     </div>

@@ -56,32 +56,65 @@ export const ESCROW_ABI = [
   'event EscrowReleased(uint256 indexed escrowId, address indexed artisan, uint256 artisanAmount, uint256 platformFee)',
 ];
 
+// Active EIP-1193 provider registered from Privy embedded wallet
+let activeEip1193Provider: any = null;
+
 /**
- * Checks whether an Ethereum wallet provider is available in the browser
+ * Registers an active EIP-1193 provider from Privy embedded wallet
  */
-export function hasWeb3Provider(): boolean {
-  return typeof window !== 'undefined' && Boolean(window.ethereum);
+export function setPrivyWeb3Provider(provider: any | null): void {
+  activeEip1193Provider = provider;
 }
 
 /**
- * Requests wallet connection and ensures user is on Monad (Mainnet or Testnet)
+ * Resolves the currently active Web3 provider:
+ * 1. Privy embedded wallet EIP-1193 provider (highest priority)
+ * 2. Injected window.ethereum provider (fallback)
  */
-export async function connectWallet() {
-  if (!hasWeb3Provider()) {
-    throw new Error('No Web3 wallet detected. Please install MetaMask or a compatible browser wallet.');
+export function getActiveWeb3Provider(): any | null {
+  return activeEip1193Provider || (typeof window !== 'undefined' ? window.ethereum : null);
+}
+
+/**
+ * Checks whether an Ethereum wallet provider is available in the browser (Privy embedded or injected)
+ */
+export function hasWeb3Provider(): boolean {
+  return Boolean(getActiveWeb3Provider());
+}
+
+/**
+ * Returns a robust read-only JsonRpcProvider connected to Monad
+ */
+export function getReadOnlyProvider(): ethers.Provider {
+  return new ethers.JsonRpcProvider(MONAD_RPC_URL);
+}
+
+/**
+ * Requests wallet connection and ensures user is on Monad (Mainnet or Testnet).
+ * Seamlessly prioritizes Privy embedded wallet before falling back to browser injected wallets.
+ */
+export async function connectWallet(customProvider?: any) {
+  const rawProvider = customProvider || getActiveWeb3Provider();
+  if (!rawProvider) {
+    throw new Error('No Web3 wallet available. Please initialize your Privy embedded wallet or connect a compatible browser wallet.');
   }
 
-  const provider = new BrowserProvider(window.ethereum);
-  const accounts = await provider.send('eth_requestAccounts', []);
-  if (!accounts || accounts.length === 0) {
-    throw new Error('No accounts selected in wallet.');
+  const provider = new BrowserProvider(rawProvider);
+  
+  // Attempt accounts unlocking if the provider supports eth_requestAccounts
+  try {
+    if (typeof rawProvider.request === 'function') {
+      await rawProvider.request({ method: 'eth_requestAccounts' });
+    }
+  } catch (accountsErr: any) {
+    console.warn('[monad-web3] eth_requestAccounts notice:', accountsErr?.message || accountsErr);
   }
 
   // Gracefully attempt network switch to configured Monad network without crashing wallet connection
   try {
-    await switchToMonadNetwork();
+    await switchToMonadNetwork(rawProvider);
   } catch (err: any) {
-    console.warn('Monad network switch deferred or skipped by user:', err?.message || err);
+    console.warn('[monad-web3] Monad network switch deferred or skipped:', err?.message || err);
   }
 
   const signer = await provider.getSigner();
@@ -93,11 +126,12 @@ export async function connectWallet() {
 /**
  * Switches the connected wallet to the configured Monad Network (Mainnet or Testnet)
  */
-export async function switchToMonadNetwork(): Promise<void> {
-  if (!hasWeb3Provider()) return;
+export async function switchToMonadNetwork(customProvider?: any): Promise<void> {
+  const rawProvider = customProvider || getActiveWeb3Provider();
+  if (!rawProvider || typeof rawProvider.request !== 'function') return;
 
   try {
-    await window.ethereum.request({
+    await rawProvider.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: MONAD_CHAIN_HEX }],
     });
@@ -105,9 +139,9 @@ export async function switchToMonadNetwork(): Promise<void> {
     const errorCode = switchError?.code || switchError?.data?.originalError?.code || switchError?.info?.error?.code;
     const errorMsg = String(switchError?.message || '').toLowerCase();
 
-    // 4902 error code indicates that the chain has not been added to MetaMask
+    // 4902 error code indicates that the chain has not been added to wallet
     if (errorCode === 4902 || errorCode === -32603 || errorMsg.includes('unrecognized chain') || errorMsg.includes('has not been added')) {
-      await window.ethereum.request({
+      await rawProvider.request({
         method: 'wallet_addEthereumChain',
         params: [
           {
@@ -124,7 +158,7 @@ export async function switchToMonadNetwork(): Promise<void> {
         ],
       });
     } else {
-      throw switchError;
+      console.warn('[monad-web3] Network switch notice:', switchError?.message || switchError);
     }
   }
 }
@@ -132,36 +166,38 @@ export async function switchToMonadNetwork(): Promise<void> {
 /**
  * Backward compatibility alias for switchToMonadNetwork
  */
-export async function switchToMonadTestnet(): Promise<void> {
-  return switchToMonadNetwork();
+export async function switchToMonadTestnet(customProvider?: any): Promise<void> {
+  return switchToMonadNetwork(customProvider);
 }
 
 /**
- * Fetches USDC balance for a given address
+ * Fetches USDC balance for a given address using reliable read-only Monad RPC
  */
 export async function getUsdcBalance(userAddress: string): Promise<string> {
-  if (!hasWeb3Provider()) return '0.00';
+  if (!userAddress || !ethers.isAddress(userAddress)) return '0.00';
   try {
-    const provider = new BrowserProvider(window.ethereum);
+    const provider = getReadOnlyProvider();
     const token = new Contract(STABLECOIN_ADDRESS, USDC_ABI, provider);
     const balance = await token.balanceOf(userAddress);
     return ethers.formatUnits(balance, USDC_DECIMALS);
-  } catch {
+  } catch (err: any) {
+    console.warn('[monad-web3] Error fetching USDC balance:', err?.message || err);
     return '0.00';
   }
 }
 
 /**
- * Checks the allowance granted to the Escrow contract
+ * Checks the allowance granted to the Escrow contract using reliable read-only Monad RPC
  */
 export async function getUsdcAllowance(userAddress: string): Promise<string> {
-  if (!hasWeb3Provider()) return '0.00';
+  if (!userAddress || !ethers.isAddress(userAddress)) return '0.00';
   try {
-    const provider = new BrowserProvider(window.ethereum);
+    const provider = getReadOnlyProvider();
     const token = new Contract(STABLECOIN_ADDRESS, USDC_ABI, provider);
     const allowance = await token.allowance(userAddress, ESCROW_CONTRACT_ADDRESS);
     return ethers.formatUnits(allowance, USDC_DECIMALS);
-  } catch {
+  } catch (err: any) {
+    console.warn('[monad-web3] Error fetching USDC allowance:', err?.message || err);
     return '0.00';
   }
 }
@@ -169,8 +205,9 @@ export async function getUsdcAllowance(userAddress: string): Promise<string> {
 /**
  * Approves the Escrow contract to spend USDC on behalf of the client
  */
-export async function approveUsdc(amountUsdc: number | string): Promise<string> {
-  const { signer, address } = await connectWallet();
+export async function approveUsdc(amountUsdc: number | string, customSigner?: ethers.Signer): Promise<string> {
+  const signer = customSigner || (await connectWallet()).signer;
+  const address = await signer.getAddress();
   const token = new Contract(STABLECOIN_ADDRESS, USDC_ABI, signer);
   const amountUnits = ethers.parseUnits(Number(amountUsdc).toFixed(USDC_DECIMALS), USDC_DECIMALS);
 
@@ -192,8 +229,9 @@ export async function approveUsdc(amountUsdc: number | string): Promise<string> 
 /**
  * Testnet faucet: mints test USDC to the user's connected address
  */
-export async function mintTestUsdc(amountUsdc: number | string = 100): Promise<string> {
-  const { signer, address } = await connectWallet();
+export async function mintTestUsdc(amountUsdc: number | string = 100, customSigner?: ethers.Signer): Promise<string> {
+  const signer = customSigner || (await connectWallet()).signer;
+  const address = await signer.getAddress();
   const token = new Contract(STABLECOIN_ADDRESS, USDC_ABI, signer);
   const amountUnits = ethers.parseUnits(Number(amountUsdc).toFixed(USDC_DECIMALS), USDC_DECIMALS);
 
@@ -209,9 +247,10 @@ export async function fundOnChainEscrow(
   contractCode: string,
   artisanAddress: string,
   amountUsdc: number | string,
-  feeBps: number = 500
+  feeBps: number = 500,
+  customSigner?: ethers.Signer
 ): Promise<{ txHash: string; onChainEscrowId?: number }> {
-  const { signer } = await connectWallet();
+  const signer = customSigner || (await connectWallet()).signer;
   const escrow = new Contract(ESCROW_CONTRACT_ADDRESS, ESCROW_ABI, signer);
   const amountUnits = ethers.parseUnits(Number(amountUsdc).toFixed(USDC_DECIMALS), USDC_DECIMALS);
 
@@ -251,8 +290,8 @@ export async function fundOnChainEscrow(
 /**
  * Approves deliverable and releases funds to the artisan on-chain
  */
-export async function releaseOnChainEscrow(escrowId: number): Promise<string> {
-  const { signer } = await connectWallet();
+export async function releaseOnChainEscrow(escrowId: number, customSigner?: ethers.Signer): Promise<string> {
+  const signer = customSigner || (await connectWallet()).signer;
   const escrow = new Contract(ESCROW_CONTRACT_ADDRESS, ESCROW_ABI, signer);
 
   const tx = await escrow.approveAndRelease(escrowId);
@@ -263,12 +302,16 @@ export async function releaseOnChainEscrow(escrowId: number): Promise<string> {
 /**
  * Transfers USDC on Monad to any external EVM address (Exchange, MetaMask, Cold Wallet)
  */
-export async function transferUsdc(recipientAddress: string, amountUsdc: number | string): Promise<string> {
+export async function transferUsdc(
+  recipientAddress: string,
+  amountUsdc: number | string,
+  customSigner?: ethers.Signer
+): Promise<string> {
   if (!ethers.isAddress(recipientAddress)) {
     throw new Error('Invalid recipient EVM wallet address.');
   }
 
-  const { signer } = await connectWallet();
+  const signer = customSigner || (await connectWallet()).signer;
   const token = new Contract(STABLECOIN_ADDRESS, USDC_ABI, signer);
   const amountUnits = ethers.parseUnits(Number(amountUsdc).toFixed(USDC_DECIMALS), USDC_DECIMALS);
 
@@ -280,12 +323,17 @@ export async function transferUsdc(recipientAddress: string, amountUsdc: number 
 /**
  * Raises a formal dispute on-chain for a funded escrow
  */
-export async function raiseDisputeOnChain(escrowId: number, reason: string): Promise<string> {
-  const { signer } = await connectWallet();
+export async function raiseDisputeOnChain(
+  escrowId: number,
+  reason: string,
+  customSigner?: ethers.Signer
+): Promise<string> {
+  const signer = customSigner || (await connectWallet()).signer;
   const escrow = new Contract(ESCROW_CONTRACT_ADDRESS, ESCROW_ABI, signer);
 
   const tx = await escrow.raiseDispute(escrowId, reason);
   const receipt = await tx.wait(1);
   return receipt.hash;
 }
+
 

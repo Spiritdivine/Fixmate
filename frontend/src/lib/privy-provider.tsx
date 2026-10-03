@@ -6,8 +6,13 @@ import {
   useCreateWallet,
   useExportWallet,
 } from '@privy-io/react-auth';
+import { ethers } from 'ethers';
 import { apiClient } from './api-client';
 import { useAuthStore } from '../stores/authStore';
+import {
+  setPrivyWeb3Provider,
+  getActiveWeb3Provider,
+} from './monad-web3';
 import {
   MONAD_CHAIN_ID,
   MONAD_RPC_URL,
@@ -52,6 +57,8 @@ export interface UnifiedWalletContextType {
   isConnected: boolean;
   isEmbedded: boolean;
   walletType: 'PRIVY_EMBEDDED' | 'NONE';
+  getEthereumProvider: () => Promise<any | null>;
+  getSigner: () => Promise<ethers.Signer | null>;
   connect: () => Promise<{ address: string }>;
   disconnect: () => Promise<void>;
   createEmbeddedWallet: () => Promise<string | null>;
@@ -66,6 +73,8 @@ const UnifiedWalletContext = createContext<UnifiedWalletContextType>({
   isConnected: false,
   isEmbedded: false,
   walletType: 'NONE',
+  getEthereumProvider: async () => null,
+  getSigner: async () => null,
   connect: async () => ({ address: '' }),
   disconnect: async () => {},
   createEmbeddedWallet: async () => null,
@@ -79,7 +88,7 @@ export const useUnifiedWallet = () => useContext(UnifiedWalletContext);
 
 // Active Privy Bridge Component
 const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { ready, authenticated } = usePrivy();
+  const { ready, authenticated, login } = usePrivy();
   const { wallets } = useWallets();
   const { createWallet } = useCreateWallet();
   const { exportWallet: privyExportWallet } = useExportWallet();
@@ -90,6 +99,21 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
   const currentAddress = appUser?.walletAddress || null;
   const isEmbedded = Boolean(currentAddress);
   const walletType = isEmbedded ? 'PRIVY_EMBEDDED' : 'NONE';
+
+  // Automatically register Privy's EIP-1193 provider with monad-web3 for on-chain contract interactions
+  useEffect(() => {
+    const embedded = wallets?.find((w) => w.walletClientType === 'privy');
+    if (embedded && typeof embedded.getEthereumProvider === 'function') {
+      embedded
+        .getEthereumProvider()
+        .then((provider) => {
+          setPrivyWeb3Provider(provider);
+        })
+        .catch((err) => {
+          console.warn('[PrivyBridge] Notice registering embedded provider:', err?.message || err);
+        });
+    }
+  }, [wallets]);
 
   // Auto-sync or provision embedded wallet when user is logged in
   useEffect(() => {
@@ -119,6 +143,32 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
         });
     }
   }, [ready, authenticated, wallets, appUser?.walletAddress]);
+
+  const getEthereumProvider = async (): Promise<any | null> => {
+    const embedded = wallets?.find((w) => w.walletClientType === 'privy');
+    if (embedded && typeof embedded.getEthereumProvider === 'function') {
+      try {
+        const provider = await embedded.getEthereumProvider();
+        setPrivyWeb3Provider(provider);
+        return provider;
+      } catch (err: any) {
+        console.warn('[PrivyBridge] Failed to get embedded provider:', err?.message || err);
+      }
+    }
+    return getActiveWeb3Provider();
+  };
+
+  const getSigner = async (): Promise<ethers.Signer | null> => {
+    const rawProvider = await getEthereumProvider();
+    if (!rawProvider) return null;
+    try {
+      const browserProvider = new ethers.BrowserProvider(rawProvider);
+      return await browserProvider.getSigner();
+    } catch (err: any) {
+      console.warn('[PrivyBridge] Error creating ethers Signer:', err?.message || err);
+      return null;
+    }
+  };
 
   const handleConnect = async () => {
     if (currentAddress) {
@@ -158,12 +208,25 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const handleExportWallet = async () => {
+    // If the browser session is not yet authenticated in Privy, prompt Privy verification with the user's email
+    if (!authenticated) {
+      if (typeof login === 'function') {
+        login({
+          prefill: appUser?.email ? { type: 'email', value: appUser.email } : undefined,
+        });
+        return;
+      }
+      throw new Error('Please verify your session to export your private key.');
+    }
+
     if (!privyExportWallet) {
       throw new Error('Wallet export is not available in the current session.');
     }
     try {
-      if (currentAddress) {
-        await privyExportWallet({ address: currentAddress });
+      const embedded = wallets?.find((w) => w.walletClientType === 'privy');
+      const targetAddress = embedded?.address || currentAddress;
+      if (targetAddress) {
+        await privyExportWallet({ address: targetAddress });
       } else {
         await privyExportWallet();
       }
@@ -202,6 +265,8 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
         isConnected: Boolean(currentAddress),
         isEmbedded,
         walletType,
+        getEthereumProvider,
+        getSigner,
         connect: handleConnect,
         disconnect: handleDisconnect,
         createEmbeddedWallet,
@@ -220,6 +285,20 @@ const ActivePrivyBridge: React.FC<{ children: React.ReactNode }> = ({ children }
 const FallbackBrowserBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user: appUser } = useAuthStore();
   const address = appUser?.walletAddress || null;
+
+  const getEthereumProvider = async (): Promise<any | null> => {
+    return typeof window !== 'undefined' ? window.ethereum : null;
+  };
+
+  const getSigner = async (): Promise<ethers.Signer | null> => {
+    if (typeof window === 'undefined' || !window.ethereum) return null;
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      return await provider.getSigner();
+    } catch {
+      return null;
+    }
+  };
 
   const sponsorGas = async () => {
     try {
@@ -246,6 +325,8 @@ const FallbackBrowserBridge: React.FC<{ children: React.ReactNode }> = ({ childr
         isConnected: Boolean(address),
         isEmbedded: Boolean(address),
         walletType: address ? 'PRIVY_EMBEDDED' : 'NONE',
+        getEthereumProvider,
+        getSigner,
         connect: async () => ({ address: address || '' }),
         disconnect: async () => {},
         createEmbeddedWallet: async () => address,
