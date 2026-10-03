@@ -1,17 +1,16 @@
 import webpush from 'web-push';
 import prisma from '../config/db.js';
 
-const VAPID_PUBLIC_KEY =
-  process.env.VAPID_PUBLIC_KEY ||
-  'BNuMJuYdTIowt6MPoT6TLM1rdw4pIH2tWE3pc51nJp4x7n659lJdy-Q_jNHwDCCw5o_CNLdt73UfEc1-V82KCgk';
-const VAPID_PRIVATE_KEY =
-  process.env.VAPID_PRIVATE_KEY || 'K0htDAdcK396sUvhmoSydYa16UJHqb2PQY-yvhtVJJU';
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:support@artifixhq.xyz';
 
-try {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-} catch (err) {
-  console.warn('[WebPush] VAPID configuration warning:', err.message);
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  } catch (err) {
+    console.warn('[WebPush] VAPID configuration warning:', err.message);
+  }
 }
 
 export class PushNotificationService {
