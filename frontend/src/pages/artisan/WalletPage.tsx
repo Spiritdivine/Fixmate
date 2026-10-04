@@ -32,7 +32,7 @@ import { formatNgn, formatDate, formatDateTime } from '../../lib/formatters';
 import { Wallet, BankAccount, Transaction, PayoutRequest } from '../../types';
 import { useUnifiedWallet } from '../../lib/privy-provider';
 import { useAuthStore } from '../../stores/authStore';
-import { getUsdcBalance, mintTestUsdc, transferUsdc, MONAD_EXPLORER_URL, TREASURY_ADDRESS, IS_MONAD_MAINNET } from '../../lib/monad-web3';
+import { getUsdcBalance, getMonBalance, getMonPriceUsd, mintTestUsdc, transferUsdc, MONAD_EXPLORER_URL, TREASURY_ADDRESS, IS_MONAD_MAINNET } from '../../lib/monad-web3';
 import { trackEvent } from '../../lib/posthog';
 
 export const WalletPage: React.FC = () => {
@@ -57,8 +57,11 @@ export const WalletPage: React.FC = () => {
 
   // Web3 & Kotani Rates
   const [usdcBalance, setUsdcBalance] = useState<string>('0.00');
+  const [monBalance, setMonBalance] = useState<string>('0.0000');
+  const [monPriceUsd, setMonPriceUsd] = useState<number>(0.033);
   const [exchangeRate, setExchangeRate] = useState<number>(1465.0);
   const [isMintingUsdc, setIsMintingUsdc] = useState(false);
+  const [isRefreshingBalances, setIsRefreshingBalances] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   // Manage Monad EVM Wallet Modal State
@@ -179,28 +182,41 @@ export const WalletPage: React.FC = () => {
     }
   };
 
-  const fetchUsdcBalance = async () => {
-    if (address) {
-      try {
-        const bal = await getUsdcBalance(address);
-        setUsdcBalance(bal);
-      } catch {
-        setUsdcBalance('0.00');
-      }
+  const effectiveAddress = address || appUser?.walletAddress || (wallet as any)?.walletAddress;
+
+  const fetchCryptoBalances = async () => {
+    if (!effectiveAddress) return;
+    setIsRefreshingBalances(true);
+    try {
+      const [usdc, mon, price] = await Promise.all([
+        getUsdcBalance(effectiveAddress),
+        getMonBalance(effectiveAddress),
+        getMonPriceUsd(),
+      ]);
+      setUsdcBalance(usdc);
+      setMonBalance(mon);
+      if (price > 0) setMonPriceUsd(price);
+    } catch (err) {
+      console.warn('Failed to fetch crypto balances', err);
+    } finally {
+      setIsRefreshingBalances(false);
     }
   };
+
+  const fetchUsdcBalance = fetchCryptoBalances;
 
   useEffect(() => {
     fetchWalletData();
   }, []);
 
   useEffect(() => {
-    fetchUsdcBalance();
-  }, [address]);
+    fetchCryptoBalances();
+  }, [effectiveAddress]);
 
   const handleCopyAddress = () => {
-    if (!address) return;
-    navigator.clipboard.writeText(address);
+    const target = effectiveAddress;
+    if (!target) return;
+    navigator.clipboard.writeText(target);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
@@ -464,8 +480,12 @@ export const WalletPage: React.FC = () => {
 
   const availableNgn = Number(wallet?.availableBalance || 0);
   const lockedNgn = Number(wallet?.escrowLockedBalance || 0);
-  const usdcNgnEquivalent = parseFloat(usdcBalance || '0') * exchangeRate;
-  const totalPortfolioValue = availableNgn + lockedNgn + usdcNgnEquivalent;
+  const parsedUsdc = parseFloat(usdcBalance || '0');
+  const parsedMon = parseFloat(monBalance || '0');
+  const monUsdValue = parsedMon * monPriceUsd;
+  const totalCryptoUsd = parsedUsdc + monUsdValue;
+  const cryptoNgnEquivalent = totalCryptoUsd * exchangeRate;
+  const totalPortfolioValue = availableNgn + lockedNgn + cryptoNgnEquivalent;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
@@ -477,7 +497,7 @@ export const WalletPage: React.FC = () => {
             Financial Hub
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            Unified balances across Nigerian Naira (Bank rail) and Monad USDC (Web3 rail)
+            Unified balances across Nigerian Naira (Bank rail) and Monad Crypto (Web3 rail)
           </p>
         </div>
 
@@ -515,14 +535,14 @@ export const WalletPage: React.FC = () => {
                 Total Portfolio Net Worth
               </span>
               <span className="text-xs text-gray-400">
-                1 USDC ≈ {formatNgn(exchangeRate)} (Kotani Pay)
+                1 USDC ≈ {formatNgn(exchangeRate)} | 1 MON ≈ ${monPriceUsd.toFixed(3)}
               </span>
             </div>
             <div className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-2 text-white">
               {formatNgn(totalPortfolioValue)}
             </div>
             <p className="text-xs text-gray-300 mt-1">
-              Combined value of your Naira earnings and Monad stablecoin assets
+              Combined value of your Naira earnings ({formatNgn(availableNgn + lockedNgn)}) and Monad crypto (${totalCryptoUsd.toFixed(2)} USD)
             </p>
           </div>
 
@@ -610,14 +630,14 @@ export const WalletPage: React.FC = () => {
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-                  $
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-700 via-purple-700 to-indigo-900 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                  ⚡
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    Monad USDC Account
+                    Monad Web3 Portfolio
                     {isEmbedded ? (
-                      <Badge className="bg-indigo-100 text-indigo-700 text-[10px] px-1.5 py-0 border-0">
+                      <Badge className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0 border-0">
                         Privy Embedded
                       </Badge>
                     ) : address ? (
@@ -626,7 +646,7 @@ export const WalletPage: React.FC = () => {
                       </Badge>
                     ) : null}
                   </h3>
-                  <p className="text-xs text-gray-500">Instant Smart Contract Settlements</p>
+                  <p className="text-xs text-gray-500">Monad Mainnet (Chain 143)</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -638,46 +658,105 @@ export const WalletPage: React.FC = () => {
                     title="Export Private Key for Self-Custody"
                   >
                     <Key className="h-3 w-3" />
-                    <span>Export Key</span>
+                    <span>Export</span>
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={fetchCryptoBalances}
+                  disabled={isRefreshingBalances}
+                  className="p-1.5 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer transition-colors"
+                  title="Refresh On-Chain Balances"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingBalances ? 'animate-spin text-indigo-600' : ''}`} />
+                </button>
                 <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs px-2 py-0.5">
                   Monad EVM
                 </Badge>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-indigo-100/70">
+            {/* Total Crypto Valuation Row */}
+            <div className="mt-5 pt-4 border-t border-indigo-100/70 flex items-baseline justify-between">
               <div>
-                <span className="text-xs text-gray-500 font-medium">Balance</span>
-                <div className="text-2xl font-bold text-indigo-950 mt-0.5">
-                  ${parseFloat(usdcBalance).toFixed(2)} <span className="text-sm font-normal text-gray-500">USDC</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Total Crypto Assets</span>
+                <div className="text-2xl font-bold text-indigo-950 mt-0.5 flex items-baseline gap-1.5">
+                  ${totalCryptoUsd.toFixed(2)}
+                  <span className="text-xs font-semibold text-gray-500">USD</span>
                 </div>
-                <span className="text-[11px] text-gray-400">≈ {formatNgn(usdcNgnEquivalent)}</span>
+                <span className="text-[11px] text-gray-400 font-medium">≈ {formatNgn(cryptoNgnEquivalent)}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-gray-400 block">Monad Network Rate</span>
+                <span className="text-xs font-medium text-gray-600 font-mono">1 MON ≈ ${monPriceUsd.toFixed(3)}</span>
+              </div>
+            </div>
+
+            {/* Multi-Token Asset Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              {/* Token 1: USDC */}
+              <div className="p-3.5 rounded-2xl bg-white border border-indigo-100/80 hover:border-indigo-200 shadow-xs transition-colors">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    USDC
+                  </span>
+                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/70">
+                    Escrows &amp; Payouts
+                  </span>
+                </div>
+                <div className="text-lg font-extrabold text-indigo-950">
+                  ${parsedUsdc.toFixed(2)}
+                </div>
+                <span className="text-[11px] text-gray-500 block mt-0.5">
+                  ${parsedUsdc.toFixed(2)} USD
+                </span>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-xs text-gray-500 font-medium">Permanent Account</span>
+              {/* Token 2: Native MON */}
+              <div className="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100 hover:bg-indigo-50/80 transition-colors">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    MON
+                  </span>
+                  <span className="text-[10px] font-semibold text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-full border border-indigo-200">
+                    Gas &amp; Swaps
+                  </span>
                 </div>
-                {address ? (
-                  <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-700 font-mono bg-white/80 p-1.5 rounded-lg border border-gray-200">
-                    <span className="truncate max-w-[110px]">{address}</span>
+                <div className="text-lg font-extrabold text-indigo-950">
+                  {parsedMon.toFixed(4)} <span className="text-xs font-normal text-indigo-600">MON</span>
+                </div>
+                <span className="text-[11px] text-indigo-600/90 font-medium block mt-0.5">
+                  ≈ ${monUsdValue.toFixed(2)} USD
+                </span>
+              </div>
+            </div>
+
+            {/* Permanent Account Address Bar */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] text-gray-500 font-medium">Permanent Monad Address</span>
+              </div>
+              {effectiveAddress ? (
+                <div className="flex items-center justify-between gap-1.5 text-xs text-gray-700 font-mono bg-white/80 p-2 rounded-xl border border-gray-200">
+                  <span className="truncate max-w-[160px] sm:max-w-[190px]">{effectiveAddress}</span>
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={handleCopyAddress}
-                      className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                      className="p-1 hover:bg-gray-100 rounded text-gray-500 cursor-pointer"
                       title="Copy Address"
                     >
-                      {isCopied ? <CheckCircle className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                      {isCopied ? <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                     <a
-                      href={`${MONAD_EXPLORER_URL}/address/${address}`}
+                      href={`${MONAD_EXPLORER_URL}/address/${effectiveAddress}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                      className="p-1 hover:bg-gray-100 rounded text-gray-500 cursor-pointer"
                       title="View on Explorer"
                     >
-                      <ExternalLink className="h-3 w-3" />
+                      <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                     <button
                       type="button"
@@ -691,27 +770,27 @@ export const WalletPage: React.FC = () => {
                       Manage
                     </button>
                   </div>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setWalletModalError(null);
-                      setWalletModalSuccess(null);
-                      setIsWalletModalOpen(true);
-                    }}
-                    className="mt-1 text-xs text-indigo-600 border-indigo-300 flex items-center gap-1"
-                  >
-                    <Plus className="h-3 w-3" />
-                    Link Wallet
-                  </Button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setWalletModalError(null);
+                    setWalletModalSuccess(null);
+                    setIsWalletModalOpen(true);
+                  }}
+                  className="w-full mt-1 text-xs text-indigo-600 border-indigo-300 flex items-center justify-center gap-1 py-2"
+                >
+                  <Plus className="h-3 w-3" />
+                  Link Wallet
+                </Button>
+              )}
             </div>
 
-            <div className="mt-6 flex flex-col sm:flex-row items-center gap-2">
+            <div className="mt-5 flex flex-col sm:flex-row items-center gap-2">
               <Button
-                className="w-full sm:flex-1 text-xs font-semibold py-2 bg-indigo-600 hover:bg-indigo-500 text-white"
+                className="w-full sm:flex-1 text-xs font-semibold py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl"
                 onClick={() => {
                   setWithdrawSource('USDC');
                   setIsWithdrawModalOpen(true);
@@ -722,11 +801,11 @@ export const WalletPage: React.FC = () => {
 
               <Button
                 variant="outline"
-                className="w-full sm:w-auto text-xs font-semibold py-2 border-indigo-300 text-indigo-700 bg-white hover:bg-indigo-50 flex items-center justify-center gap-1.5"
+                className="w-full sm:w-auto text-xs font-semibold py-2.5 border-indigo-300 text-indigo-700 bg-white hover:bg-indigo-50 flex items-center justify-center gap-1.5 rounded-xl cursor-pointer"
                 onClick={() => setIsSendUsdcModalOpen(true)}
               >
-                <Send className="w-3.5 h-3.5" />
-                Send USDC
+                <Send className="h-3.5 w-3.5" />
+                <span>Send USDC</span>
               </Button>
 
               {!IS_MONAD_MAINNET && (

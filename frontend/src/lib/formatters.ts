@@ -2,12 +2,11 @@ export function formatNgn(amount: number | string | undefined | null): string {
   if (amount === undefined || amount === null) return '₦0';
   const numeric = typeof amount === 'string' ? parseFloat(amount) : amount;
   if (isNaN(numeric)) return '₦0';
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
+  const formatted = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(numeric).replace('NGN', '₦');
+  }).format(numeric);
+  return `₦ ${formatted}`;
 }
 
 export const formatCurrency = formatNgn;

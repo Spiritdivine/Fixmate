@@ -19,6 +19,7 @@ import {
   Zap,
   Download,
   Key,
+  RefreshCw,
 } from 'lucide-react';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { Wallet, Transaction, SavedPaymentMethod, ApiResponse } from '../../types';
@@ -29,7 +30,7 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { useUnifiedWallet } from '../../lib/privy-provider';
 import { useAuthStore } from '../../stores/authStore';
-import { getUsdcBalance, mintTestUsdc, MONAD_EXPLORER_URL } from '../../lib/monad-web3';
+import { getUsdcBalance, getMonBalance, getMonPriceUsd, mintTestUsdc, MONAD_EXPLORER_URL, IS_MONAD_MAINNET } from '../../lib/monad-web3';
 import { trackEvent } from '../../lib/posthog';
 
 export const ClientWalletPage: React.FC = () => {
@@ -52,8 +53,11 @@ export const ClientWalletPage: React.FC = () => {
 
   // Web3 & Rates
   const [usdcBalance, setUsdcBalance] = useState<string>('0.00');
+  const [monBalance, setMonBalance] = useState<string>('0.0000');
+  const [monPriceUsd, setMonPriceUsd] = useState<number>(0.033);
   const [exchangeRate, setExchangeRate] = useState<number>(1465.0);
   const [isMintingUsdc, setIsMintingUsdc] = useState(false);
+  const [isRefreshingBalances, setIsRefreshingBalances] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   const handleExportWallet = async () => {
@@ -74,6 +78,17 @@ export const ClientWalletPage: React.FC = () => {
     },
   });
 
+  const availableBalance = Number(wallet?.availableBalance || 0);
+  const escrowLocked = Number(wallet?.escrowLockedBalance || 0);
+
+  // Accurate multi-token valuation
+  const parsedUsdc = parseFloat(usdcBalance || '0');
+  const parsedMon = parseFloat(monBalance || '0');
+  const monUsdValue = parsedMon * monPriceUsd;
+  const totalCryptoUsd = parsedUsdc + monUsdValue;
+  const cryptoNgnEquivalent = totalCryptoUsd * exchangeRate;
+  const totalBalance = availableBalance + escrowLocked + cryptoNgnEquivalent;
+
   // Sync wallet address if auto-provisioned on backend
   useEffect(() => {
     const backendAddr = (wallet as any)?.walletAddress;
@@ -92,21 +107,31 @@ export const ClientWalletPage: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  // 3. Fetch USDC Balance
-  const fetchUsdc = async () => {
-    if (address) {
-      try {
-        const bal = await getUsdcBalance(address);
-        setUsdcBalance(bal);
-      } catch {
-        setUsdcBalance('0.00');
-      }
+  const effectiveAddress = address || appUser?.walletAddress || (wallet as any)?.walletAddress;
+
+  // 3. Fetch Multi-Token Balances (USDC + MON + MON Price)
+  const fetchCryptoBalances = async () => {
+    if (!effectiveAddress) return;
+    setIsRefreshingBalances(true);
+    try {
+      const [usdc, mon, price] = await Promise.all([
+        getUsdcBalance(effectiveAddress),
+        getMonBalance(effectiveAddress),
+        getMonPriceUsd(),
+      ]);
+      setUsdcBalance(usdc);
+      setMonBalance(mon);
+      if (price > 0) setMonPriceUsd(price);
+    } catch (err) {
+      console.warn('Failed to fetch crypto balances', err);
+    } finally {
+      setIsRefreshingBalances(false);
     }
   };
 
   useEffect(() => {
-    fetchUsdc();
-  }, [address]);
+    fetchCryptoBalances();
+  }, [effectiveAddress]);
 
   // 4. Fetch Saved Cards
   const { data: savedCards = [] } = useQuery<SavedPaymentMethod[]>({
@@ -174,8 +199,9 @@ export const ClientWalletPage: React.FC = () => {
   });
 
   const handleCopyAddress = () => {
-    if (!address) return;
-    navigator.clipboard.writeText(address);
+    const target = effectiveAddress;
+    if (!target) return;
+    navigator.clipboard.writeText(target);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
@@ -188,7 +214,7 @@ export const ClientWalletPage: React.FC = () => {
     try {
       setIsMintingUsdc(true);
       await mintTestUsdc(100);
-      await fetchUsdc();
+      await fetchCryptoBalances();
       alert('Successfully minted 100 Test USDC on Monad to your wallet!');
     } catch (err) {
       alert(getErrorMessage(err));
@@ -220,7 +246,7 @@ export const ClientWalletPage: React.FC = () => {
       } else {
         setOnRampModalOpen(false);
         queryClient.invalidateQueries({ queryKey: ['client-wallet-page'] });
-        await fetchUsdc();
+        await fetchCryptoBalances();
         alert(
           `On-Ramp Initiated! ₦${amountNum.toLocaleString()} converted to ~${data.data?.estimatedUsdc} USDC for wallet ${address.slice(0, 6)}...${address.slice(-4)}`
         );
@@ -257,11 +283,6 @@ export const ClientWalletPage: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const availableBalance = Number(wallet?.availableBalance || 0);
-  const escrowLocked = Number(wallet?.escrowLockedBalance || 0);
-  const usdcNgnEquivalent = parseFloat(usdcBalance || '0') * exchangeRate;
-  const totalBalance = availableBalance + escrowLocked + usdcNgnEquivalent;
-
   const rawTxs = wallet?.transactions || [];
   const filteredTxs = rawTxs.filter((tx) => {
     if (selectedTxType !== 'ALL' && tx.type !== selectedTxType) return false;
@@ -291,15 +312,17 @@ export const ClientWalletPage: React.FC = () => {
             <span>Deposit Naira</span>
           </Button>
 
-          <Button
-            variant="outline"
-            onClick={handleMintTestUsdc}
-            isLoading={isMintingUsdc}
-            className="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-xs cursor-pointer"
-          >
-            <Zap className="h-4 w-4 text-amber-500" />
-            <span>Test USDC (+100)</span>
-          </Button>
+          {!IS_MONAD_MAINNET && (
+            <Button
+              variant="outline"
+              onClick={handleMintTestUsdc}
+              isLoading={isMintingUsdc}
+              className="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-xs cursor-pointer"
+            >
+              <Zap className="h-4 w-4 text-amber-500" />
+              <span>Test USDC (+100)</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -316,14 +339,14 @@ export const ClientWalletPage: React.FC = () => {
                 Total Portfolio Net Worth
               </span>
               <span className="text-xs text-slate-300">
-                1 USDC ≈ {formatCurrency(exchangeRate)} (Kotani Pay)
+                1 USDC ≈ {formatCurrency(exchangeRate)} | 1 MON ≈ ${monPriceUsd.toFixed(3)}
               </span>
             </div>
             <div className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-3 text-white">
               {formatCurrency(totalBalance)}
             </div>
             <p className="text-xs text-slate-300 mt-1">
-              Combined balance available for milestone funding across fiat and crypto rails
+              Combined balance across fiat ({formatCurrency(availableBalance + escrowLocked)}) and Monad crypto (${totalCryptoUsd.toFixed(2)} USD)
             </p>
           </div>
 
@@ -385,86 +408,147 @@ export const ClientWalletPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 2: Monad USDC Account */}
-        <div className="p-6 border border-slate-100 bg-white rounded-[24px] shadow-xs hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-800 text-white flex items-center justify-center font-bold text-lg shadow-xs">
-                $
+        {/* Card 2: Monad Web3 Multi-Token Portfolio */}
+        <div className="p-6 border border-slate-100 bg-white rounded-[24px] shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-700 via-purple-700 to-indigo-900 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                  ⚡
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 font-dashboard flex items-center gap-2">
+                    Monad Web3 Portfolio
+                    {isEmbedded ? (
+                      <span className="bg-purple-50 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-200">
+                        Privy Embedded
+                      </span>
+                    ) : address ? (
+                      <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                        Connected
+                      </span>
+                    ) : null}
+                  </h3>
+                  <p className="text-xs text-slate-500">Monad Mainnet (Chain 143)</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-slate-900 font-dashboard flex items-center gap-2">
-                  Monad USDC Account
-                  {isEmbedded ? (
-                    <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                      Privy Embedded
-                    </span>
-                  ) : address ? (
-                    <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                      Connected
-                    </span>
-                  ) : null}
-                </h3>
-                <p className="text-xs text-slate-500">Monad EVM Smart Contract Escrow</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {address && (
+              <div className="flex items-center gap-2">
+                {address && (
+                  <button
+                    type="button"
+                    onClick={handleExportWallet}
+                    className="text-xs text-indigo-600 hover:text-indigo-700 font-medium px-2.5 py-1 rounded-full border border-indigo-200 hover:bg-indigo-50 flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Export Private Key for Self-Custody"
+                  >
+                    <Key className="h-3 w-3" />
+                    <span>Export</span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={handleExportWallet}
-                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium px-2.5 py-1 rounded-full border border-indigo-200 hover:bg-indigo-50 flex items-center gap-1 cursor-pointer transition-colors"
-                  title="Export Private Key for Self-Custody"
+                  onClick={fetchCryptoBalances}
+                  disabled={isRefreshingBalances}
+                  className="p-1.5 text-slate-500 hover:text-slate-700 rounded-full hover:bg-slate-100 cursor-pointer transition-colors"
+                  title="Refresh On-Chain Balances"
                 >
-                  <Key className="h-3 w-3" />
-                  <span>Export Key</span>
+                  <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingBalances ? 'animate-spin text-indigo-600' : ''}`} />
                 </button>
-              )}
-              <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs px-2.5 py-0.5 rounded-full font-semibold">
-                Monad EVM
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-100">
-            <div>
-              <span className="text-xs text-slate-500 font-medium">Balance</span>
-              <div className="text-2xl font-black text-slate-900 mt-0.5">
-                ${parseFloat(usdcBalance).toFixed(2)} <span className="text-sm font-normal text-slate-500">USDC</span>
+                <span className="bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs px-2.5 py-0.5 rounded-full font-semibold">
+                  EVM
+                </span>
               </div>
-              <span className="text-[11px] text-slate-400">≈ {formatCurrency(usdcNgnEquivalent)}</span>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-0.5">
-                <span className="text-xs text-slate-500 font-medium">Permanent Account</span>
+            {/* Total Crypto Valuation Row */}
+            <div className="mt-5 pt-4 border-t border-slate-100 flex items-baseline justify-between">
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Total Crypto Assets</span>
+                <div className="text-2xl font-black text-slate-900 mt-0.5 flex items-baseline gap-1.5">
+                  ${totalCryptoUsd.toFixed(2)}
+                  <span className="text-xs font-semibold text-slate-500">USD</span>
+                </div>
+                <span className="text-[11px] text-slate-400 font-medium">≈ {formatCurrency(cryptoNgnEquivalent)}</span>
               </div>
-              {address ? (
-                <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-700 font-mono bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  <span className="truncate max-w-[110px]">{address}</span>
-                  <button
-                    onClick={handleCopyAddress}
-                    className="p-1 hover:bg-white rounded text-slate-500 cursor-pointer"
-                    title="Copy Address"
-                  >
-                    {isCopied ? <CheckCircle2 className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                  </button>
-                  <a
-                    href={`${MONAD_EXPLORER_URL}/address/${address}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-1 hover:bg-white rounded text-slate-500 cursor-pointer"
-                    title="View on Explorer"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 block">Monad Network Rate</span>
+                <span className="text-xs font-medium text-slate-600 font-mono">1 MON ≈ ${monPriceUsd.toFixed(3)}</span>
+              </div>
+            </div>
+
+            {/* Multi-Token Asset Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              {/* Token 1: USDC */}
+              <div className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    USDC
+                  </span>
+                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/70">
+                    Escrows &amp; Jobs
+                  </span>
+                </div>
+                <div className="text-lg font-extrabold text-slate-900">
+                  ${parsedUsdc.toFixed(2)}
+                </div>
+                <span className="text-[11px] text-slate-500 block mt-0.5">
+                  ${parsedUsdc.toFixed(2)} USD
+                </span>
+              </div>
+
+              {/* Token 2: Native MON */}
+              <div className="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100 hover:bg-indigo-50/80 transition-colors">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    MON
+                  </span>
+                  <span className="text-[10px] font-semibold text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-full border border-indigo-200">
+                    Gas &amp; Swaps
+                  </span>
+                </div>
+                <div className="text-lg font-extrabold text-indigo-950">
+                  {parsedMon.toFixed(4)} <span className="text-xs font-normal text-indigo-600">MON</span>
+                </div>
+                <span className="text-[11px] text-indigo-600/90 font-medium block mt-0.5">
+                  ≈ ${monUsdValue.toFixed(2)} USD
+                </span>
+              </div>
+            </div>
+
+            {/* Permanent Account Address Bar */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] text-slate-500 font-medium">Permanent Monad Address</span>
+              </div>
+              {effectiveAddress ? (
+                <div className="flex items-center justify-between gap-1.5 text-xs text-slate-700 font-mono bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+                  <span className="truncate max-w-[170px] sm:max-w-[210px]">{effectiveAddress}</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handleCopyAddress}
+                      className="p-1 hover:bg-white rounded text-slate-500 hover:text-slate-800 cursor-pointer transition-colors"
+                      title="Copy Address"
+                    >
+                      {isCopied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
+                    <a
+                      href={`${MONAD_EXPLORER_URL}/address/${effectiveAddress}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-1 hover:bg-white rounded text-slate-500 hover:text-slate-800 cursor-pointer transition-colors"
+                      title="View on Explorer"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
                 </div>
               ) : (
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => connect()}
-                  className="mt-1 text-xs text-emerald-800 border-emerald-200 hover:bg-emerald-50 rounded-full cursor-pointer"
+                  className="w-full text-xs text-emerald-800 border-emerald-200 hover:bg-emerald-50 rounded-full cursor-pointer py-2"
                 >
                   Connect Wallet
                 </Button>
@@ -472,7 +556,7 @@ export const ClientWalletPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Button
               onClick={() => setOnRampModalOpen(true)}
               className="w-full text-xs font-semibold py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center gap-1.5 cursor-pointer"
@@ -480,15 +564,17 @@ export const ClientWalletPage: React.FC = () => {
               <Coins className="h-3.5 w-3.5" />
               <span>Buy USDC (Kotani)</span>
             </Button>
-            <Button
-              variant="outline"
-              onClick={handleMintTestUsdc}
-              isLoading={isMintingUsdc}
-              className="w-full text-xs font-semibold py-2.5 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 rounded-full flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <Zap className="h-3.5 w-3.5 text-amber-500" />
-              <span>Test Faucet (+100)</span>
-            </Button>
+            {!IS_MONAD_MAINNET && (
+              <Button
+                variant="outline"
+                onClick={handleMintTestUsdc}
+                isLoading={isMintingUsdc}
+                className="w-full text-xs font-semibold py-2.5 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 rounded-full flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                <span>Test Faucet (+100)</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>

@@ -15,21 +15,20 @@ export const ENV = {
       : '/'),
 
   // 2. Monad Blockchain Configuration (Mainnet / Testnet)
-  MONAD_NETWORK: import.meta.env.VITE_MONAD_NETWORK || 'testnet',
-  MONAD_RPC_URL: import.meta.env.VITE_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz',
-  MONAD_CHAIN_ID: Number(import.meta.env.VITE_MONAD_CHAIN_ID || 10143),
+  MONAD_NETWORK: import.meta.env.VITE_MONAD_NETWORK || 'mainnet',
+  MONAD_RPC_URL:
+    import.meta.env.VITE_MONAD_RPC_URL ||
+    'https://thrilling-frosty-butterfly.monad-mainnet.quiknode.pro/fcb0cf2bb95af2faab7e12953dbde7675f8f7741/',
+  MONAD_CHAIN_ID: Number(import.meta.env.VITE_MONAD_CHAIN_ID || 143),
   MONAD_EXPLORER_URL:
-    import.meta.env.VITE_MONAD_EXPLORER_URL ||
-    (Number(import.meta.env.VITE_MONAD_CHAIN_ID) === 143 || import.meta.env.VITE_MONAD_NETWORK === 'mainnet'
-      ? 'https://monadexplorer.com'
-      : 'https://testnet.monadvision.com'),
+    import.meta.env.VITE_MONAD_EXPLORER_URL || 'https://monadexplorer.com',
   ESCROW_CONTRACT_ADDRESS: (
     import.meta.env.VITE_ESCROW_CONTRACT_ADDRESS ||
-    '0xfD5aE7dC6f46D43A6f216caf681430A6d7dace7A'
+    '0x6E1691b3467AcB27fbB85244741bcAa68B029c7e'
   ) as `0x${string}`,
   STABLECOIN_ADDRESS: (
     import.meta.env.VITE_STABLECOIN_ADDRESS ||
-    '0x4079e33893Fb59B8aD3C618CBEBa06511D6525DD'
+    '0x754704Bc059F8C67012fEd69BC8A327a5aafb603'
   ) as `0x${string}`,
   TREASURY_ADDRESS: (
     import.meta.env.VITE_TREASURY_ADDRESS ||

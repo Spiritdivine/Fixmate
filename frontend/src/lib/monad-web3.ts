@@ -89,7 +89,14 @@ export function hasWeb3Provider(): boolean {
  * Returns a robust read-only JsonRpcProvider connected to Monad
  */
 export function getReadOnlyProvider(): ethers.Provider {
-  return new ethers.JsonRpcProvider(MONAD_RPC_URL);
+  return new ethers.JsonRpcProvider(
+    MONAD_RPC_URL,
+    {
+      chainId: Number(MONAD_CHAIN_ID || 143),
+      name: IS_MONAD_MAINNET ? 'monad-mainnet' : 'monad-testnet',
+    },
+    { staticNetwork: true }
+  );
 }
 
 /**
@@ -367,6 +374,84 @@ export async function claimInactivityRefundOnChain(
   const tx = await escrow.claimInactivityRefund(escrowId);
   const receipt = await tx.wait(1);
   return receipt.hash;
+}
+
+/**
+ * Fetches native MON (gas token) balance for a given address using reliable read-only Monad RPC
+ */
+export async function getMonBalance(userAddress: string): Promise<string> {
+  if (!userAddress || !ethers.isAddress(userAddress)) return '0.0000';
+
+  // Fast direct JSON-RPC query
+  try {
+    const res = await fetch(MONAD_RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_getBalance',
+        params: [userAddress, 'latest'],
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.result) {
+        const rawWei = BigInt(data.result);
+        const integerUnits = Number(rawWei / 10n ** 14n);
+        return (integerUnits / 10000).toFixed(4);
+      }
+    }
+  } catch {
+    // Fall back to ethers provider below
+  }
+
+  try {
+    const provider = getReadOnlyProvider();
+    const balance = await provider.getBalance(userAddress);
+    return parseFloat(ethers.formatEther(balance)).toFixed(4);
+  } catch (err: any) {
+    console.warn('[monad-web3] Error fetching MON balance:', err?.message || err);
+    return '0.0000';
+  }
+}
+
+// In-memory cache for MON market price to prevent excessive external rate-limiting
+let cachedMonPrice = 0.033;
+let cachedMonPriceExpiry = 0;
+
+/**
+ * Fetches current MON token market price in USD (with 60-second caching & graceful fallback)
+ */
+export async function getMonPriceUsd(): Promise<number> {
+  const now = Date.now();
+  if (cachedMonPriceExpiry > now) {
+    return cachedMonPrice;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=monad&vs_currencies=usd', {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.monad?.usd && typeof data.monad.usd === 'number' && data.monad.usd > 0) {
+        cachedMonPrice = data.monad.usd;
+        cachedMonPriceExpiry = now + 60_000; // cache for 1 minute
+        return cachedMonPrice;
+      }
+    }
+  } catch {
+    // Graceful fallback without disrupting application state
+  }
+
+  cachedMonPriceExpiry = now + 30_000;
+  return cachedMonPrice;
 }
 
 
