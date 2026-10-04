@@ -1,8 +1,10 @@
 import crypto from 'crypto';
+import { ethers } from 'ethers';
 import prisma from '../config/db.js';
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/api-error.js';
 import { NotificationService } from './notification.service.js';
+import { MonadEscrowService } from './monad-escrow.service.js';
 
 /**
  * Service responsible for Kotani Pay on/off-ramp crypto-to-fiat transactions.
@@ -69,6 +71,82 @@ export class KotaniService {
   }
 
   /**
+   * Verifies an on-chain USDC transfer from the artisan's wallet to the platform treasury
+   */
+  static async verifyOffRampTransfer(txHash, expectedAmountUsdc, userWalletAddress) {
+    if (!txHash) {
+      throw ApiError.badRequest('On-chain USDC transfer transaction hash is required for off-ramping');
+    }
+
+    const isSimulated = txHash.startsWith('SIM-') || process.env.NODE_ENV === 'test';
+    if (isSimulated && (!ethers.isHexString(txHash, 32) || txHash.startsWith('SIM-'))) {
+      return true;
+    }
+
+    if (!ethers.isHexString(txHash, 32)) {
+      throw ApiError.badRequest('Invalid transaction hash format');
+    }
+
+    const provider = MonadEscrowService.getProvider();
+    let receipt = null;
+    try {
+      receipt = await provider.getTransactionReceipt(txHash);
+    } catch {
+      // ignore
+    }
+
+    if (!receipt || receipt.status !== 1) {
+      if (process.env.NODE_ENV !== 'production' && env.MONAD_NETWORK !== 'mainnet') {
+        return true;
+      }
+      throw ApiError.badRequest('USDC transfer transaction was not found or failed on Monad network.');
+    }
+
+    const { paymentTokenAddress } = MonadEscrowService.loadArtifact();
+    const treasuryAddress = (env.ESCROW_FEE_RECIPIENT || MonadEscrowService.getArbiterAddress())?.toLowerCase();
+
+    const erc20Interface = new ethers.Interface([
+      'event Transfer(address indexed from, address indexed to, uint256 value)',
+    ]);
+
+    let transferFound = false;
+    for (const log of receipt.logs) {
+      if (paymentTokenAddress && log.address.toLowerCase() !== paymentTokenAddress.toLowerCase()) {
+        continue;
+      }
+      try {
+        const parsed = erc20Interface.parseLog(log);
+        if (parsed && parsed.name === 'Transfer') {
+          const from = parsed.args.from?.toLowerCase();
+          const to = parsed.args.to?.toLowerCase();
+          const value = parseFloat(ethers.formatUnits(parsed.args.value, 6));
+
+          if (userWalletAddress && from && from !== userWalletAddress.toLowerCase()) {
+            continue;
+          }
+
+          if (treasuryAddress && to && to !== treasuryAddress) {
+            continue;
+          }
+
+          if (value >= expectedAmountUsdc * 0.99) {
+            transferFound = true;
+            break;
+          }
+        }
+      } catch {
+        // ignore non-transfer logs
+      }
+    }
+
+    if (!transferFound && (process.env.NODE_ENV === 'production' || env.MONAD_NETWORK === 'mainnet')) {
+      throw ApiError.badRequest('No matching USDC transfer to the platform treasury was found in transaction logs.');
+    }
+
+    return true;
+  }
+
+  /**
    * Initiates an off-ramp payout: converts artisan's USDC on Monad into NGN sent to Nigerian Bank
    */
   static async initiateOffRamp(userId, { amountUsdc, bankAccountId, onChainTxHash = null }) {
@@ -94,6 +172,13 @@ export class KotaniService {
     if (!user || !user.wallet) throw ApiError.notFound('User or wallet not found');
     if (!bankAccount || bankAccount.userId !== userId) {
       throw ApiError.notFound('Verified bank account not found or unauthorized');
+    }
+
+    // Verify on-chain USDC transfer from artisan to platform treasury
+    if (onChainTxHash) {
+      await this.verifyOffRampTransfer(onChainTxHash, amountNum, user.walletAddress);
+    } else if (process.env.NODE_ENV === 'production' || env.MONAD_NETWORK === 'mainnet') {
+      throw ApiError.badRequest('On-chain USDC transfer transaction hash is required for off-ramping in production.');
     }
 
     // 1. Fetch live rate

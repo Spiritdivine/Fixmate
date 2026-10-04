@@ -31,6 +31,11 @@ export const ENV = {
     import.meta.env.VITE_STABLECOIN_ADDRESS ||
     '0x4079e33893Fb59B8aD3C618CBEBa06511D6525DD'
   ) as `0x${string}`,
+  TREASURY_ADDRESS: (
+    import.meta.env.VITE_TREASURY_ADDRESS ||
+    import.meta.env.VITE_ESCROW_FEE_RECIPIENT ||
+    '0x9A979F4f6C24cBB96a2c4f7bd1fa2fdAb60173eB'
+  ) as `0x${string}`,
 
   // 3. Payment Gateway (Paystack Public Key)
   PAYSTACK_PUBLIC_KEY: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
@@ -63,6 +68,7 @@ export const {
   MONAD_EXPLORER_URL,
   ESCROW_CONTRACT_ADDRESS,
   STABLECOIN_ADDRESS,
+  TREASURY_ADDRESS,
   PAYSTACK_PUBLIC_KEY,
   PRIVY_APP_ID,
   POSTHOG_KEY,

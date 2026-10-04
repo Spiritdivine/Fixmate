@@ -37,6 +37,18 @@ function updateEnvAddresses(newEscrowAddress, newStablecoinAddress) {
 
   fs.writeFileSync(envPath, envContent, 'utf8');
   console.log(`📝 Updated .env with ESCROW_CONTRACT_ADDRESS and STABLECOIN_CONTRACT_ADDRESS`);
+
+  const frontendEnvPath = path.resolve(__dirname, '../frontend/.env');
+  if (fs.existsSync(frontendEnvPath)) {
+    let fEnv = fs.readFileSync(frontendEnvPath, 'utf8');
+    if (fEnv.includes('VITE_ESCROW_CONTRACT_ADDRESS=')) {
+      fEnv = fEnv.replace(/VITE_ESCROW_CONTRACT_ADDRESS=.*$/m, `VITE_ESCROW_CONTRACT_ADDRESS="${newEscrowAddress}"`);
+    } else {
+      fEnv += `\nVITE_ESCROW_CONTRACT_ADDRESS="${newEscrowAddress}"`;
+    }
+    fs.writeFileSync(frontendEnvPath, fEnv, 'utf8');
+    console.log(`📝 Updated frontend/.env with VITE_ESCROW_CONTRACT_ADDRESS`);
+  }
 }
 
 async function main() {

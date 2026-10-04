@@ -43,6 +43,9 @@ contract ArtisanEscrow is IArtisanEscrow, Ownable2Step, ReentrancyGuard, Pausabl
     /// @notice Maximum allowable platform fee (2000 bps = 20.00%)
     uint256 public constant MAX_PLATFORM_FEE_BPS = 2000;
 
+    /// @notice Inactivity refund threshold for unstarted escrows (30 days)
+    uint256 public constant INACTIVITY_REFUND_PERIOD = 30 days;
+
     /// @notice Counter for unique auto-incrementing escrow IDs
     uint256 public nextEscrowId;
 
@@ -279,6 +282,34 @@ contract ArtisanEscrow is IArtisanEscrow, Ownable2Step, ReentrancyGuard, Pausabl
             escrow.state != EscrowState.DISPUTED
         ) {
             revert InvalidState(escrow.state, EscrowState.FUNDED);
+        }
+
+        uint256 refundAmount = escrow.amount;
+
+        // Checks-Effects-Interactions
+        escrow.state = EscrowState.REFUNDED;
+        escrow.completedAt = block.timestamp;
+
+        paymentToken.safeTransfer(escrow.client, refundAmount);
+
+        emit EscrowRefunded(escrowId, escrow.client, refundAmount);
+    }
+
+    /**
+     * @inheritdoc IArtisanEscrow
+     */
+    function claimInactivityRefund(uint256 escrowId) external override nonReentrant {
+        Escrow storage escrow = escrows[escrowId];
+        if (msg.sender != escrow.client && msg.sender != owner()) {
+            revert Unauthorized();
+        }
+        if (escrow.state != EscrowState.FUNDED) {
+            revert InvalidState(escrow.state, EscrowState.FUNDED);
+        }
+
+        uint256 elapsed = block.timestamp - escrow.createdAt;
+        if (elapsed < INACTIVITY_REFUND_PERIOD) {
+            revert InactivityPeriodNotElapsed(elapsed, INACTIVITY_REFUND_PERIOD);
         }
 
         uint256 refundAmount = escrow.amount;

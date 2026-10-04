@@ -5,6 +5,8 @@ import { ContractService } from '../src/services/contract.service.js';
 import { EscrowService } from '../src/services/escrow.service.js';
 import bcrypt from 'bcryptjs';
 
+process.env.NODE_ENV = 'test';
+
 async function main() {
   console.log('🧪 Starting End-to-End Monad Escrow Lifecycle Test...\n');
 

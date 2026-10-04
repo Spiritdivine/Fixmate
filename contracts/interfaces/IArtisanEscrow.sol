@@ -91,6 +91,7 @@ interface IArtisanEscrow {
     error DisputeAmountsMismatch(uint256 totalExpected, uint256 provided);
     error TokenDecimalsMismatch(uint8 expected, uint8 actual);
     error PlatformFeeTooHigh(uint256 maxBps, uint256 requestedBps);
+    error InactivityPeriodNotElapsed(uint256 elapsed, uint256 requiredPeriod);
 
     // =========================================================================
     // CLIENT & ARTISAN LIFECYCLE FUNCTIONS
@@ -108,6 +109,8 @@ interface IArtisanEscrow {
     function approveAndRelease(uint256 escrowId) external;
 
     function raiseDispute(uint256 escrowId, string calldata reason) external;
+
+    function claimInactivityRefund(uint256 escrowId) external;
 
     // =========================================================================
     // ARBITER & MUTUAL SETTLEMENT FUNCTIONS

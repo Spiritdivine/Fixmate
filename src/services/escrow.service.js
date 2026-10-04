@@ -281,6 +281,14 @@ export class EscrowService {
     const netPayout = grossAmount - feeAmount;
     const { releaseTxHash } = releaseData;
 
+    let verifiedRelease = null;
+    if (milestone.contract.onChainEscrowId && releaseTxHash) {
+      verifiedRelease = await MonadEscrowService.verifyReleaseTransaction(
+        releaseTxHash,
+        milestone.contract.onChainEscrowId
+      );
+    }
+
     const isOnChain = Boolean(
       milestone.contract.onChainEscrowId ||
       milestone.contract.cryptoCurrency === 'USDC' ||

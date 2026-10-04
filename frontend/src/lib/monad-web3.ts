@@ -6,6 +6,7 @@ import {
   MONAD_EXPLORER_URL as ENV_EXPLORER_URL,
   ESCROW_CONTRACT_ADDRESS as ENV_ESCROW,
   STABLECOIN_ADDRESS as ENV_STABLECOIN,
+  TREASURY_ADDRESS as ENV_TREASURY,
 } from '../config/env';
 
 // Declare window.ethereum for TypeScript
@@ -25,6 +26,7 @@ export const MONAD_CHAIN_NAME = IS_MONAD_MAINNET ? 'Monad Mainnet' : 'Monad Test
 // Deployed addresses on Monad
 export const ESCROW_CONTRACT_ADDRESS = ENV_ESCROW;
 export const STABLECOIN_ADDRESS = ENV_STABLECOIN;
+export const TREASURY_ADDRESS = ENV_TREASURY;
 export const USDC_DECIMALS = 6;
 
 export function getExplorerTxUrl(txHash: string): string {
@@ -51,6 +53,7 @@ export const ESCROW_ABI = [
   'function approveAndRelease(uint256 escrowId)',
   'function raiseDispute(uint256 escrowId, string reason)',
   'function refundClient(uint256 escrowId)',
+  'function claimInactivityRefund(uint256 escrowId)',
   'function getEscrow(uint256 escrowId) view returns (tuple(uint256 id, string contractCode, address client, address artisan, uint256 amount, uint256 platformFeeBps, uint8 state, uint256 createdAt, uint256 completedAt))',
   'event EscrowCreated(uint256 indexed escrowId, string contractCode, address indexed client, address indexed artisan, uint256 amount, uint256 feeBps)',
   'event EscrowReleased(uint256 indexed escrowId, address indexed artisan, uint256 artisanAmount, uint256 platformFee)',
@@ -332,6 +335,36 @@ export async function raiseDisputeOnChain(
   const escrow = new Contract(ESCROW_CONTRACT_ADDRESS, ESCROW_ABI, signer);
 
   const tx = await escrow.raiseDispute(escrowId, reason);
+  const receipt = await tx.wait(1);
+  return receipt.hash;
+}
+
+/**
+ * Artisan submits completed work on-chain for the funded escrow
+ */
+export async function submitWorkOnChain(
+  escrowId: number,
+  customSigner?: ethers.Signer
+): Promise<string> {
+  const signer = customSigner || (await connectWallet()).signer;
+  const escrow = new Contract(ESCROW_CONTRACT_ADDRESS, ESCROW_ABI, signer);
+
+  const tx = await escrow.submitWork(escrowId);
+  const receipt = await tx.wait(1);
+  return receipt.hash;
+}
+
+/**
+ * Client reclaims escrowed funds on-chain if 30 days elapse with zero work submitted
+ */
+export async function claimInactivityRefundOnChain(
+  escrowId: number,
+  customSigner?: ethers.Signer
+): Promise<string> {
+  const signer = customSigner || (await connectWallet()).signer;
+  const escrow = new Contract(ESCROW_CONTRACT_ADDRESS, ESCROW_ABI, signer);
+
+  const tx = await escrow.claimInactivityRefund(escrowId);
   const receipt = await tx.wait(1);
   return receipt.hash;
 }

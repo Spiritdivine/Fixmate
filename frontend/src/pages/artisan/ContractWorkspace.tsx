@@ -26,11 +26,13 @@ import { Textarea } from '../../components/ui/Textarea';
 import { Stepper } from '../../components/ui/Stepper';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { formatNgn, formatDate, formatDateTime, shortenAddress } from '../../lib/formatters';
-import { MONAD_EXPLORER_URL, MONAD_CHAIN_NAME } from '../../lib/monad-web3';
+import { MONAD_EXPLORER_URL, MONAD_CHAIN_NAME, submitWorkOnChain } from '../../lib/monad-web3';
+import { useUnifiedWallet } from '../../lib/privy-provider';
 import { Contract, Milestone, MilestoneStatus } from '../../types';
 
 export const ContractWorkspace: React.FC = () => {
  const { contractId } = useParams<{ contractId: string }>();
+ const { getSigner } = useUnifiedWallet();
  const [contract, setContract] = useState<Contract | null>(null);
  const [isLoading, setIsLoading] = useState(true);
 
@@ -107,6 +109,15 @@ export const ContractWorkspace: React.FC = () => {
  try {
  setIsSubmitting(true);
  setSubmitError(null);
+
+ if (contract?.onChainEscrowId) {
+   try {
+     const signer = await getSigner();
+     await submitWorkOnChain(contract.onChainEscrowId, signer || undefined);
+   } catch (onChainErr: any) {
+     console.warn("Notice: on-chain submitWork notice:", onChainErr?.message || onChainErr);
+   }
+ }
 
  await apiClient.post(`/escrow/submit-work/${selectedMilestone.id}`, {
  submissionNotes,

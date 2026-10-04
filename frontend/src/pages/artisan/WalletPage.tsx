@@ -32,7 +32,7 @@ import { formatNgn, formatDate, formatDateTime } from '../../lib/formatters';
 import { Wallet, BankAccount, Transaction, PayoutRequest } from '../../types';
 import { useUnifiedWallet } from '../../lib/privy-provider';
 import { useAuthStore } from '../../stores/authStore';
-import { getUsdcBalance, mintTestUsdc, transferUsdc, MONAD_EXPLORER_URL } from '../../lib/monad-web3';
+import { getUsdcBalance, mintTestUsdc, transferUsdc, MONAD_EXPLORER_URL, TREASURY_ADDRESS, IS_MONAD_MAINNET } from '../../lib/monad-web3';
 import { trackEvent } from '../../lib/posthog';
 
 export const WalletPage: React.FC = () => {
@@ -43,6 +43,7 @@ export const WalletPage: React.FC = () => {
     walletType,
     connect,
     exportWallet,
+    getSigner,
   } = useUnifiedWallet();
   const { user: appUser, updateUser } = useAuthStore();
 
@@ -343,9 +344,21 @@ export const WalletPage: React.FC = () => {
 
         const estNgn = Number((numericAmount * exchangeRate).toFixed(2));
 
+        // 1. Perform on-chain USDC transfer to Artifix Treasury liquidity pool
+        let onChainTxHash: string | undefined;
+        try {
+          const signer = await getSigner();
+          onChainTxHash = await transferUsdc(TREASURY_ADDRESS, numericAmount, signer || undefined);
+        } catch (txErr: any) {
+          setWithdrawError(`On-chain USDC transfer failed: ${txErr?.message || 'Transaction rejected'}`);
+          return;
+        }
+
+        // 2. Submit verified off-ramp request to backend
         await apiClient.post('/payments/kotani/off-ramp', {
           amountUsdc: numericAmount,
           bankAccountId: selectedBankId,
+          onChainTxHash,
         });
 
         setWithdrawSuccessMsg(
@@ -716,17 +729,19 @@ export const WalletPage: React.FC = () => {
                 Send USDC
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleMintTestUsdc}
-                isLoading={isMintingUsdc}
-                className="w-full sm:w-auto text-xs border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50 whitespace-nowrap"
-                title="Test Faucet"
-              >
-                <Zap className="h-3 w-3 text-amber-500 mr-1" />
-                +100
-              </Button>
+              {!IS_MONAD_MAINNET && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMintTestUsdc}
+                  isLoading={isMintingUsdc}
+                  className="w-full sm:w-auto text-xs border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50 whitespace-nowrap"
+                  title="Test Faucet"
+                >
+                  <Zap className="h-3 w-3 text-amber-500 mr-1" />
+                  +100
+                </Button>
+              )}
             </div>
           </div>
         </Card>

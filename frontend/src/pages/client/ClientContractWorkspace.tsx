@@ -45,6 +45,7 @@ import {
   ESCROW_CONTRACT_ADDRESS,
   STABLECOIN_ADDRESS,
   MONAD_EXPLORER_URL,
+  IS_MONAD_MAINNET,
 } from '../../lib/monad-web3';
 import { useUnifiedWallet } from '../../lib/privy-provider';
 
@@ -116,6 +117,22 @@ export const ClientContractWorkspace: React.FC = () => {
       return (data.data as any)?.availableBalance !== undefined ? (data.data as Wallet) : (data.data as any)?.wallet;
     },
   });
+
+  // 2b. Live Kotani Exchange Rate (USDC -> NGN)
+  const { data: exchangeRateData } = useQuery<{ rate: number }>({
+    queryKey: ['kotani-exchange-rate'],
+    queryFn: async () => {
+      try {
+        const { data } = await apiClient.get<ApiResponse<{ rate: number }>>('/payments/kotani/rate');
+        return (data.data as any)?.rate ? (data.data as any) : { rate: 1465 };
+      } catch {
+        return { rate: 1465 };
+      }
+    },
+    staleTime: 60000,
+  });
+
+  const liveRate = exchangeRateData?.rate || 1465;
 
   // Helper to refresh on-chain wallet balance & allowance
   const refreshWalletState = async (addr?: string) => {
@@ -214,10 +231,14 @@ export const ClientContractWorkspace: React.FC = () => {
       );
       return;
     }
-    const neededUsdc = Math.max(1, Math.round(Number(milestone.amount) / 1500));
+    const neededUsdc = Math.max(1, Math.ceil(Number(milestone.amount) / liveRate));
     try {
       setIsLockingUsdc(true);
-      const { txHash } = await fundOnChainEscrow(contract.contractCode, artisanAddr, neededUsdc);
+      const milestoneRef = contract.milestones && contract.milestones.length > 1
+        ? `${contract.contractCode}-M${milestone.stepOrder}`
+        : contract.contractCode;
+
+      const { txHash } = await fundOnChainEscrow(milestoneRef, artisanAddr, neededUsdc);
       await fundMilestoneMutation.mutateAsync({
         milestoneId: milestone.id,
         payload: {
@@ -792,7 +813,7 @@ export const ClientContractWorkspace: React.FC = () => {
 
       {/* FUND MILESTONE MODAL (DUAL RAIL: FIAT & MONAD WEB3 USDC) */}
       {fundingMilestone && (() => {
-        const neededUsdc = Math.max(1, Math.round(Number(fundingMilestone.amount) / 1500));
+        const neededUsdc = Math.max(1, Math.ceil(Number(fundingMilestone.amount) / liveRate));
         const hasEnoughAllowance = Number(usdcAllowance) >= neededUsdc;
         const hasEnoughUsdc = Number(usdcBalance) >= neededUsdc;
 
@@ -923,8 +944,8 @@ export const ClientContractWorkspace: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Faucet Helper Button */}
-                  {connectedWallet && (
+                  {/* Faucet Helper Button (Testnet only) */}
+                  {connectedWallet && !IS_MONAD_MAINNET && (
                     <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px]">
                       <span className="text-slate-500">Need test funds on Monad?</span>
                       <button
