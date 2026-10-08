@@ -15,6 +15,7 @@ import adminRoutes from './admin.routes.js';
 import uploadRoutes from './upload.routes.js';
 import seoRoutes from './seo.routes.js';
 import contactRoutes from './contact.routes.js';
+import aiRoutes from './ai.routes.js';
 import prisma from '../config/db.js';
 import { MonadEscrowService } from '../services/monad-escrow.service.js';
 
@@ -70,6 +71,7 @@ router.use('/notifications', notificationRoutes);
 router.use('/admin', adminRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/contact', contactRoutes);
+router.use('/ai', aiRoutes);
 router.use('/seo', seoRoutes);
 router.use(seoRoutes);
 

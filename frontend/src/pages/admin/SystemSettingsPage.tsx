@@ -96,7 +96,7 @@ export const SystemSettingsPage: React.FC = () => {
             <span>Dynamic Platform Configuration</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-400">
-            Runtime platform variables, escrow commission percentages, withdrawal thresholds, and Monad RPC parameters.
+            Runtime platform variables, escrow commission percentages, withdrawal thresholds, and smart contract escrow parameters.
           </p>
         </div>
         <Button
@@ -218,11 +218,11 @@ export const SystemSettingsPage: React.FC = () => {
         {/* Monad Chain ID & RPC */}
         <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-white text-sm">Monad Network Chain ID</span>
+            <span className="font-bold text-white text-sm">Smart Escrow Network Chain ID</span>
             <Badge variant="purple" size="sm">MONAD_CHAIN_ID</Badge>
           </div>
           <p className="text-xs text-slate-400">
-            EVM Network ID for smart contract escrow interactions (Monad Testnet).
+            EVM Network ID for smart contract escrow interactions.
           </p>
           <div className="flex items-center justify-between pt-2 border-t border-slate-800">
             <span className="text-xl font-black text-purple-400 font-mono">

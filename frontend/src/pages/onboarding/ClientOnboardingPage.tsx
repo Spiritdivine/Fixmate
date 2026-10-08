@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   Briefcase,
   Users,
-  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
@@ -275,7 +274,7 @@ export const ClientOnboardingPage: React.FC = () => {
         {currentStep === 3 && (
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#1a221d] border border-stone-200 dark:border-stone-800 shadow-sm space-y-6 text-center">
             <div className="w-14 h-14 rounded-2xl bg-[#123E2A] text-emerald-400 flex items-center justify-center mx-auto shadow-sm">
-              <Sparkles className="w-7 h-7" />
+              <CheckCircle2 className="w-7 h-7" />
             </div>
 
             <div className="space-y-1">

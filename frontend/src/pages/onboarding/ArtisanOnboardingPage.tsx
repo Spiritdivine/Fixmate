@@ -10,7 +10,6 @@ import {
   ArrowLeft,
   DollarSign,
   Loader2,
-  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
@@ -526,7 +525,7 @@ export const ArtisanOnboardingPage: React.FC = () => {
               </div>
               <div className="p-3.5 rounded-2xl bg-stone-50 dark:bg-[#151c17] border border-stone-200 dark:border-stone-800">
                 <div className="font-bold text-stone-900 dark:text-white mb-0.5">Fast Escrow Payouts</div>
-                <div className="text-[11px] text-stone-500">Instant Paystack / Monad release</div>
+                <div className="text-[11px] text-stone-500">Instant Bank / Digital USD release</div>
               </div>
             </div>
 

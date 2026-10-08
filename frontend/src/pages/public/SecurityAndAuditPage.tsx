@@ -64,7 +64,7 @@ export const SecurityAndAuditPage: React.FC = () => {
     <div className="min-h-screen bg-[#FAF7F0] text-[#141A16] font-sans antialiased selection:bg-[#123E2A] selection:text-white pb-24">
       <SeoHead
         title="Security & Smart Contract Audit | Artifix Dual-Rail Escrow"
-        description="Review the Monad EVM escrow smart contract architecture, dual-rail fiat & crypto security protocols, automated milestone settlement, and verified audit report for Artifix."
+        description="Review the smart contract escrow architecture, dual-rail fiat & digital dollar security protocols, automated milestone settlement, and verified audit report for Artifix."
         canonical="https://artifixhq.xyz/security"
         ogType="website"
         ogImage="/api/v1/og/default"
@@ -93,7 +93,7 @@ export const SecurityAndAuditPage: React.FC = () => {
             </h1>
 
             <p className="text-sm sm:text-base text-stone-600 leading-relaxed mb-8">
-              Artifix combines Central Bank of Nigeria (CBN) regulated bank escrow vaults with high-throughput Monad blockchain smart contracts. Explore our verified contracts, security audit scorecards, and bug bounty policy.
+              Artifix combines Central Bank of Nigeria (CBN) regulated bank escrow vaults with high-throughput smart contract escrow. Explore our verified contracts, security audit scorecards, and bug bounty policy.
             </p>
           </div>
 
@@ -111,7 +111,7 @@ export const SecurityAndAuditPage: React.FC = () => {
             <div className="p-4 bg-white border border-stone-200/80 rounded-2xl shadow-xs">
               <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block mb-1">Contract Engine</span>
               <span className="text-lg sm:text-xl font-extrabold text-[#141A16]">
-                Monad EVM
+                Smart Contract EVM
               </span>
               <p className="text-[11px] text-stone-500 mt-1">Solidity 0.8.24 • Upgradeable</p>
             </div>
@@ -180,8 +180,8 @@ export const SecurityAndAuditPage: React.FC = () => {
                     <span className="font-mono text-white font-semibold">Solidity 0.8.24</span>
                   </div>
                   <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
-                    <span className="text-stone-400 block text-[10px] uppercase font-bold">EVM Network</span>
-                    <span className="font-mono text-white font-semibold">Monad Mainnet</span>
+                    <span className="text-stone-400 block text-[10px] uppercase font-bold">Network</span>
+                    <span className="font-mono text-white font-semibold">Smart Escrow Network</span>
                   </div>
                   <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
                     <span className="text-stone-400 block text-[10px] uppercase font-bold">Proxy Pattern</span>

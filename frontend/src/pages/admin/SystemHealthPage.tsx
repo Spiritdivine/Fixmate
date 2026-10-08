@@ -53,7 +53,7 @@ export const SystemHealthPage: React.FC = () => {
             <span>Infrastructure Health & Diagnostic Console</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-400">
-            Live health checks across PostgreSQL database clusters, Monad RPC endpoints, and WebSockets gateway.
+            Live health checks across PostgreSQL database clusters, Smart Escrow RPC endpoints, and WebSockets gateway.
           </p>
         </div>
         <Button
@@ -140,7 +140,7 @@ export const SystemHealthPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 font-bold text-white text-sm">
               <Layers className="w-4 h-4 text-purple-400" />
-              <span>Monad Testnet RPC</span>
+              <span>Smart Escrow RPC</span>
             </div>
             <Badge
               variant={healthData?.checks?.monadRpc === 'ok' ? 'success' : 'danger'}

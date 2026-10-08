@@ -20,7 +20,7 @@ export const EditorialFooter: React.FC = () => {
             </Link>
 
             <p className="text-xs sm:text-[13px] text-[#556259] leading-relaxed mb-6 font-normal">
-              Decentralized trust, escrow, and identity infrastructure for Africa’s informal service economy. Guaranteeing zero-dispute settlements for homeowners and verified craftsmen.
+              Decentralized trust, payment protection, and identity infrastructure for Africa’s informal service economy. Guaranteeing zero-dispute settlements for homeowners and verified craftsmen.
             </p>
 
             {/* Social Media Links */}
@@ -78,7 +78,7 @@ export const EditorialFooter: React.FC = () => {
                 <Link to="/jobs" className="hover:text-[#123E2A] transition-colors">Jobs Marketplace</Link>
               </li>
               <li>
-                <Link to="/pricing" className="hover:text-[#123E2A] transition-colors">Escrow Fee Model</Link>
+                <Link to="/pricing" className="hover:text-[#123E2A] transition-colors">Platform Fee Model</Link>
               </li>
               <li>
                 <Link to="/security" className="hover:text-[#123E2A] transition-colors">Security &amp; Audit</Link>
@@ -162,8 +162,6 @@ export const EditorialFooter: React.FC = () => {
           <div className="flex items-center gap-1">
             <span>Handcrafted with pride for</span>
             <span className="text-[#123E2A] font-bold">Nigeria's Informal Economy</span>
-            <span>&bull;</span>
-            <span className="text-[#836EF9] font-bold">Powered by Monad</span>
           </div>
         </div>
 

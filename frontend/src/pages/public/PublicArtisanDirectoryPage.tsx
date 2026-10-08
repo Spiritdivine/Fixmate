@@ -85,7 +85,7 @@ export const PublicArtisanDirectoryPage: React.FC = () => {
 
   // Dynamic document title
   useEffect(() => {
-    document.title = 'Find Verified Nigerian Artisans | Artifix Escrow Directory';
+    document.title = 'Find Verified Nigerian Artisans | Artifix Directory';
   }, []);
 
   // Debounce search input
@@ -240,8 +240,8 @@ export const PublicArtisanDirectoryPage: React.FC = () => {
   return (
     <div className="w-full pb-20">
       <SeoHead
-        title="Find Verified Nigerian Artisans | Artifix Escrow Directory"
-        description="Search and hire ID-verified electricians, plumbers, solar engineers, carpenters, and painters across Nigeria with 100% money-back smart escrow protection."
+        title="Find Verified Nigerian Artisans | Artifix Directory"
+        description="Search and hire ID-verified electricians, plumbers, solar engineers, carpenters, and painters across Nigeria with 100% money-back milestone payment protection."
         canonical="https://artifixhq.xyz/artisans"
         ogType="website"
         ogImage="/api/v1/og/default"
@@ -272,7 +272,7 @@ export const PublicArtisanDirectoryPage: React.FC = () => {
             </h1>
 
             <p className="text-sm sm:text-base text-[#556259] leading-relaxed max-w-2xl font-normal">
-              Browse vetted plumbers, solar installers, electricians, and tradesmen in Lagos, Abuja, Port Harcourt, and beyond. Your funds remain safely in smart escrow until you approve the finished work.
+              Browse vetted plumbers, solar installers, electricians, and tradesmen in Lagos, Abuja, Port Harcourt, and beyond. Your funds remain safely protected until you approve the finished work.
             </p>
           </div>
 
@@ -824,7 +824,7 @@ export const PublicArtisanDirectoryPage: React.FC = () => {
               Get discovered by high-budget clients &amp; guarantee your payouts.
             </h2>
             <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed font-normal">
-              Join thousands of verified electricians, plumbers, and contractors earning reliably through Monad smart escrow. No bidding commissions, instant settlements.
+              Join thousands of verified electricians, plumbers, and contractors earning reliably through automated payment guarantees. No bidding commissions, instant settlements.
             </p>
           </div>
 

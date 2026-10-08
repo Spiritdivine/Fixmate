@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, Wallet, Sparkles } from 'lucide-react';
+import { Loader2, Wallet } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { AuthInput } from '../../components/auth/AuthInput';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
@@ -205,7 +205,7 @@ export const Register: React.FC = () => {
               <Wallet className="w-3.5 h-3.5" />
             </div>
             <div className="flex-1 leading-snug">
-              <span className="font-semibold text-emerald-950">Automated Monad Escrow Wallet:</span>{' '}
+              <span className="font-semibold text-emerald-950">Automated Smart Escrow Wallet:</span>{' '}
               {preconnectedWallet ? (
                 <>
                   Pre-connected wallet{' '}

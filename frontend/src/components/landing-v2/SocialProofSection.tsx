@@ -3,7 +3,7 @@ import { LANDING_IMAGES } from '../../assets/landing-assets';
 
 export const SocialProofSection: React.FC = () => {
   const metrics = [
-    { value: '₦180M+', label: 'Escrow Volume Protected', sub: 'Across 1,200+ residential projects' },
+    { value: '₦180M+', label: 'Project Funds Protected', sub: 'Across 1,200+ residential projects' },
     { value: '99.6%', label: 'Dispute-Free Completion', sub: 'Verified by milestone inspection' },
     { value: '2,450+', label: 'Vetted Craft Masters', sub: 'Identity & competency audited' },
     { value: '< 15 mins', label: 'Average Response Time', sub: 'Direct match with nearby technicians' },
@@ -15,9 +15,9 @@ export const SocialProofSection: React.FC = () => {
       role: 'Homeowner, Lekki Phase 1, Lagos',
       avatar: LANDING_IMAGES.avatars[0],
       project: '5kVA Solar Inverter & Battery Bank',
-      amount: '₦1,850,000 in Escrow',
+      amount: '₦1,850,000 Protected',
       quote:
-        'In the past, an electrician absconded with my ₦450,000 deposit for solar panels. With Artifix, the money remained safely locked in escrow until the batteries were delivered and load-tested. I will never hire outside Artifix again.',
+        'In the past, an electrician absconded with my ₦450,000 deposit for solar panels. With Artifix, the money remained safely locked until the batteries were delivered and load-tested. I will never hire outside Artifix again.',
       badge: 'Protected Milestone Release',
     },
     {
@@ -35,9 +35,9 @@ export const SocialProofSection: React.FC = () => {
       role: 'Property Investor, London, UK',
       avatar: LANDING_IMAGES.avatars[2],
       project: 'Kitchen & Bathroom Remodeling in Ikeja GRA',
-      amount: 'Funded via Monad Crypto',
+      amount: 'Funded via Digital USD',
       quote:
-        'Managing renovations from abroad used to mean relatives lying about progress. With Artifix’s photo proof-of-work docket and Monad crypto escrow, I inspected every tile from London before releasing a single pound.',
+        'Managing renovations from abroad used to mean relatives lying about progress. With Artifix’s photo proof-of-work docket and smart milestone protection, I inspected every tile from London before releasing a single pound.',
       badge: 'Zero Diaspora Loss',
     },
   ];
@@ -90,7 +90,7 @@ export const SocialProofSection: React.FC = () => {
           </h2>
 
           <p className="text-sm sm:text-base text-[#556259] leading-[1.65] font-normal">
-            Real experiences from property owners and technicians whose projects and businesses are protected by Artifix milestone escrow.
+            Real experiences from property owners and technicians whose projects and businesses are protected by Artifix milestone guarantees.
           </p>
         </div>
 

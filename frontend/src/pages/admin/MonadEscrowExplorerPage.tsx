@@ -86,10 +86,10 @@ export const MonadEscrowExplorerPage: React.FC = () => {
         <div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
             <Layers className="w-6 h-6 text-purple-400" />
-            <span>Monad Web3 Smart Contract Explorer</span>
+            <span>Smart Escrow Contract Explorer</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-400">
-            Real-time verification of EVM smart contract state on Monad Testnet (Chain ID 10143).
+            Real-time verification of EVM smart contract state & escrow records.
           </p>
         </div>
         <Button
@@ -120,7 +120,7 @@ export const MonadEscrowExplorerPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-1">
           <span className="text-[10px] font-bold uppercase text-slate-400">Target EVM Chain</span>
-          <p className="text-lg font-black text-white">Monad Testnet</p>
+          <p className="text-lg font-black text-white">Smart Escrow Network</p>
           <span className="text-[11px] font-mono text-purple-400">Chain ID: 10143</span>
         </div>
 
@@ -176,7 +176,7 @@ export const MonadEscrowExplorerPage: React.FC = () => {
                 onChange={(e) => setSyncAction(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-hidden focus:border-purple-500"
               >
-                <option value="DEPOSIT">DEPOSIT (Fund Escrow on Monad)</option>
+                <option value="DEPOSIT">DEPOSIT (Fund Smart Escrow)</option>
                 <option value="RELEASE">RELEASE (Approve & Release Milestone)</option>
                 <option value="REFUND">REFUND (Voluntary Milestone Refund)</option>
               </select>
@@ -212,7 +212,7 @@ export const MonadEscrowExplorerPage: React.FC = () => {
         <div className="lg:col-span-2 p-5 rounded-[24px] bg-slate-900 border border-slate-800 space-y-4">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Activity className="w-4 h-4 text-purple-400" />
-            <span>Monad On-Chain Escrow Records</span>
+            <span>On-Chain Escrow Records</span>
           </h3>
 
           {isLoading ? (
@@ -222,7 +222,7 @@ export const MonadEscrowExplorerPage: React.FC = () => {
             </div>
           ) : contracts.length === 0 ? (
             <div className="py-12 text-center text-slate-500 bg-slate-950 rounded-xl border border-slate-800">
-              No on-chain Monad escrow contracts found.
+              No on-chain escrow contracts found.
             </div>
           ) : (
             <div className="space-y-3">

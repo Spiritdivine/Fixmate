@@ -60,7 +60,7 @@ export const ContractsList: React.FC = () => {
  Contracts & Escrow Agreements
  </h1>
  <p className="text-sm text-slate-500 mt-1">
- Work agreements backed by Monad Blockchain smart contracts & in-app atomic escrow locks.
+ Work agreements backed by automated smart contracts & in-app atomic escrow locks.
  </p>
  </div>
  <Link to="/artisan/jobs">
@@ -121,8 +121,8 @@ export const ContractsList: React.FC = () => {
  #{contract.contractCode}
  </span>
  {contract.onChainEscrowId && (
- <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-500 border border-purple-500/20 flex items-center gap-1">
-  Monad Web3
+ <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1">
+  Digital Escrow
  </span>
  )}
  </div>

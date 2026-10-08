@@ -246,7 +246,7 @@ export const ClientSettingsPage: React.FC = () => {
               <Shield className="w-3.5 h-3.5 text-emerald-300" />
               <span>Artifix Security Shield</span>
             </div>
-            <h3 className="text-lg font-bold text-white">Monad Smart Contract &amp; Vault Protection</h3>
+            <h3 className="text-lg font-bold text-white">Automated Smart Contract &amp; Vault Protection</h3>
             <p className="text-xs text-emerald-100/90 leading-relaxed">
               All deposited funds remain secured in non-custodial or audited on-chain smart escrow accounts until you explicitly inspect and authorize milestone approvals.
             </p>

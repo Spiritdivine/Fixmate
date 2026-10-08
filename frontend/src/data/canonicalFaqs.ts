@@ -15,7 +15,7 @@ export const CANONICAL_FAQS: FaqItem[] = [
   {
     id: 'web3-crypto-knowledge',
     q: 'Do I need a crypto wallet or Web3 knowledge to use Artifix?',
-    a: 'No. Artifix is built for everyday homeowners and facility managers. Over 85% of our clients fund milestones using normal Nigerian bank debit cards (Mastercard, Visa, Verve) or instant bank transfers via Paystack/NIP. Monad EVM blockchain escrow operates under the hood to guarantee tamper-proof execution without requiring any crypto knowledge.',
+    a: 'No. Artifix is built for everyday homeowners and facility managers. Over 85% of our clients fund milestones using normal Nigerian bank debit cards (Mastercard, Visa, Verve) or instant bank transfers via Paystack/NIP. Automated smart contract escrow operates under the hood to guarantee tamper-proof execution without requiring any crypto knowledge.',
     category: 'payments',
   },
   {

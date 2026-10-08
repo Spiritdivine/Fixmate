@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ShieldCheck } from 'lucide-react';
 import { trackEvent } from '../lib/posthog';
 
 // Modular Full-Page Landing V2 Sections
 import { PublicNavbar } from '../components/layout/PublicNavbar';
+import { HeroAiSearchInput } from '../components/landing-v2/HeroAiSearchInput';
+import { useAiChatStore } from '../stores/aiChatStore';
 import { CategoryGridSection } from '../components/landing-v2/CategoryGridSection';
 import { HowItWorksSection } from '../components/landing-v2/HowItWorksSection';
 import { SponsorBarSection } from '../components/landing-v2/SponsorBarSection';
@@ -16,6 +19,8 @@ import { ClosingCtaSection } from '../components/landing-v2/ClosingCtaSection';
 import { EditorialFooter } from '../components/landing-v2/EditorialFooter';
 
 export function LandingPageV2() {
+  const openChat = useAiChatStore((state) => state.openChat);
+
   return (
     <div className="min-h-screen bg-[#FAF7F0] text-[#141A16] font-sans antialiased selection:bg-[#133E2B] selection:text-white flex flex-col justify-between overflow-x-clip scroll-smooth">
       
@@ -35,45 +40,28 @@ export function LandingPageV2() {
           {/* -------------------------------------------------------- */}
           {/* LEFT COLUMN: HERO COPY & CTAS                            */}
           {/* -------------------------------------------------------- */}
-          <div className="md:col-span-6 flex flex-col items-start z-10 pr-0 md:pr-2 lg:pr-4">
+          <div className="md:col-span-6 flex flex-col items-center md:items-start text-center md:text-left z-10 pr-0 md:pr-2 lg:pr-4">
             
-            {/* Tagline / Eyebrow */}
-            <div className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em] text-[#6A7B70] uppercase mb-2.5 sm:mb-4">
-              TRUSTED ARTISANS • SECURE ESCROW • VERIFIED WORK
-            </div>
+            {/* Short Tagline Text Above Hero Title */}
+            <p className="text-[12px] sm:text-[13px] font-semibold text-[#184530] tracking-wider uppercase mb-2.5 sm:mb-3">
+              AI Diagnostics · Verified Artisans
+            </p>
 
             {/* Main Headline */}
             <h1 
-              className="text-[32px] xs:text-[36px] sm:text-[42px] md:text-[38px] lg:text-[48px] xl:text-[56px] font-bold text-[#141A16] leading-[1.08] tracking-[-0.03em] mb-3.5 sm:mb-5"
+              className="text-[32px] xs:text-[36px] sm:text-[42px] md:text-[38px] lg:text-[48px] xl:text-[56px] font-bold text-[#141A16] leading-[1.08] tracking-[-0.03em] mb-4 sm:mb-6 text-center md:text-left mx-auto md:mx-0"
               style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
             >
               Hire skilled artisans with <span className="font-serif italic font-normal text-[#121814]" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>confidence.</span>
             </h1>
 
-            {/* Subparagraph */}
-            <p className="text-[13px] sm:text-[14px] lg:text-[15px] text-[#556259] leading-[1.65] max-w-[500px] mb-6 sm:mb-8 font-normal">
-              Find verified professionals, secure payments through escrow, and release funds only when work is completed as agreed.
-            </p>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-3 sm:mb-6">
-              <Link
-                to="/artisans"
-                onClick={() => trackEvent('landing_v2_cta_clicked', { target: 'find_artisan', location: 'hero' })}
-                className="inline-flex items-center gap-2 bg-[#123E2A] text-white text-xs sm:text-[13px] font-semibold px-5 sm:px-6 py-3 rounded-full hover:bg-[#0E3222] transition-all shadow-md active:scale-95"
-              >
-                <span>Find an Artisan</span>
-                <span aria-hidden="true">→</span>
-              </Link>
-
-              <Link
-                to="/register?role=ARTISAN"
-                onClick={() => trackEvent('landing_v2_cta_clicked', { target: 'become_artisan', role: 'ARTISAN', location: 'hero' })}
-                className="inline-flex items-center border border-[#123E2A] text-[#123E2A] text-xs sm:text-[13px] font-semibold px-5 sm:px-6 py-3 rounded-full hover:bg-[#123E2A]/5 transition-all active:scale-95"
-              >
-                Become an Artisan
-              </Link>
-            </div>
+            {/* Template-Styled Hero AI Input Bar (replaces the 'find an artisan' and 'become an artisan' buttons) */}
+            <HeroAiSearchInput
+              onDiagnose={(prompt, attachments) => {
+                openChat(prompt, attachments || {});
+                trackEvent('hero_ai_diagnose_started', { prompt });
+              }}
+            />
 
           </div>
 
@@ -277,7 +265,7 @@ export function LandingPageV2() {
                 <div className="absolute bottom-4 right-6 z-30 bg-[#0D1815] text-white rounded-2xl p-4 shadow-[0_20px_40px_rgba(0,0,0,0.35)] w-[290px] backdrop-blur-md">
                   
                   <div className="text-[13px] font-bold tracking-tight text-white mb-0.5">
-                    Secure Escrow
+                    Secure Payment
                   </div>
                   <div className="text-[10px] text-stone-400 mb-2.5">
                     Your funds are safe until the work is verified.
@@ -295,14 +283,14 @@ export function LandingPageV2() {
                       </div>
                     </div>
 
-                    {/* MON Rail */}
+                    {/* USD Rail */}
                     <div className="bg-[#182622] rounded-xl p-2 flex items-center gap-2 hover:bg-[#20322d] transition-colors">
-                      <div className="w-6 h-6 rounded-full bg-[#836EF9] text-white font-black flex items-center justify-center text-[10px] shrink-0">
-                        <span className="w-1.5 h-1.5 rounded-full border border-white" />
+                      <div className="w-6 h-6 rounded-full bg-[#123E2A] text-emerald-400 font-black flex items-center justify-center text-[10px] shrink-0 border border-emerald-500/30">
+                        $
                       </div>
                       <div className="overflow-hidden">
-                        <div className="text-[11px] font-bold leading-tight text-white">MON</div>
-                        <div className="text-[8px] text-stone-400 truncate leading-tight">Pay with crypto (Monad)</div>
+                        <div className="text-[11px] font-bold leading-tight text-white">USD</div>
+                        <div className="text-[8px] text-stone-400 truncate leading-tight">Digital dollar (USDC)</div>
                       </div>
                     </div>
                   </div>
@@ -364,7 +352,7 @@ export function LandingPageV2() {
                   </svg>
                 </div>
                 <span className="text-[10px] lg:text-[11px] font-medium text-[#2C3630] leading-tight max-w-[85px]">
-                  Smart Contract Escrow
+                  Milestone Protection
                 </span>
               </div>
 
@@ -378,7 +366,7 @@ export function LandingPageV2() {
                   </svg>
                 </div>
                 <span className="text-[10px] lg:text-[11px] font-medium text-[#2C3630] leading-tight max-w-[95px]">
-                  Dual Payment Rails (NGN &amp; MON)
+                  Dual Payment Rails (Naira &amp; Digital USD)
                 </span>
               </div>
 
@@ -428,12 +416,14 @@ export function LandingPageV2() {
               </div>
             </div>
 
-            {/* Right: Monad Attribution Badge */}
+            {/* Right: Security Guarantee Badge */}
             <div className="flex items-center gap-2 text-stone-600 text-xs lg:text-[11px] font-medium select-none shrink-0">
-              <div className="w-4 h-4 rounded bg-[#836EF9] flex items-center justify-center text-white shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-white" />
+              <div className="w-4 h-4 rounded bg-[#123E2A] flex items-center justify-center text-emerald-400 shadow-sm">
+                <svg className="w-2.5 h-2.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
               </div>
-              <span className="whitespace-nowrap">Powered by Monad Blockchain</span>
+              <span className="whitespace-nowrap">100% Payment Protected</span>
             </div>
 
           </div>
@@ -469,7 +459,7 @@ export function LandingPageV2() {
                         <path strokeLinecap="round" d="M7 9l3 2M17 9l-3 2M12 15v3" />
                       </svg>
                     </div>
-                    <span className="text-xs font-semibold text-[#2C3630] whitespace-nowrap">Smart Contract Escrow</span>
+                    <span className="text-xs font-semibold text-[#2C3630] whitespace-nowrap">Milestone Protection</span>
                   </div>
 
                   {/* Dual Payment Rails */}
@@ -481,7 +471,7 @@ export function LandingPageV2() {
                         <path strokeLinecap="round" d="M12 2v2M12 20v2M2 12h2M20 12h2" />
                       </svg>
                     </div>
-                    <span className="text-xs font-semibold text-[#2C3630] whitespace-nowrap">Dual Payment Rails (NGN &amp; MON)</span>
+                    <span className="text-xs font-semibold text-[#2C3630] whitespace-nowrap">Dual Payment Rails (Naira &amp; Digital USD)</span>
                   </div>
 
                   {/* Proof of Work */}
@@ -514,12 +504,10 @@ export function LandingPageV2() {
                     </span>
                   </div>
 
-                  {/* Monad attribution badge */}
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 text-xs shrink-0">
-                    <div className="w-3.5 h-3.5 rounded bg-[#836EF9] flex items-center justify-center text-white">
-                      <span className="w-1 h-1 rounded-full bg-white" />
-                    </div>
-                    <span className="text-[11px] font-medium whitespace-nowrap">Powered by Monad</span>
+                  {/* Escrow protection badge */}
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#123E2A]/6 text-[#123E2A] text-xs shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#1E573B]" />
+                    <span className="text-[11px] font-medium whitespace-nowrap">Bank-Grade Payment Security</span>
                   </div>
                 </React.Fragment>
               ))}

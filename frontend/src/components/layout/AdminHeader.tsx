@@ -68,7 +68,7 @@ export const AdminHeader: React.FC<HeaderProps> = ({ onMenuClick }) => {
     if (path.includes('/admin/contracts')) return 'Contracts & Escrow Oversight';
     if (path.includes('/admin/transactions')) return 'Financial Transactions Ledger';
     if (path.includes('/admin/payouts')) return 'Artisan Payouts Moderation';
-    if (path.includes('/admin/monad-escrow')) return 'Monad Web3 Blockchain Explorer';
+    if (path.includes('/admin/monad-escrow')) return 'Smart Escrow Explorer';
     if (path.includes('/admin/audit-logs')) return 'System Audit Trail & State History';
     if (path.includes('/admin/settings')) return 'Dynamic System Parameters';
     if (path.includes('/admin/health')) return 'Production Health & RPC Diagnostics';

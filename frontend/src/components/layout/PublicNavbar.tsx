@@ -106,7 +106,7 @@ export const PublicNavbar: React.FC = () => {
     {
       label: 'Smart contract audit',
       path: '/security',
-      desc: '0 critical vulnerabilities, audited Monad EVM bytecode & bug bounty.',
+      desc: '0 critical vulnerabilities, audited smart contract bytecode & bug bounty.',
     },
   ];
 

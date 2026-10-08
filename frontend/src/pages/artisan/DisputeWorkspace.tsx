@@ -213,7 +213,7 @@ export const DisputeWorkspace: React.FC = () => {
  rel="noopener noreferrer"
  className="text-purple-400 hover:underline flex items-center gap-1"
  >
- Monad Resolution Tx: {dispute.onChainResolutionTxHash.slice(0, 12)}...{' '}
+ Escrow Resolution Tx: {dispute.onChainResolutionTxHash.slice(0, 12)}...{' '}
  <ExternalLink className="w-3 h-3" />
  </a>
  )}

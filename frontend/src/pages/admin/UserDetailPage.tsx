@@ -305,7 +305,7 @@ export const UserDetailPage: React.FC = () => {
             {user.walletAddress && (
               <p className="text-[11px] text-purple-400 font-mono mt-2 flex items-center gap-1">
                 <Layers className="w-3 h-3" />
-                <span>Monad Wallet: {user.walletAddress}</span>
+                <span>Escrow Account: {user.walletAddress}</span>
               </p>
             )}
           </div>

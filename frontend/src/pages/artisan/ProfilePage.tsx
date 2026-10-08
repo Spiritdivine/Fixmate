@@ -27,6 +27,7 @@ import { WorkshopLocationCard } from '../../components/artisan/WorkshopLocationC
 import { useAuthStore } from '../../stores/authStore';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { JobCategory } from '../../types';
+import { MONAD_EXPLORER_URL } from '../../lib/monad-web3';
 
 export const ProfilePage: React.FC = () => {
  const { user, updateUser } = useAuthStore();
@@ -336,8 +337,8 @@ export const ProfilePage: React.FC = () => {
  <div className="flex items-center gap-2">
  <Wallet className="w-5 h-5 text-purple-400" />
  <div>
- <CardTitle className="text-purple-400">Monad Payout Account</CardTitle>
- <CardDescription>Your permanent, self-custodial Monad address for direct smart contract escrow payouts.</CardDescription>
+ <CardTitle className="text-purple-400">Digital Escrow Payout Account</CardTitle>
+ <CardDescription>Your permanent, self-custodial account for direct milestone payouts.</CardDescription>
  </div>
  </div>
  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -349,7 +350,7 @@ export const ProfilePage: React.FC = () => {
 
  <div className="px-6 pb-6">
  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
- Permanent EVM Address
+ Permanent Escrow Account ID
  </label>
  <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-700/60 bg-slate-900/60 text-sm font-mono text-slate-200 break-all">
  <span>{user?.walletAddress || 'Provisioning embedded wallet...'}</span>
@@ -367,11 +368,11 @@ export const ProfilePage: React.FC = () => {
  <Copy className="w-4 h-4" />
  </button>
  <a
- href={`https://testnet.monadvision.com/address/${user.walletAddress}`}
+ href={`${MONAD_EXPLORER_URL}/address/${user.walletAddress}`}
  target="_blank"
  rel="noopener noreferrer"
  className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-purple-400 transition-colors cursor-pointer border border-transparent hover:border-slate-700"
- title="View on MonadVision"
+ title="View On-Chain Receipt"
  >
  <ExternalLink className="w-4 h-4" />
  </a>

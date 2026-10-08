@@ -51,6 +51,9 @@ const envSchema = z.object({
   // Resend Email Configuration
   RESEND_API_KEY: optionalCleanString,
   EMAIL_FROM: cleanString.default('Artifix <noreply@artifixhq.xyz>'),
+  // AI Diagnostics Configuration
+  GEMINI_API_KEY: optionalCleanString,
+  OPENAI_API_KEY: optionalCleanString,
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

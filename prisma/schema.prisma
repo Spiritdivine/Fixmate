@@ -200,6 +200,7 @@ model User {
   pushSubscriptions  PushSubscription[]
   auditLogs          AuditLog[]
   settingsUpdated    SystemSetting[]
+  aiDiagnosticSessions AiDiagnosticSession[]
 
   @@index([email])
   @@index([phoneNumber])
@@ -264,6 +265,7 @@ model ArtisanProfile {
   skills             ArtisanSkill[]
   services           ArtisanService[]
   savedByClients     SavedArtisan[]
+  diagnosticMatches  DiagnosticMatch[]
 
   @@index([state, lgaCity])
   @@index([latitude, longitude])
@@ -341,6 +343,7 @@ model JobCategory {
   children  JobCategory[] @relation("CategoryHierarchy")
   jobs      Job[]
   skills    Skill[]
+  aiDiagnosticSessions AiDiagnosticSession[]
 
   @@map("job_categories")
 }
@@ -570,6 +573,7 @@ model Contract {
   reviews              Review[]
   transactions         Transaction[]
   conversations        Conversation[]
+  repairVerifications  AiRepairVerification[]
 
   @@index([clientId])
   @@index([artisanId])
@@ -599,6 +603,7 @@ model Milestone {
   contract             Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
   transactions         Transaction[]
   disputes             Dispute[]
+  repairVerifications  AiRepairVerification[]
 
   @@index([contractId, stepOrder])
   @@map("milestones")
@@ -956,4 +961,146 @@ model SystemSetting {
   admin       User?    @relation(fields: [updatedBy], references: [id])
 
   @@map("system_settings")
+}
+
+// ==============================================================================
+// 15. AI DIAGNOSTIC & MATCHING ENGINE (PHASE 1)
+// ==============================================================================
+
+enum DiagnosticInputType {
+  TEXT
+  PHOTO
+  VOICE
+  MULTIMODAL
+}
+
+enum DiagnosticSeverity {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum DiagnosticUrgency {
+  ROUTINE
+  SCHEDULED
+  URGENT
+  EMERGENCY
+}
+
+model AiDiagnosticSession {
+  id                 String               @id @default(uuid()) @db.Uuid
+  userId             String?              @map("user_id") @db.Uuid
+  clientSessionToken String?              @map("client_session_token") @db.VarChar(128)
+  inputType          DiagnosticInputType  @default(TEXT) @map("input_type")
+  rawTextPrompt      String?              @map("raw_text_prompt") @db.Text
+  transcribedAudio   String?              @map("transcribed_audio") @db.Text
+  voiceAudioUrl      String?              @map("voice_audio_url") @db.Text
+  
+  diagnosticTitle    String?              @map("diagnostic_title") @db.VarChar(255)
+  probableCause      String?              @map("probable_cause") @db.Text
+  severity           DiagnosticSeverity   @default(LOW)
+  urgency            DiagnosticUrgency    @default(ROUTINE)
+  isHazardous        Boolean              @default(false) @map("is_hazardous")
+  safetyInstructions Json                 @default("[]") @map("safety_instructions")
+  diyAllowed         Boolean              @default(false) @map("diy_allowed")
+  diyGuide           String?              @map("diy_guide") @db.Text
+
+  // Phase 3: Conversational Clarification & Artisan Audio Bridge
+  clarificationQuestion   String?           @map("clarification_question") @db.Text
+  clarificationOptions    Json              @default("[]") @map("clarification_options")
+  clarificationAnswer     String?           @map("clarification_answer") @db.Text
+  artisanAudioBriefingUrl String?           @map("artisan_audio_briefing_url") @db.Text
+  artisanAudioScript      String?           @map("artisan_audio_script") @db.Text
+  
+  estimatedBOM       Json                 @default("[]") @map("estimated_bom")
+  estimatedLaborMin  Decimal?             @map("estimated_labor_min") @db.Decimal(12, 2)
+  estimatedLaborMax  Decimal?             @map("estimated_labor_max") @db.Decimal(12, 2)
+  currency           String               @default("NGN") @db.VarChar(10)
+  
+  matchedCategoryId  Int?                 @map("matched_category_id")
+  recommendedSkills  Json                 @default("[]") @map("recommended_skills")
+  
+  clientLatitude     Decimal?             @map("client_latitude") @db.Decimal(10, 8)
+  clientLongitude    Decimal?             @map("client_longitude") @db.Decimal(11, 8)
+  clientAddress      String?              @map("client_address") @db.Text
+  
+  convertedToJobId      String?              @unique @map("converted_to_job_id") @db.Uuid
+  convertedToContractId String?              @unique @map("converted_to_contract_id") @db.Uuid
+  selectedArtisanId     String?              @map("selected_artisan_id") @db.Uuid
+  
+  // Phase 4: Emergency SOS & AI Before/After Verification
+  isSosDispatched       Boolean              @default(false) @map("is_sos_dispatched")
+  sosDispatchedAt       DateTime?            @map("sos_dispatched_at") @db.Timestamptz
+  sosClaimedByArtisanId String?              @map("sos_claimed_by_artisan_id") @db.Uuid
+  
+  createdAt             DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  user                  User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category              JobCategory?         @relation(fields: [matchedCategoryId], references: [id])
+  mediaFiles            DiagnosticMedia[]
+  recommendations       DiagnosticMatch[]
+  repairVerifications   AiRepairVerification[]
+
+  @@index([userId])
+  @@index([matchedCategoryId])
+  @@index([createdAt])
+  @@map("ai_diagnostic_sessions")
+}
+
+model DiagnosticMedia {
+  id                   String              @id @default(uuid()) @db.Uuid
+  diagnosticSessionId  String              @map("diagnostic_session_id") @db.Uuid
+  mediaUrl             String              @map("media_url") @db.Text
+  mediaType            String              @map("media_type") @db.VarChar(50)
+  fileSize             Int                 @map("file_size")
+  aiVisualSummary      String?             @map("ai_visual_summary") @db.Text
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  session              AiDiagnosticSession @relation(fields: [diagnosticSessionId], references: [id], onDelete: Cascade)
+
+  @@index([diagnosticSessionId])
+  @@map("diagnostic_media")
+}
+
+model DiagnosticMatch {
+  id                  String              @id @default(uuid()) @db.Uuid
+  diagnosticSessionId String              @map("diagnostic_session_id") @db.Uuid
+  artisanProfileId    String              @map("artisan_profile_id") @db.Uuid
+  matchScore          Decimal             @map("match_score") @db.Decimal(5, 2)
+  distanceKm          Decimal?            @map("distance_km") @db.Decimal(6, 2)
+  matchRationale      String?             @map("match_rationale") @db.Text
+  isContacted         Boolean             @default(false) @map("is_contacted")
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  session             AiDiagnosticSession @relation(fields: [diagnosticSessionId], references: [id], onDelete: Cascade)
+  artisan             ArtisanProfile      @relation(fields: [artisanProfileId], references: [id], onDelete: Cascade)
+
+  @@index([diagnosticSessionId])
+  @@index([artisanProfileId])
+  @@map("diagnostic_matches")
+}
+
+model AiRepairVerification {
+  id                  String               @id @default(uuid()) @db.Uuid
+  diagnosticSessionId String?              @map("diagnostic_session_id") @db.Uuid
+  contractId          String?              @map("contract_id") @db.Uuid
+  milestoneId         String?              @map("milestone_id") @db.Uuid
+  isRepairVerified    Boolean              @default(false) @map("is_repair_verified")
+  confidenceScore     Decimal              @map("confidence_score") @db.Decimal(5, 2)
+  observations        Json                 @default("[]")
+  hazardsRemaining    Boolean              @default(false) @map("hazards_remaining")
+  recommendation      String               @db.VarChar(50)
+  preRepairPhotoUrls  Json                 @default("[]") @map("pre_repair_photo_urls")
+  postRepairPhotoUrls Json                 @default("[]") @map("post_repair_photo_urls")
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz
+
+  session             AiDiagnosticSession? @relation(fields: [diagnosticSessionId], references: [id], onDelete: SetNull)
+  contract            Contract?            @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  milestone           Milestone?           @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+
+  @@index([diagnosticSessionId])
+  @@index([contractId])
+  @@map("ai_repair_verifications")
 }

@@ -96,7 +96,7 @@ export const ClosingCtaSection: React.FC<ClosingCtaSectionProps> = ({
 
             {/* Subtitle */}
             <p className="text-sm sm:text-base text-stone-200 leading-[1.65] font-normal mb-8 max-w-[620px] mx-auto drop-shadow-xs">
-              Join thousands of Nigerian homeowners, diaspora investors, and verified master craftsmen building a transparent, escrow-protected service economy.
+              Join thousands of Nigerian homeowners, diaspora investors, and verified master craftsmen building a transparent, scam-free service economy.
             </p>
 
             {/* Dual Action Buttons */}
@@ -125,7 +125,7 @@ export const ClosingCtaSection: React.FC<ClosingCtaSectionProps> = ({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-emerald-400">✓</span>
-                <span>Milestone escrow vault</span>
+                <span>Milestone protection vault</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-emerald-400">✓</span>

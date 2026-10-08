@@ -148,7 +148,7 @@ export const AuthIntentModal: React.FC<AuthIntentModalProps> = ({
                 <CheckCircle2 className="w-3.5 h-3.5" />
               </div>
               <p className="text-xs sm:text-[13px] text-stone-700 leading-snug">
-                <strong className="text-[#141A16] font-semibold">Dispute resolution guaranteed:</strong> Monad blockchain smart contracts back our 24h arbitration tribunal.
+                <strong className="text-[#141A16] font-semibold">Dispute resolution guaranteed:</strong> Automated smart escrow contracts back our 24h arbitration tribunal.
               </p>
             </div>
           </div>

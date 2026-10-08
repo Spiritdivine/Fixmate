@@ -145,7 +145,7 @@ export const PublicArtisanProfilePage: React.FC = () => {
   const artisanName = artisan.businessName || artisan.user?.email?.split('@')[0] || 'Verified Artisan';
   const locationName = [artisan.lgaCity, artisan.state || 'Nigeria'].filter(Boolean).join(', ');
   const seoTitle = `${artisanName} – Verified ${primaryTrade} in ${locationName} | Artifix`;
-  const seoDesc = `Hire ${artisanName}, verified ${primaryTrade} in ${locationName}. Rated ★ ${ratingVal.toFixed(1)} (${reviews.length} reviews) with ${artisan.completedJobsCount || 0} completed projects. 100% Escrow Protected on Artifix.`;
+  const seoDesc = `Hire ${artisanName}, verified ${primaryTrade} in ${locationName}. Rated ★ ${ratingVal.toFixed(1)} (${reviews.length} reviews) with ${artisan.completedJobsCount || 0} completed projects. 100% Payment Protected on Artifix.`;
   const ogImageUrl = `/api/v1/og/artisan/${artisan.id}`;
 
   const jsonLd = {
@@ -299,7 +299,7 @@ export const PublicArtisanProfilePage: React.FC = () => {
 
                     <div className="flex items-center gap-1.5 text-[#108A00] font-bold">
                       <ShieldCheck className="w-4 h-4" />
-                      <span>Monad Escrow Tested</span>
+                      <span>Payment Protection Verified</span>
                     </div>
                   </div>
 
@@ -464,7 +464,7 @@ export const PublicArtisanProfilePage: React.FC = () => {
                   </h3>
                   <p className="text-sm sm:text-[15px] text-stone-700 leading-relaxed font-normal whitespace-pre-line mb-6">
                     {artisan.bio ||
-                      `${artisan.businessName || 'This artisan'} is a vetted professional specializing in high-quality ${primaryTrade} for residential complexes and commercial properties across Nigeria. Backed by verified client reviews and strict compliance with the Artifix escrow framework.`}
+                      `${artisan.businessName || 'This artisan'} is a vetted professional specializing in high-quality ${primaryTrade} for residential complexes and commercial properties across Nigeria. Backed by verified client reviews and strict compliance with the Artifix milestone protection framework.`}
                   </p>
 
                   {/* Skills Pills */}
@@ -510,24 +510,24 @@ export const PublicArtisanProfilePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Escrow Guarantee Highlight */}
+                {/* Payment Protection Guarantee Highlight */}
                 <div className="bg-[#123E2A] rounded-3xl p-6 sm:p-8 text-white">
                   <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2">
                     <ShieldCheck className="w-4 h-4" />
-                    <span>How Escrow Protects You</span>
+                    <span>How Milestone Protection Works</span>
                   </div>
                   <h4 className="text-lg sm:text-xl font-bold text-white mb-2">
-                    Zero financial risk with Monad smart contract escrow
+                    Zero financial risk with automated milestone protection
                   </h4>
                   <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed font-normal mb-4">
-                    When you hire through Artifix, your funds are deposited into an on-chain escrow contract. The artisan begins work immediately, but payment is only disbursed once milestones are completed to your full satisfaction.
+                    When you hire through Artifix, your funds are safely reserved for each milestone. The artisan begins work immediately, but payment is only disbursed once milestones are completed to your full satisfaction.
                   </p>
                   <button
                     type="button"
                     onClick={() => setIsAuthModalOpen(true)}
                     className="bg-white text-[#123E2A] hover:bg-stone-100 font-bold text-xs sm:text-sm px-6 py-2.5 rounded-full transition-colors inline-flex items-center gap-1.5"
                   >
-                    <span>Hire with Escrow Protection</span>
+                    <span>Hire with Milestone Protection</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -719,7 +719,7 @@ export const PublicArtisanProfilePage: React.FC = () => {
                       Customer Reviews &amp; Testimonials
                     </h3>
                     <p className="text-xs text-stone-500">
-                      Authentic ratings from verified client escrow milestones
+                      Authentic ratings from verified completed milestones
                     </p>
                   </div>
 
@@ -863,7 +863,7 @@ export const PublicArtisanProfilePage: React.FC = () => {
               <div className="space-y-2.5 pt-5 border-t border-stone-100">
                 <div className="flex items-center gap-2 text-xs text-stone-600 font-medium">
                   <Check className="w-4 h-4 text-[#108A00] shrink-0" />
-                  <span>Funds held in smart escrow</span>
+                  <span>Funds safely protected until completion</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-stone-600 font-medium">
                   <Check className="w-4 h-4 text-[#108A00] shrink-0" />

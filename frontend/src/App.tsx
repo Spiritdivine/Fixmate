@@ -102,6 +102,21 @@ import { PostHogPageViewTracker } from './components/analytics/PostHogPageViewTr
 import { PwaInstallBanner } from './components/pwa/PwaInstallBanner';
 import { OfflineIndicator } from './components/pwa/OfflineIndicator';
 import { OfflineFallbackPage } from './components/pwa/OfflineFallbackPage';
+import { FloatingOgaJohnTrigger } from './components/ai/FloatingOgaJohnTrigger';
+import { AiChatModal } from './components/ai/AiChatModal';
+import { useAiChatStore } from './stores/aiChatStore';
+
+const GlobalAiChatModal: React.FC = () => {
+  const { isOpen, closeChat, initialPrompt, initialAttachments } = useAiChatStore();
+  return (
+    <AiChatModal
+      isOpen={isOpen}
+      onClose={closeChat}
+      initialPrompt={initialPrompt}
+      initialAttachments={initialAttachments}
+    />
+  );
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -258,6 +273,8 @@ export function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          <GlobalAiChatModal />
+          <FloatingOgaJohnTrigger />
           <PwaInstallBanner />
           <OfflineIndicator />
         </BrowserRouter>

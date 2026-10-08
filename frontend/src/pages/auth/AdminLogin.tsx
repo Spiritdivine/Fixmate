@@ -60,10 +60,10 @@ export const AdminLogin: React.FC = () => {
           Platform integrity.
         </>
       }
-      showcaseSubtitle="Restricted superuser portal for KYC document audits, Monad smart contract escrow arbitration, and financial ledger oversight."
+      showcaseSubtitle="Restricted superuser portal for KYC document audits, smart contract escrow arbitration, and financial ledger oversight."
       showcasePills={[
         'Role-Based Access',
-        'Monad Escrow Control',
+        'Smart Escrow Control',
         'Dispute Resolution',
         'Audit Trail',
         'KYC Moderation',

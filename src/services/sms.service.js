@@ -43,6 +43,42 @@ export class SmsService {
 
     return { success: true, provider: 'simulated' };
   }
+
+  /**
+   * Send an urgent text alert/broadcast to a recipient
+   * @param {string} to - Destination phone number
+   * @param {string} message - Alert message body
+   */
+  static async sendAlert(to, message) {
+    if (!to || !message) return { success: false, reason: 'Missing to or message' };
+
+    if (process.env.TERMII_API_KEY) {
+      try {
+        const response = await fetch('https://api.ng.termii.com/api/sms/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to,
+            from: process.env.TERMII_SENDER_ID || 'Artisan',
+            sms: message,
+            type: 'plain',
+            channel: 'generic',
+            api_key: process.env.TERMII_API_KEY,
+          }),
+        });
+        const data = await response.json();
+        return { success: true, provider: 'termii', data };
+      } catch (err) {
+        console.error(`❌ [SmsService] Termii SMS alert failed: ${err.message}`);
+      }
+    }
+
+    if (env.NODE_ENV !== 'production') {
+      console.log(`\n🚨 [DEV SMS ALERT] To: ${to} | Message: "${message}"\n`);
+    }
+
+    return { success: true, provider: 'simulated' };
+  }
 }
 
 export default SmsService;

@@ -236,10 +236,10 @@ export const AcceptProposalWizard: React.FC = () => {
             >
               <div className="flex items-center gap-2 mb-1 text-purple-700 font-bold text-xs">
                 
-                <span>Monad Web3 Escrow</span>
+                <span>Digital Dollar (USDC) Escrow</span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
-                On-chain smart contract on Monad
+                Automated smart contract escrow in USD
               </p>
             </button>
           </div>

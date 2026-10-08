@@ -162,7 +162,7 @@ export const PricingPage: React.FC = () => {
                     : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
-                Monad Crypto (2.5%)
+                Digital USD Escrow (2.5%)
               </button>
             </div>
           </div>

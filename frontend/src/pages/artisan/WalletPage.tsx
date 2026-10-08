@@ -230,7 +230,7 @@ export const WalletPage: React.FC = () => {
       setIsMintingUsdc(true);
       await mintTestUsdc(100);
       await fetchUsdcBalance();
-      alert('Successfully minted 100 Test USDC on Monad to your wallet!');
+      alert('Successfully received 100 Test USDC to your escrow wallet!');
     } catch (err) {
       alert(getErrorMessage(err));
     } finally {
@@ -463,7 +463,7 @@ export const WalletPage: React.FC = () => {
       formatDate(t.createdAt),
       t.reference,
       `"${(t.description || '').replace(/"/g, '""')}"`,
-      t.description?.includes('Monad') || t.description?.includes('USDC') ? 'Monad USDC' : 'Naira Bank',
+      t.description?.includes('USDC') ? 'Digital USD (USDC)' : 'Naira Bank',
       t.amount,
       t.status,
     ]);
@@ -497,7 +497,7 @@ export const WalletPage: React.FC = () => {
             Financial Hub
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            Unified balances across Nigerian Naira (Bank rail) and Monad Crypto (Web3 rail)
+            Unified balances across Nigerian Naira (Bank rail) and Digital USD Escrow
           </p>
         </div>
 
@@ -535,14 +535,14 @@ export const WalletPage: React.FC = () => {
                 Total Portfolio Net Worth
               </span>
               <span className="text-xs text-gray-400">
-                1 USDC ≈ {formatNgn(exchangeRate)} | 1 MON ≈ ${monPriceUsd.toFixed(3)}
+                1 USDC ≈ {formatNgn(exchangeRate)} | Gas Credits Available
               </span>
             </div>
             <div className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-2 text-white">
               {formatNgn(totalPortfolioValue)}
             </div>
             <p className="text-xs text-gray-300 mt-1">
-              Combined value of your Naira earnings ({formatNgn(availableNgn + lockedNgn)}) and Monad crypto (${totalCryptoUsd.toFixed(2)} USD)
+              Combined value of your Naira earnings ({formatNgn(availableNgn + lockedNgn)}) and Digital USD (${totalCryptoUsd.toFixed(2)} USD)
             </p>
           </div>
 
@@ -625,7 +625,7 @@ export const WalletPage: React.FC = () => {
           </div>
         </Card>
 
-        {/* Card 2: Monad USDC (Privy Web3 Rail) */}
+        {/* Card 2: Digital Dollar (USDC) Vault */}
         <Card className="border border-indigo-200/70 shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-shadow bg-gradient-to-b from-indigo-50/30 to-transparent">
           <div className="p-6">
             <div className="flex items-center justify-between">
@@ -635,10 +635,10 @@ export const WalletPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                    Monad Web3 Portfolio
+                    Digital Dollar (USDC) Earnings
                     {isEmbedded ? (
                       <Badge className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0 border-0">
-                        Privy Embedded
+                        Smart Escrow Account
                       </Badge>
                     ) : address ? (
                       <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0 border-0">
@@ -646,7 +646,7 @@ export const WalletPage: React.FC = () => {
                       </Badge>
                     ) : null}
                   </h3>
-                  <p className="text-xs text-gray-500">Monad Mainnet (Chain 143)</p>
+                  <p className="text-xs text-gray-500">Automated Smart Escrow Rail</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -671,7 +671,7 @@ export const WalletPage: React.FC = () => {
                   <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingBalances ? 'animate-spin text-indigo-600' : ''}`} />
                 </button>
                 <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs px-2 py-0.5">
-                  Monad EVM
+                  Smart Escrow Vault
                 </Badge>
               </div>
             </div>
@@ -679,7 +679,7 @@ export const WalletPage: React.FC = () => {
             {/* Total Crypto Valuation Row */}
             <div className="mt-5 pt-4 border-t border-indigo-100/70 flex items-baseline justify-between">
               <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Total Crypto Assets</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Digital Dollar Escrow</span>
                 <div className="text-2xl font-bold text-indigo-950 mt-0.5 flex items-baseline gap-1.5">
                   ${totalCryptoUsd.toFixed(2)}
                   <span className="text-xs font-semibold text-gray-500">USD</span>
@@ -687,8 +687,8 @@ export const WalletPage: React.FC = () => {
                 <span className="text-[11px] text-gray-400 font-medium">≈ {formatNgn(cryptoNgnEquivalent)}</span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-gray-400 block">Monad Network Rate</span>
-                <span className="text-xs font-medium text-gray-600 font-mono">1 MON ≈ ${monPriceUsd.toFixed(3)}</span>
+                <span className="text-[10px] text-gray-400 block">Escrow Network Status</span>
+                <span className="text-xs font-medium text-emerald-600 font-medium">Active &amp; Secured</span>
               </div>
             </div>
 
@@ -713,19 +713,19 @@ export const WalletPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Token 2: Native MON */}
+              {/* Token 2: Network Gas */}
               <div className="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100 hover:bg-indigo-50/80 transition-colors">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                    MON
+                    Gas Credits
                   </span>
                   <span className="text-[10px] font-semibold text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-full border border-indigo-200">
-                    Gas &amp; Swaps
+                    Network Gas
                   </span>
                 </div>
                 <div className="text-lg font-extrabold text-indigo-950">
-                  {parsedMon.toFixed(4)} <span className="text-xs font-normal text-indigo-600">MON</span>
+                  {parsedMon.toFixed(4)} <span className="text-xs font-normal text-indigo-600">Credits</span>
                 </div>
                 <span className="text-[11px] text-indigo-600/90 font-medium block mt-0.5">
                   ≈ ${monUsdValue.toFixed(2)} USD
@@ -736,7 +736,7 @@ export const WalletPage: React.FC = () => {
             {/* Permanent Account Address Bar */}
             <div className="mt-4">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] text-gray-500 font-medium">Permanent Monad Address</span>
+                <span className="text-[11px] text-gray-500 font-medium">Digital Escrow Account ID</span>
               </div>
               {effectiveAddress ? (
                 <div className="flex items-center justify-between gap-1.5 text-xs text-gray-700 font-mono bg-white/80 p-2 rounded-xl border border-gray-200">
@@ -754,7 +754,7 @@ export const WalletPage: React.FC = () => {
                       target="_blank"
                       rel="noreferrer"
                       className="p-1 hover:bg-gray-100 rounded text-gray-500 cursor-pointer"
-                      title="View on Explorer"
+                      title="View Escrow Record"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
@@ -1019,7 +1019,7 @@ export const WalletPage: React.FC = () => {
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-indigo-600 hover:text-indigo-800 p-0.5"
-                                title="View on Monad Explorer"
+                                title="View Escrow Record"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </a>
@@ -1030,7 +1030,7 @@ export const WalletPage: React.FC = () => {
                         <td className="py-3 px-6">
                           {isCrypto ? (
                             <Badge className="bg-indigo-50 text-indigo-700 text-[10px] px-2 py-0.5 border-indigo-200">
-                              Monad / Kotani
+                              Digital USD / Kotani
                             </Badge>
                           ) : (
                             <Badge className="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 border-emerald-200">
@@ -1204,7 +1204,7 @@ export const WalletPage: React.FC = () => {
                   : 'text-gray-500 hover:text-gray-900'
               }`}
             >
-              🟣 Monad USDC (${parseFloat(usdcBalance).toFixed(2)})
+              🟣 Digital USD (${parseFloat(usdcBalance).toFixed(2)})
             </button>
           </div>
 
@@ -1434,6 +1434,7 @@ export const WalletPage: React.FC = () => {
       </Modal>
 
       {/* Link / Manage Monad EVM Wallet Modal */}
+      {/* Link / Manage Monad EVM Wallet Modal */}
       <Modal
         isOpen={isWalletModalOpen}
         onClose={() => {
@@ -1441,7 +1442,7 @@ export const WalletPage: React.FC = () => {
           setWalletModalError(null);
           setWalletModalSuccess(null);
         }}
-        title="Manage Monad EVM Wallet"
+        title="Manage Digital Escrow Account"
       >
         <div className="space-y-4">
           <div className="p-3.5 bg-indigo-50/80 border border-indigo-100 rounded-xl text-xs text-indigo-950 space-y-1.5">
@@ -1450,7 +1451,7 @@ export const WalletPage: React.FC = () => {
               Direct Smart Contract Settlement Address
             </p>
             <p className="text-[11px] text-indigo-700 leading-relaxed">
-              Your Monad EVM address receives on-chain milestone escrow deposits, USDC earnings, and direct contract payouts.
+              Your digital escrow account ID receives milestone escrow deposits, USD earnings, and direct contract payouts.
             </p>
           </div>
 
@@ -1459,7 +1460,7 @@ export const WalletPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500 font-medium">Currently Linked Address:</span>
                 <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0 border-0">
-                  {isEmbedded ? 'Privy Embedded' : 'Monad Account'}
+                  {isEmbedded ? 'Smart Escrow Account' : 'Direct Account'}
                 </Badge>
               </div>
               <div className="font-mono text-xs text-gray-800 break-all p-2.5 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between gap-2">
@@ -1468,7 +1469,7 @@ export const WalletPage: React.FC = () => {
                   <button onClick={handleCopyAddress} className="p-1 hover:bg-gray-200 rounded text-gray-500" title="Copy Address">
                     {isCopied ? <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                   </button>
-                  <a href={`${MONAD_EXPLORER_URL}/address/${address}`} target="_blank" rel="noreferrer" className="p-1 hover:bg-gray-200 rounded text-gray-500" title="View on Explorer">
+                  <a href={`${MONAD_EXPLORER_URL}/address/${address}`} target="_blank" rel="noreferrer" className="p-1 hover:bg-gray-200 rounded text-gray-500" title="View Escrow Record">
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 </div>
@@ -1513,16 +1514,16 @@ export const WalletPage: React.FC = () => {
           setSendUsdcError(null);
           setSendUsdcTxHash(null);
         }}
-        title="Send USDC to External Wallet"
+        title="Transfer Digital USD (USDC)"
       >
         <form onSubmit={handleSendUsdc} className="space-y-4">
           <div className="p-3.5 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900">
             <p className="font-semibold flex items-center gap-1.5">
               <Send className="w-3.5 h-3.5 text-indigo-600" />
-              On-Chain Monad Token Transfer
+              Digital USD (USDC) Transfer
             </p>
             <p className="mt-1 text-slate-600 text-[11px] leading-relaxed">
-              Send your Monad ERC-20 USDC to any external wallet (e.g. Binance, Bybit, MetaMask, hardware cold storage).
+              Send your digital USD (USDC) to any external wallet or digital dollar account (e.g. Binance, Bybit, MetaMask, self-custody).
             </p>
           </div>
 
@@ -1587,7 +1588,7 @@ export const WalletPage: React.FC = () => {
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-emerald-800 font-bold underline mt-1 text-[11px]"
               >
-                <span>View on Monad Explorer</span>
+                <span>View Escrow Record</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>

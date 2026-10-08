@@ -238,7 +238,7 @@ export const ContractWorkspace: React.FC = () => {
  </span>
  {contract.onChainEscrowId && (
  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/10 text-purple-500 border border-purple-500/20 flex items-center gap-1">
-  Monad Escrow #{contract.onChainEscrowId}
+  Smart Escrow #{contract.onChainEscrowId}
  </span>
  )}
  </div>
@@ -266,12 +266,12 @@ export const ContractWorkspace: React.FC = () => {
  </div>
  </div>
 
- {/* Monad Web3 Blockchain Status Bar */}
+ {/* Smart Escrow On-Chain Status Bar */}
  {contract.onChainEscrowId && (
  <div className="p-4 rounded-[24px] bg-purple-950/20 border border-purple-800/30 text-xs space-y-2">
  <div className="flex items-center justify-between">
  <span className="font-bold text-purple-400 flex items-center gap-1.5">
-  {MONAD_CHAIN_NAME} On-Chain Verification
+  On-Chain Escrow Verification
  </span>
  <span className="text-slate-400 font-mono">
  Smart Contract: {shortenAddress(contract.smartContractAddr)}

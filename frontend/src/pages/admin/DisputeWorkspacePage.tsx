@@ -276,12 +276,12 @@ export const DisputeWorkspacePage: React.FC = () => {
             {dispute.contract?.onChainEscrowId && (
               <>
                 <div className="flex items-center justify-between pt-2 border-t border-slate-800 font-mono text-[11px]">
-                  <span className="text-slate-400">Monad Escrow ID:</span>
+                  <span className="text-slate-400">Smart Escrow ID:</span>
                   <span className="text-purple-400 font-bold">#{dispute.contract.onChainEscrowId}</span>
                 </div>
                 <div className="flex items-center justify-between font-mono text-[11px]">
                   <span className="text-slate-400">Settlement Asset:</span>
-                  <span className="text-emerald-400 font-bold">USDC (Monad EVM)</span>
+                  <span className="text-emerald-400 font-bold">Digital USD (USDC)</span>
                 </div>
               </>
             )}
@@ -449,7 +449,7 @@ export const DisputeWorkspacePage: React.FC = () => {
           />
 
           <Input
-            label="Optional Monad On-Chain Resolution Tx Hash"
+            label="Optional On-Chain Resolution Tx Hash"
             placeholder="0x..."
             value={onChainTxHash}
             onChange={(e) => setOnChainTxHash(e.target.value)}

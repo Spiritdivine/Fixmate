@@ -148,7 +148,7 @@ export const ContractDetailPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-purple-400" />
-              <span>Monad Blockchain Escrow State</span>
+              <span>Smart Escrow State</span>
             </h3>
             <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/20 text-purple-400 font-mono">
               Chain 10143

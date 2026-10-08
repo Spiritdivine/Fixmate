@@ -18,11 +18,11 @@ export const HowItWorksSection: React.FC = () => {
     },
     {
       step: '02',
-      title: 'Lock Funds in Escrow',
+      title: 'Fund Protected Milestone',
       subtitle: 'Dual-Rail Vault Security',
       badge: 'Zero Cash Advance Risk',
       description:
-        'Deposit milestone funds using your local debit card, instant bank transfer (NGN), or Monad cryptocurrency. Money is held securely until you verify the work.',
+        'Deposit milestone funds using your local debit card, instant bank transfer (NGN), or digital dollars (USDC). Money is held securely until you verify the work.',
       icon: (
         <svg className="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
@@ -49,7 +49,7 @@ export const HowItWorksSection: React.FC = () => {
       subtitle: 'Guaranteed Payout',
       badge: 'Zero Payment Delays',
       description:
-        'Once you are fully satisfied with the milestone, tap approve. Escrow instantly releases the funds directly to the artisan’s local bank or crypto wallet.',
+        'Once you are fully satisfied with the milestone, tap approve. Funds are instantly released directly to the artisan’s local bank or digital wallet.',
       icon: (
         <svg className="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -82,7 +82,7 @@ export const HowItWorksSection: React.FC = () => {
           </h2>
 
           <p className="text-sm sm:text-base text-[#556259] leading-[1.65] font-normal">
-            No more high-risk cash advances or delayed artisan payments. Artifix keeps money safely locked in milestone escrow until real, verifiable work is completed to your satisfaction.
+            No more high-risk cash advances or delayed artisan payments. Artifix keeps money safely protected until real, verifiable work is completed to your satisfaction.
           </p>
 
           {/* Organic handwritten margin note */}

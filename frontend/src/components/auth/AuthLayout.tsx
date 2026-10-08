@@ -15,7 +15,7 @@ const DEFAULT_PILLS = [
   'Instant Payouts',
   'Background Checks',
   'Dispute Protection',
-  'Monad Web3',
+  'Smart Escrow',
 ];
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({
@@ -29,7 +29,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   ),
   showcaseSubtitle = 'Hire vetted artisans, protect project funds with milestone escrow, and enjoy guaranteed quality delivery across every trade.',
   showcasePills = DEFAULT_PILLS,
-  showcaseFooter = 'Milestone escrow payments secured on Monad blockchain.',
+  showcaseFooter = 'Milestone escrow payments secured by automated smart contracts.',
 }) => {
   return (
     <div className="min-h-screen bg-white text-stone-900 flex flex-col lg:flex-row font-sans selection:bg-[#0e3827] selection:text-white relative overflow-x-hidden">

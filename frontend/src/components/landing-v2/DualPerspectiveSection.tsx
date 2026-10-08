@@ -116,7 +116,7 @@ export const DualPerspectiveSection: React.FC = () => {
                           className="text-xs sm:text-[13px] text-[#556259] leading-[1.55] sm:leading-[1.65]"
                           style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
                         >
-                          Funds are fully deposited into escrow before you purchase project materials or begin labor. No more chasing clients for months or hearing “the director hasn’t approved the transfer”.
+                          Funds are secured and protected before you purchase project materials or begin labor. No more chasing clients for months or hearing “the director hasn’t approved the transfer”.
                         </p>
                       </div>
                     </div>
@@ -241,13 +241,13 @@ export const DualPerspectiveSection: React.FC = () => {
                           className="text-sm sm:text-base md:text-[17px] font-bold text-[#112319] mb-1 sm:mb-1.5 leading-snug"
                           style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
                         >
-                          Fixed Milestone Escrow Protection
+                          Fixed Milestone Protection
                         </h3>
                         <p 
                           className="text-xs sm:text-[13px] text-[#556259] leading-[1.55] sm:leading-[1.65]"
                           style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
                         >
-                          Say goodbye to unexpected price surges or disappearing contractors. Your money stays locked in escrow until each phase is completed according to the agreed contract specification.
+                          Say goodbye to unexpected price surges or disappearing contractors. Your money stays safely protected until each phase is completed according to the agreed contract specification.
                         </p>
                       </div>
                     </div>
@@ -433,10 +433,10 @@ export const DualPerspectiveSection: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Active Escrow Badge */}
+                      {/* Active Protection Badge */}
                       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0D3123] text-[#34D399] text-[11px] font-semibold">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
-                        <span>Escrow Vault Active</span>
+                        <span>Protected Vault Active</span>
                       </div>
                     </div>
 
@@ -446,7 +446,7 @@ export const DualPerspectiveSection: React.FC = () => {
                         className="text-xs text-stone-400 font-medium"
                         style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
                       >
-                        Pending Escrow Balance
+                        Protected Balance
                       </div>
                       <div 
                         className="text-3xl sm:text-[36px] font-extrabold text-white tracking-tight mt-1 leading-tight"
@@ -499,7 +499,7 @@ export const DualPerspectiveSection: React.FC = () => {
                             ₦220,000
                           </div>
                           <span className="inline-block text-[9px] font-medium text-[#34D399] bg-[#0A2E20] px-2 py-0.5 rounded-full mt-0.5">
-                            Locked In Escrow
+                            Safely Protected
                           </span>
                         </div>
                       </div>
@@ -535,7 +535,7 @@ export const DualPerspectiveSection: React.FC = () => {
                             ₦165,000
                           </div>
                           <span className="inline-block text-[9px] font-medium text-[#34D399] bg-[#0A2E20] px-2 py-0.5 rounded-full mt-0.5">
-                            Locked In Escrow
+                            Safely Protected
                           </span>
                         </div>
                       </div>
@@ -583,7 +583,7 @@ export const DualPerspectiveSection: React.FC = () => {
                               className="text-xs font-bold text-white whitespace-nowrap"
                               style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
                             >
-                              NGN &amp; MON Payments
+                              Naira &amp; Digital USD Payments
                             </div>
                             <div 
                               className="text-[10px] text-stone-400 mt-0.5 whitespace-nowrap"
@@ -616,32 +616,13 @@ export const DualPerspectiveSection: React.FC = () => {
                       className="text-xs font-bold text-[#112319] leading-tight mb-1"
                       style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
                     >
-                      Secure Escrow
+                      Secure Payment
                     </div>
                     <div 
                       className="text-[10px] text-stone-500 leading-snug"
                       style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
                     >
                       Your funds are safe until the work is verified.
-                    </div>
-                  </div>
-
-                  {/* 7. BOTTOM RIGHT: Powered by Monad Blockchain Attribution */}
-                  <div className="absolute bottom-0 right-2 sm:right-6 z-10">
-                    <div className="inline-flex items-center gap-2.5 text-stone-600 select-none">
-                      {/* Monad Logo Ribbon Knot in Purple */}
-                      <div className="w-6 h-6 rounded-lg bg-[#836EF9] flex items-center justify-center text-white shadow-sm p-1">
-                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                          <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.5 13.5c-1.38 1.38-3.62 1.38-5 0l-1.5-1.5 1.5-1.5c.55-.55 1.45-.55 2 0l.5.5.5-.5c.55-.55 1.45-.55 2 0s.55 1.45 0 2l-.5.5.5.5c1.38 1.38 1.38 3.62 0 5z" />
-                        </svg>
-                      </div>
-                      <div 
-                        className="text-left leading-tight"
-                        style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}
-                      >
-                        <span className="text-[10px] text-stone-400 block font-normal">Powered by</span>
-                        <span className="text-xs font-semibold text-stone-800 tracking-tight block">Monad Blockchain</span>
-                      </div>
                     </div>
                   </div>
 

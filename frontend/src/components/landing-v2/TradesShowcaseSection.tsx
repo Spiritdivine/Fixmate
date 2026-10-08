@@ -51,7 +51,7 @@ export const TradesShowcaseSection: React.FC = () => {
       title: 'Concealed PPR Leak Detection & Pressure Pump Overhaul',
       image: LANDING_IMAGES.plumbingTools || LANDING_IMAGES.plumber,
       category: 'Sanitary & Water',
-      tag: 'Verified Escrow',
+      tag: 'Verified & Protected',
       description: 'Acoustic leak detection for concealed master bathroom conduit pipes, PPR re-piping, and installation of a 1HP automated water pressure booster pump with safety bypass.',
       budget: '₦85,000 – ₦180,000',
       turnaround: 'Same Day – 2 Days',
@@ -69,7 +69,7 @@ export const TradesShowcaseSection: React.FC = () => {
       title: 'Distribution Board Rewiring & 3-Phase Balancing',
       image: LANDING_IMAGES.electrician,
       category: 'Power & Safety',
-      tag: 'Funded Escrow',
+      tag: 'Funded Milestone',
       description: 'Commercial studio distribution board upgrade, replacement of melted circuit breakers, industrial surge arresters installation, and 3-phase load rebalancing.',
       budget: '₦120,000 – ₦250,000',
       turnaround: '1 – 2 Days',
@@ -87,7 +87,7 @@ export const TradesShowcaseSection: React.FC = () => {
       title: 'Custom Fitted Kitchen Cabinets & Island Joinery',
       image: LANDING_IMAGES.kitchenCabinetry || LANDING_IMAGES.carpenter,
       category: 'Interior & Woodwork',
-      tag: 'Milestone Escrow',
+      tag: 'Milestone Protected',
       description: 'Fabrication and fitting of high-gloss moisture-resistant kitchen cabinets, soft-close hardware, pantry pull-out organizers, and custom hardwood island trim.',
       budget: '₦450,000 – ₦850,000',
       turnaround: '4 – 7 Days',
@@ -130,7 +130,7 @@ export const TradesShowcaseSection: React.FC = () => {
       title: 'Automated Sliding Security Gate & Steel Grilles',
       image: LANDING_IMAGES.welder,
       category: 'Security & Steel',
-      tag: 'Funded Escrow',
+      tag: 'Funded Milestone',
       description: 'Fabrication and motorization of 4.5m heavy-duty steel sliding gate with remote automation sensors, plus 8 burglar-proof window grilles with anti-rust priming.',
       budget: '₦300,000 – ₦650,000',
       turnaround: '3 – 6 Days',
@@ -244,7 +244,7 @@ export const TradesShowcaseSection: React.FC = () => {
           {/* Typical Escrow Overlay Bar at Bottom of Image */}
           <div className="absolute bottom-2.5 sm:bottom-3 left-3 right-3 sm:left-3.5 sm:right-3.5 flex items-center justify-between text-white text-xs pointer-events-none gap-2">
             <span className="font-semibold text-stone-200 text-[10.5px] sm:text-[11.5px] truncate">
-              Funded Escrow:
+              Protected Budget:
             </span>
             <span className="font-extrabold text-white text-[11px] sm:text-xs md:text-[12.5px] bg-black/50 px-2 sm:px-2.5 py-0.5 rounded-lg backdrop-blur-sm shrink-0">
               {job.budget}
@@ -330,7 +330,7 @@ export const TradesShowcaseSection: React.FC = () => {
 
             {/* Subtitle */}
             <p className="text-xs sm:text-sm md:text-base text-[#556259] leading-[1.65] font-normal">
-              Clients and homeowners post verified jobs with upfront smart escrow funding. Review detailed project scopes, submit competitive proposals, and get paid promptly upon verified milestone completion.
+              Clients and homeowners post verified jobs with upfront protected funding. Review detailed project scopes, submit competitive proposals, and get paid promptly upon verified milestone completion.
             </p>
           </div>
 

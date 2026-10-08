@@ -179,7 +179,7 @@ export const ClientContractWorkspace: React.FC = () => {
       setIsMintingUsdc(true);
       await mintTestUsdc(100);
       await refreshWalletState();
-      alert('100 Test USDC minted to your wallet on Monad Testnet!');
+      alert('100 Test USDC added to your digital escrow wallet!');
     } catch (err: any) {
       alert(`Faucet mint failed: ${err.message}`);
     } finally {
@@ -457,7 +457,7 @@ export const ClientContractWorkspace: React.FC = () => {
               {contract.onChainEscrowId && (
                 <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
                   
-                  <span>Monad Escrow #{contract.onChainEscrowId}</span>
+                  <span>Smart Escrow #{contract.onChainEscrowId}</span>
                 </span>
               )}
             </div>
@@ -474,7 +474,7 @@ export const ClientContractWorkspace: React.FC = () => {
               onClick={() => syncOnChainMutation.mutate()}
               disabled={syncOnChainMutation.isPending}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-sm"
-              title="Synchronize on-chain Monad smart contract state"
+              title="Synchronize on-chain smart escrow contract state"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncOnChainMutation.isPending ? 'animate-spin' : ''}`} />
               <span>Sync On-Chain</span>
@@ -853,7 +853,7 @@ export const ClientContractWorkspace: React.FC = () => {
                   }`}
                 >
                   
-                  <span>Monad Web3 ($USDC)</span>
+                  <span>Digital USD ($USDC)</span>
                 </button>
               </div>
 
@@ -874,7 +874,7 @@ export const ClientContractWorkspace: React.FC = () => {
                   {Number(wallet?.availableBalance || 0) < Number(fundingMilestone.amount) && (
                     <div className="p-3 rounded-xl bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
-                      <span>Low balance. Please top up your wallet or use Monad Web3 tab.</span>
+                      <span>Low balance. Please top up your wallet or use Digital USD tab.</span>
                     </div>
                   )}
 
@@ -893,16 +893,16 @@ export const ClientContractWorkspace: React.FC = () => {
                 </div>
               )}
 
-              {/* RAIL B: MONAD WEB3 USDC STABLECOIN */}
+              {/* RAIL B: DIGITAL USD USDC STABLECOIN */}
               {fundingRail === 'usdc' && (
                 <div className="space-y-4">
                   <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-900 dark:text-purple-200">
                     <div className="flex items-center justify-between font-bold pb-1">
-                      <span>Monad Smart Contract Escrow</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-600 text-white">Chain ID 10143</span>
+                      <span>Smart Contract Escrow (USDC)</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-700 text-white font-medium">Automated</span>
                     </div>
                     <p className="text-[11px] text-purple-700 dark:text-purple-300">
-                      Payment is settled in <strong>USD Coin (USDC)</strong> locked trustlessly on Monad EVM.
+                      Payment is settled in <strong>USD Coin (USDC)</strong> locked in automated smart escrow.
                     </p>
                   </div>
 
@@ -947,7 +947,7 @@ export const ClientContractWorkspace: React.FC = () => {
                   {/* Faucet Helper Button (Testnet only) */}
                   {connectedWallet && !IS_MONAD_MAINNET && (
                     <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px]">
-                      <span className="text-slate-500">Need test funds on Monad?</span>
+                      <span className="text-slate-500">Need test funds?</span>
                       <button
                         type="button"
                         onClick={handleMintFaucet}
@@ -964,9 +964,9 @@ export const ClientContractWorkspace: React.FC = () => {
                     <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2.5">
                       <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-bold">Artisan Monad EVM Account Pending</p>
+                        <p className="font-bold">Artisan Escrow Account Pending</p>
                         <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5 leading-relaxed">
-                          The artisan's Monad EVM account is being provisioned. You can ask them to view their profile, or switch to the <strong>In-App Wallet (₦)</strong> tab to fund with Naira Escrow.
+                          The artisan's escrow account is being provisioned. You can ask them to view their profile, or switch to the <strong>In-App Wallet (₦)</strong> tab to fund with Naira Escrow.
                         </p>
                       </div>
                     </div>

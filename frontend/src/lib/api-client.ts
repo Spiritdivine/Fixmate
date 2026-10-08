@@ -27,6 +27,12 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
 };
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  // Allow browser/Axios to compute standard multipart/form-data boundaries for FormData
+  if (config.data instanceof FormData && config.headers) {
+    delete config.headers['Content-Type'];
+    delete config.headers['content-type'];
+  }
+
   const token = localStorage.getItem('access_token');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;

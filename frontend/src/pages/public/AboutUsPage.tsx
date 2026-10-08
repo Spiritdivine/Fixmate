@@ -176,7 +176,7 @@ export const AboutUsPage: React.FC = () => {
               Dual-Rail Inclusivity
             </h3>
             <p className="text-xs text-stone-600 leading-relaxed font-normal">
-              Familiar Nigerian Naira bank transfers for everyday simplicity; Monad EVM blockchain escrow for uncheatable security.
+              Familiar Nigerian Naira bank transfers for everyday simplicity; automated digital escrow for uncheatable security.
             </p>
           </div>
 

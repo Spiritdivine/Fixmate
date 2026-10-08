@@ -406,7 +406,7 @@ export const ArtisanPublicProfilePage: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-slate-900">
-                        Monad Escrow Ready
+                        Smart Escrow Ready
                       </p>
                       <p className="text-[11px] text-slate-500">Accepts Artifix smart contract payments</p>
                     </div>

@@ -22,6 +22,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { Card } from '../../components/ui/Card';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
+import { MONAD_EXPLORER_URL } from '../../lib/monad-web3';
 
 export const ClientProfilePage: React.FC = () => {
   const { user, updateUser } = useAuthStore();
@@ -129,7 +130,7 @@ export const ClientProfilePage: React.FC = () => {
           Client Profile &amp; Preferences
         </h1>
         <p className="text-sm text-slate-500">
-          Manage your contact information, company billing details, and Monad Web3 wallet connection.
+          Manage your contact information, company billing details, and digital escrow wallet connection.
         </p>
       </div>
 
@@ -298,7 +299,7 @@ export const ClientProfilePage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-purple-700">
             <WalletIcon className="w-5 h-5 text-purple-600" />
-            <h3 className="text-base font-bold">Monad Blockchain Account</h3>
+            <h3 className="text-base font-bold">Digital Escrow Account</h3>
           </div>
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
             <ShieldCheck className="w-3.5 h-3.5" />
@@ -307,12 +308,12 @@ export const ClientProfilePage: React.FC = () => {
         </div>
 
         <p className="text-xs text-slate-500 leading-relaxed font-normal">
-          This is your permanent, self-custodial Monad address generated for your account. It is automatically used for escrow funding, milestone approvals, and smart contract settlements.
+          This is your permanent, self-custodial escrow address generated for your account. It is automatically used for milestone funding, approvals, and automated settlements.
         </p>
 
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Permanent EVM Address
+            Permanent Escrow Account ID
           </label>
           <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/80 text-sm font-mono text-slate-800 break-all">
             <span>{user?.walletAddress || 'Provisioning embedded wallet...'}</span>
@@ -327,11 +328,11 @@ export const ClientProfilePage: React.FC = () => {
                   {isCopied ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                 </button>
                 <a
-                  href={`https://testnet.monadvision.com/address/${user.walletAddress}`}
+                  href={`${MONAD_EXPLORER_URL}/address/${user.walletAddress}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-1.5 hover:bg-white rounded-lg text-slate-500 hover:text-purple-700 transition-colors cursor-pointer border border-transparent hover:border-slate-200"
-                  title="View on MonadVision"
+                  title="View On-Chain Receipt"
                 >
                   <ExternalLink className="w-4 h-4" />
                 </a>

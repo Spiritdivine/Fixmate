@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Artifix — AI Diagnostic & Smart Artisan Matching Engine Specification</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 14mm 16mm 14mm;
+      @bottom-right {
+        content: "Page " counter(page);
+        font-size: 8pt;
+        color: #64748B;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #1a202c;
+      background: #ffffff;
+      line-height: 1.5;
+      font-size: 9.5pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Cover / Hero Header */
+    .header-banner {
+      background: linear-gradient(135deg, #071F15 0%, #0D3825 50%, #00A86B 100%);
+      color: #ffffff;
+      padding: 24px 28px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(7, 31, 21, 0.15);
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+
+    .brand-title {
+      font-size: 22pt;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-tagline {
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #86EFAC;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .badge-pill {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 8pt;
+      font-weight: 600;
+      color: #F0FDF4;
+    }
+
+    .doc-main-title {
+      font-size: 16pt;
+      font-weight: 800;
+      margin: 0 0 6px 0;
+      color: #ffffff;
+      line-height: 1.25;
+    }
+
+    .doc-subtitle {
+      font-size: 9.5pt;
+      color: #D1FAE5;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .meta-strip {
+      display: flex;
+      gap: 18px;
+      margin-top: 12px;
+      font-size: 8pt;
+      color: #E2E8F0;
+    }
+
+    .meta-strip span strong {
+      color: #ffffff;
+    }
+
+    /* Section Styling */
+    h2 {
+      color: #0A261B;
+      font-size: 12.5pt;
+      font-weight: 800;
+      border-bottom: 2px solid #E2E8F0;
+      padding-bottom: 5px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h3 {
+      color: #0D3825;
+      font-size: 10.5pt;
+      font-weight: 700;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    p {
+      margin: 0 0 8px 0;
+      color: #334155;
+      font-size: 9pt;
+    }
+
+    ul, ol {
+      margin: 0 0 10px 0;
+      padding-left: 18px;
+      color: #334155;
+      font-size: 9pt;
+    }
+
+    li {
+      margin-bottom: 3px;
+    }
+
+    /* Callout Card */
+    .callout {
+      background: #F8FAFC;
+      border-left: 4px solid #00A86B;
+      border-radius: 0 8px 8px 0;
+      padding: 10px 14px;
+      margin: 10px 0;
+      font-size: 8.8pt;
+      color: #1E293B;
+      page-break-inside: avoid;
+    }
+
+    .callout.alert {
+      border-left-color: #DC2626;
+      background: #FEF2F2;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      color: #0A261B;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout.alert .callout-title {
+      color: #991B1B;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 14px 0;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+
+    th {
+      background: #0A261B;
+      color: #ffffff;
+      font-weight: 700;
+      text-align: left;
+      padding: 7px 9px;
+      border: 1px solid #0A261B;
+    }
+
+    td {
+      padding: 7px 9px;
+      border: 1px solid #E2E8F0;
+      vertical-align: top;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background: #F8FAFC;
+    }
+
+    /* Code & Pre */
+    pre {
+      background: #0F172A;
+      color: #E2E8F0;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 7.8pt;
+      line-height: 1.4;
+      overflow-x: auto;
+      margin: 8px 0 12px 0;
+      page-break-inside: avoid;
+      border: 1px solid #1E293B;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 8.2pt;
+      background: #F1F5F9;
+      color: #0F172A;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    /* Grid cards */
+    .grid-2 {
+      display: flex;
+      gap: 12px;
+      margin: 10px 0;
+      page-break-inside: avoid;
+    }
+
+    .grid-card {
+      flex: 1;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .grid-card h4 {
+      margin: 0 0 6px 0;
+      color: #0D3825;
+      font-size: 9.5pt;
+    }
+
+    /* Flow diagram box */
+    .flow-box {
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      font-family: ui-monospace, monospace;
+      font-size: 7.8pt;
+      color: #14532D;
+      white-space: pre;
+      line-height: 1.35;
+      page-break-inside: avoid;
+    }
+
+    .page-break {
+      page-break-after: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO COVER BANNER -->
+  <div class="header-banner">
+    <div class="brand-row">
+      <div>
+        <div class="brand-title">🛠️ Artifix</div>
+        <div class="brand-tagline">AI Diagnostic & Smart Matching Engine</div>
+      </div>
+      <div class="badge-pill">Master Architectural Spec • 2026</div>
+    </div>
+    <div class="doc-main-title">Multimodal Diagnostics, Hazard Triage & Smart Artisan Matching</div>
+    <div class="doc-subtitle">
+      A comprehensive implementation blueprint enabling clients to describe faults via text, photos, or voice notes, receive instant root-cause diagnostics with cost estimates, and connect to high-fit verified artisans backed by escrow.
+    </div>
+    <div class="meta-strip">
+      <span><strong>Stack:</strong> React 19 • Node.js Express 5 • PostgreSQL & Prisma • Gemini 2.0 Flash • Whisper</span>
+      <span><strong>Target Markets:</strong> Lagos • Abuja • Port Harcourt</span>
+      <span><strong>Status:</strong> Implementation Ready</span>
+    </div>
+  </div>
+
+  <!-- SECTION 1 -->
+  <h2>1. Executive Summary & Problem Space</h2>
+  <p>In trade services and home repairs, non-technical clients face acute barriers before an artisan is booked: lack of technical vocabulary, fear of overcharging, and frequent misdiagnoses leading to wrong artisan dispatches. The Artifix AI Copilot transforms Fixmate into an intelligent triage clinic.</p>
+
+  <div class="grid-2">
+    <div class="grid-card">
+      <h4>🚨 The Triad of Repair Friction</h4>
+      <ul>
+        <li><strong>Linguistic Deficit:</strong> Homeowners describe symptoms ("ac dey sweat") rather than root causes ("blocked condensate drain").</li>
+        <li><strong>Misdiagnosis:</strong> Electrician called for compressor mechanics, resulting in wasted transit fees and delays.</li>
+        <li><strong>Price Asymmetry:</strong> Lack of objective insight into fair local labor rates and actual spare parts costs.</li>
+      </ul>
+    </div>
+    <div class="grid-card">
+      <h4>💡 The Artifix Solution</h4>
+      <ul>
+        <li><strong>Multimodal Ingestion:</strong> Accepts spontaneous text, high-res photos, or 15–60s voice notes (in English or Nigerian Pidgin).</li>
+        <li><strong>Dual-Track Output:</strong> Immediate safety steps + price radar for clients, paired with automated job briefs for artisans.</li>
+        <li><strong>5-Pillar Matching:</strong> Ranked dispatch based on GPS distance, Bayesian rating, KYC, and portfolio similarity.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="flow-box">
+┌────────────────────────────────────────────────────────────────────────┐
+│                      CLIENT MULTIMODAL INGESTION                       │
+│             (Text Prompt  •  Photos/Video  •  Voice Note)              │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                       INGESTION & PRE-PROCESSING                       │
+│  • Audio: Opus/WebM -> Whisper / Gemini Audio -> Dialect Transcript    │
+│  • Images: Cloudinary -> 1080p WebP Downscaling & Compression          │
+│  • Text: Normalization & Nigerian Colloquial Repair Slang Parsing      │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                 MULTIMODAL DIAGNOSTIC AGENT (LLM ENGINE)               │
+│  • Root-cause Analysis & Severity Classification                       │
+│  • Safety/Hazard Check (Gas, Fire, Water, Shock)                       │
+│  • DIY Feasibility vs Professional Need Determination                  │
+│  • Estimated Bill of Materials (BOM) & Local Labor Price Radar         │
+└───────────────────┬────────────────────────────────┬───────────────────┘
+                    │                                │
+    [Track A: Client Self-Help]        [Track B: Smart Matching Engine]
+                    │                                │
+                    ▼                                ▼
+    ┌──────────────────────────────┐   ┌─────────────────────────────────┐
+    │  Interactive Diagnostic Card │   │   5-PILLAR RANKING ENGINE       │
+    │  • Root Cause & Severity     │   │   • Spatial Proximity (GPS)     │
+    │  • Immediate Containment     │   │   • Bayesian Rating (0-100)     │
+    │  • Estimated Parts + Labor   │   │   • KYC Tier & Velocity Bonus   │
+    └──────────────────────────────┘   └────────────────┬────────────────┘
+                                                        │
+                                                        ▼
+                                       ┌─────────────────────────────────┐
+                                       │    1-CLICK ESCROW DISPATCH      │
+                                       │    • Pre-filled Job Contract    │
+                                       │    • AI Artisan Brief Dossier   │
+                                       │    • Monad USDC / Fiat Escrow   │
+                                       └─────────────────────────────────┘
+  </div>
+
+  <!-- SECTION 2 -->
+  <h2>2. Multimodal Ingestion Pipeline</h2>
+  <h3>2.1 Voice Note Acoustic Architecture</h3>
+  <p>Voice is the primary communication mode across West Africa. Clients record audio via the browser MediaRecorder API (compressed to 32kbps mono Opus in WebM containers). The audio buffer streams to Gemini 2.0 / Whisper primed with an extensive Nigerian trade terminology dictionary (e.g., <em>"pumping machine don knock"</em>, <em>"nepaa took light"</em>, <em>"gen dey surge"</em>, <em>"ac dey sweat"</em>).</p>
+
+  <h3>2.2 Computer Vision Photo Pipeline</h3>
+  <p>The client can attach up to 4 photos (wide shot, close-up of defect, serial/model plate, context). Before upload, the frontend compresses images to max 1920x1080 WebP. Cloudinary returns secure signed URLs which are fed directly into the Gemini multimodal vision endpoint.</p>
+
+  <h3>2.3 Interactive Clarification Loop (Conversational Triage)</h3>
+  <p>When the confidence score is below 70%, the AI pauses before matching and outputs 1–2 quick-tap multiple choice questions (e.g., <em>"Is the compressor fan spinning outside?"</em> [Yes] [No] [Cannot Access]).</p>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 3 -->
+  <h2>3. Core Diagnostic Intelligence & Failure Analysis (FMEA)</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Vertical</th>
+        <th>Common Symptoms</th>
+        <th>Probable Root Causes</th>
+        <th>Urgency</th>
+        <th>Immediate Safety Protocol</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Plumbing</strong></td>
+        <td>Under-sink leak, low shower pressure, gurgling drains</td>
+        <td>Worn spindle washer, calcified cartridge, pipe fissure</td>
+        <td>High</td>
+        <td>Isolate main stopcock; shut off booster pump</td>
+      </tr>
+      <tr>
+        <td><strong>Electrical</strong></td>
+        <td>Breaker tripping repeatedly, burning plastic smell</td>
+        <td>Overloaded circuit, burnt relay, shorted neutral wire</td>
+        <td>Critical</td>
+        <td>Trip main RCBO/Incomer breaker immediately; do not touch</td>
+      </tr>
+      <tr>
+        <td><strong>HVAC / AC</strong></td>
+        <td>Blower running lukewarm air, water dripping indoors</td>
+        <td>Failed run capacitor, low refrigerant, clogged tray</td>
+        <td>Moderate</td>
+        <td>Turn off AC from isolator switch to protect motor</td>
+      </tr>
+      <tr>
+        <td><strong>Generators</strong></td>
+        <td>Surging engine, cranking without ignition, black smoke</td>
+        <td>Fouled spark plug, dirty carburetor, bad AVR</td>
+        <td>Moderate</td>
+        <td>Turn off fuel petcock; disconnect load switch</td>
+      </tr>
+      <tr>
+        <td><strong>Carpentry</strong></td>
+        <td>Door sagging, jammed lock latch, sawdust on floor</td>
+        <td>Loose hinge screws, warped wood, termite infestation</td>
+        <td>Low</td>
+        <td>Avoid forcing handle; keep water away from timber</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout alert">
+    <div class="callout-title">⚠️ Real-Time Hazard Detection Protocol</div>
+    When severity is marked as <strong>CRITICAL</strong> and <code>isHazardous === true</code> (active electrical arcing, gas smell, structural ceiling crack), the system immediately displays a high-visibility Emergency Alert Banner with step-by-step containment steps before any quotes or artisan matches are rendered.
+  </div>
+
+  <!-- SECTION 4 -->
+  <h2>4. Intelligent Artisan Matching Algorithm</h2>
+  <p>Every candidate artisan in the target trade category is scored on a normalized 0 to 100 scale using the 5-pillar mathematical formulation:</p>
+
+  <div class="callout">
+    <strong>Final Score Formula:</strong><br>
+    <code>Score(a) = (0.35 × DistScore) + (0.25 × RatingScore) + (0.20 × PortfolioScore) + (0.10 × KycScore) + (0.10 × VelocityScore)</code>
+  </div>
+
+  <ul>
+    <li><strong>Distance Score (35%):</strong> Linear decay over a 20km radius using Haversine GPS distance. Artisans within 3km receive maximum points.</li>
+    <li><strong>Bayesian Rating (25%):</strong> Normalizes ratings against review volume: <code>(v × R + 5 × 3.5) / (v + 5) × 20</code>, preventing zero-review 5-star bias.</li>
+    <li><strong>Portfolio Similarity (20%):</strong> Evaluates semantic match between diagnostic failure mode and verified portfolio tags.</li>
+    <li><strong>KYC Verification (10%):</strong> 100 points for approved government identity verification (NIN/BVN), 0 points for unverified accounts.</li>
+    <li><strong>Completion Velocity (10%):</strong> Reward for historical low dispute ratio and prompt contract turnaround.</li>
+  </ul>
+
+  <!-- SECTION 5 -->
+  <h2>5. Technical Implementation Blueprints</h2>
+  <h3>5.1 Database Models (Prisma Schema Additions)</h3>
+  <pre><code>model AiDiagnosticSession {
+  id                 String               @id @default(uuid()) @db.Uuid
+  userId             String?              @map("user_id") @db.Uuid
+  inputType          DiagnosticInputType  @default(TEXT) @map("input_type")
+  rawTextPrompt      String?              @map("raw_text_prompt") @db.Text
+  diagnosticTitle    String?              @map("diagnostic_title") @db.VarChar(255)
+  probableCause      String?              @map("probable_cause") @db.Text
+  severity           DiagnosticSeverity   @default(LOW)
+  urgency            DiagnosticUrgency    @default(ROUTINE)
+  isHazardous        Boolean              @default(false) @map("is_hazardous")
+  safetyInstructions Json                 @default("[]") @map("safety_instructions")
+  diyAllowed         Boolean              @default(false) @map("diy_allowed")
+  estimatedBOM       Json                 @default("[]") @map("estimated_bom")
+  estimatedLaborMin  Decimal?             @map("estimated_labor_min") @db.Decimal(12, 2)
+  estimatedLaborMax  Decimal?             @map("estimated_labor_max") @db.Decimal(12, 2)
+  clientLatitude     Decimal?             @map("client_latitude") @db.Decimal(10, 8)
+  clientLongitude    Decimal?             @map("client_longitude") @db.Decimal(11, 8)
+  createdAt          DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  mediaFiles         DiagnosticMedia[]
+  recommendations    DiagnosticMatch[]
+  @@map("ai_diagnostic_sessions")
+}</code></pre>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 6 -->
+  <h2>6. Strategic Extra Features to Elevate the Platform</h2>
+
+  <div class="grid-2">
+    <div class="grid-card">
+      <h4>1. Artisan Prep Dossier & Pre-BOM</h4>
+      <p>Generates an automated tool/part checklist so the artisan brings the correct capacitor or valve on Trip #1, eliminating the notorious 3-hour inspection market delay.</p>
+    </div>
+    <div class="grid-card">
+      <h4>2. Anti-Gouging Fair Price Radar</h4>
+      <p>Displays an objective median labor price band derived from Fixmate's historical transaction ledger for the client's specific LGA/City.</p>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="grid-card">
+      <h4>3. Two-Way Multimodal Audio Bridge</h4>
+      <p>Converts client's formal problem statement into a 25s localized voice note in Nigerian Pidgin sent to the artisan's WhatsApp / PWA.</p>
+    </div>
+    <div class="grid-card">
+      <h4>4. AI Post-Repair Before/After Verification</h4>
+      <p>Compares pre-repair fault photos with post-repair completion photos before authorizing escrow milestone payout release.</p>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="grid-card">
+      <h4>5. Emergency 1-Tap SOS Dispatch</h4>
+      <p>Bypasses normal 3-bid proposals when hazards are detected. Simultaneously pings the 3 closest emergency on-call artisans.</p>
+    </div>
+    <div class="grid-card">
+      <h4>6. Interactive Visual AR Photo Annotation</h4>
+      <p>Overlays glowing bounding boxes on the uploaded photo: <em>"Turn this blue valve 90 degrees clockwise to stop the leak."</em></p>
+    </div>
+  </div>
+
+  <!-- SECTION 7 -->
+  <h2>7. Implementation Roadmap & Phases</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Phase</th>
+        <th>Timeline</th>
+        <th>Focus Area</th>
+        <th>Key Deliverables</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Phase 1</strong></td>
+        <td>Weeks 1 – 3</td>
+        <td>Core Multimodal Diagnostic MVP</td>
+        <td>Database migrations, Gemini 2.0 Flash JSON service, Cloudinary pipeline, React photo upload widget, basic category matching.</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 2</strong></td>
+        <td>Weeks 4 – 6</td>
+        <td>Geospatial & Multi-Factor Matching</td>
+        <td>Haversine geospatial index, 5-pillar mathematical scoring, 1-click "Diagnosis to Job Draft" conversion, automated Artisan Dossier.</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 3</strong></td>
+        <td>Weeks 7 – 9</td>
+        <td>Conversational Voice & Dialect Loop</td>
+        <td>Web Audio recorder with animated waveform, Whisper / Gemini Audio transcription, Nigerian Pidgin slang dictionary, TTS artisan briefings.</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 4</strong></td>
+        <td>Weeks 10 – 12</td>
+        <td>Hardening, Escrow & Rollout</td>
+        <td>Direct Monad USDC & Paystack escrow linking, Emergency SOS dispatch, AI post-repair verification, Redis semantic caching, NDPR compliance.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 8 -->
+  <h2>8. SLA, Cost & Performance Matrix</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>Target SLA</th>
+        <th>Engineering Strategy</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Diagnostic Latency</strong></td>
+        <td>&lt; 2.5 seconds</td>
+        <td>Gemini 2.0 Flash with prompt caching; progressive status updates streamed to frontend.</td>
+      </tr>
+      <tr>
+        <td><strong>Voice Transcription</strong></td>
+        <td>&lt; 1.8 seconds</td>
+        <td>Opus 32kbps client-side compression; direct buffer streaming to Whisper / Gemini.</td>
+      </tr>
+      <tr>
+        <td><strong>AI Inference Cost</strong></td>
+        <td>&lt; $0.004 / diagnosis</td>
+        <td>Strict max token budget (800 tokens); 1080p image downscaling; Redis symptom caching.</td>
+      </tr>
+      <tr>
+        <td><strong>Matching Execution</strong></td>
+        <td>&lt; 350 ms</td>
+        <td>SQL bounding box pre-filtering before in-memory mathematical ranking calculation.</td>
+      </tr>
+      <tr>
+        <td><strong>Fault Tolerance</strong></td>
+        <td>99.9% Uptime</td>
+        <td>Graceful fallback to rule-based keyword matching and Fixmate live human triage queue.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout" style="text-align: center; margin-top: 24px;">
+    <strong>Artifix Engineering Documentation</strong> • Confidential & Proprietary • Author: Fixmate AI Core Team
+  </div>
+
+</body>
+</html>

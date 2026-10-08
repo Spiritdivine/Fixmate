@@ -80,7 +80,7 @@ export const AdminSidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           badge: pendingPayoutsCount > 0 ? pendingPayoutsCount : undefined,
           badgeColor: 'bg-purple-500 text-white',
         },
-        { label: 'Monad Web3 Explorer', to: '/admin/monad-escrow', icon: <Layers className="w-4 h-4" /> },
+        { label: 'Smart Escrow Explorer', to: '/admin/monad-escrow', icon: <Layers className="w-4 h-4" /> },
       ],
     },
     {

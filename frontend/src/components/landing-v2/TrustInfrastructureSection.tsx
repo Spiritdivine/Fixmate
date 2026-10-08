@@ -31,7 +31,7 @@ export const TrustInfrastructureSection: React.FC = () => {
           </h2>
 
           <p className="text-sm sm:text-base text-stone-300 leading-[1.65] font-normal">
-            You do not need to understand blockchain mechanics to enjoy the safest home service infrastructure in Africa. Artifix bridges familiar Nigerian bank rails with Monad EVM smart contracts.
+            You do not need to understand blockchain mechanics to enjoy the safest home service infrastructure in Africa. Artifix bridges familiar Nigerian bank rails with automated milestone payment protection.
           </p>
         </div>
 
@@ -51,7 +51,7 @@ export const TrustInfrastructureSection: React.FC = () => {
                 Nigerian Naira (NGN) Rails
               </h3>
               <p className="text-xs sm:text-[13px] text-stone-300 leading-relaxed mb-6">
-                Fund your escrow milestone in seconds using debit cards (Mastercard, Visa, Verve) or direct bank transfer. Settled immediately upon milestone approval into any Nigerian commercial bank.
+                Fund your project milestone in seconds using debit cards (Mastercard, Visa, Verve) or direct bank transfer. Settled immediately upon milestone approval into any Nigerian commercial bank.
               </p>
             </div>
 
@@ -71,37 +71,37 @@ export const TrustInfrastructureSection: React.FC = () => {
             </div>
           </div>
 
-          {/* Pillar 2: Monad Web3 Rails */}
+          {/* Pillar 2: Digital USD Rails */}
           <div className="bg-[#14221D] rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col justify-between hover:bg-[#182a24] transition-colors relative overflow-hidden">
-            <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-[#836EF9]/10 rounded-full blur-xl pointer-events-none" />
+            <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
             
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-[#836EF9] text-white flex items-center justify-center font-extrabold text-sm mb-6 shadow-sm">
-                <span className="w-3 h-3 rounded-full border-2 border-white" />
+              <div className="w-12 h-12 rounded-2xl bg-[#123E2A] text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-extrabold text-lg mb-6 shadow-sm">
+                $
               </div>
-              <div className="inline-block text-[10px] font-bold uppercase tracking-wider text-[#836EF9] bg-[#836EF9]/20 px-2.5 py-0.5 rounded-full mb-2">
-                Decentralized Escrow
+              <div className="inline-block text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 px-2.5 py-0.5 rounded-full mb-2">
+                Diaspora Protection
               </div>
               <h3 className="text-xl font-bold text-white mb-2">
-                Monad Blockchain Rails (MON)
+                Digital Dollar (USDC)
               </h3>
               <p className="text-xs sm:text-[13px] text-stone-300 leading-relaxed mb-6">
-                Programmatic smart contracts executing on Monad EVM with 10,000 TPS and sub-second finality. Ideal for diaspora Nigerians funding property builds from abroad without wire delays.
+                Automated milestone protection securing projects in digital dollars. Ideal for diaspora clients funding home builds and renovations from abroad without expensive bank wire fees or delays.
               </p>
             </div>
 
             <div className="space-y-2 pt-4 border-t border-white/5 text-xs text-stone-400">
               <div className="flex items-center gap-2">
-                <span className="text-[#836EF9] font-bold">✓</span>
-                <span>Sub-second settlement speed (0.8s)</span>
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span>Sub-second settlement speed</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[#836EF9] font-bold">✓</span>
-                <span>Near-zero gas fees (&lt; $0.001)</span>
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span>Zero international wire deductions</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[#836EF9] font-bold">✓</span>
-                <span>Zero diaspora remittance deductions</span>
+                <span className="text-emerald-400 font-bold">✓</span>
+                <span>Instant milestone release upon approval</span>
               </div>
             </div>
           </div>
@@ -148,7 +148,7 @@ export const TrustInfrastructureSection: React.FC = () => {
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-mono text-stone-300">
-              Monad EVM Smart Contracts (Chain ID 10143)
+              Automated Smart Contracts &amp; CBN-Compliant Bank Vaults
             </span>
             <span className="hidden sm:inline text-stone-600">|</span>
             <span className="hidden sm:inline text-stone-400">

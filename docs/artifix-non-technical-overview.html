@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Artifix — Product Overview & Non-Technical Guide</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #1a202c;
+      background: #ffffff;
+      line-height: 1.55;
+      font-size: 10pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Cover / Hero Header */
+    .header-banner {
+      background: linear-gradient(135deg, #071F15 0%, #0D3825 50%, #00A86B 100%);
+      color: #ffffff;
+      padding: 28px 30px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(7, 31, 21, 0.15);
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+    }
+
+    .brand-title {
+      font-size: 26pt;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-tagline {
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #86EFAC;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .badge-pill {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 8.5pt;
+      font-weight: 600;
+      color: #F0FDF4;
+    }
+
+    .doc-main-title {
+      font-size: 17pt;
+      font-weight: 800;
+      margin: 0 0 6px 0;
+      color: #ffffff;
+      line-height: 1.25;
+    }
+
+    .doc-subtitle {
+      font-size: 10pt;
+      color: #D1FAE5;
+      margin: 0;
+      max-width: 650px;
+      line-height: 1.4;
+    }
+
+    .meta-strip {
+      display: flex;
+      gap: 20px;
+      margin-top: 14px;
+      font-size: 8.5pt;
+      color: #E2E8F0;
+    }
+
+    .meta-strip span strong {
+      color: #ffffff;
+    }
+
+    /* Section Styling */
+    h2 {
+      color: #0A261B;
+      font-size: 13pt;
+      font-weight: 800;
+      border-bottom: 2px solid #E2E8F0;
+      padding-bottom: 6px;
+      margin-top: 22px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h3 {
+      color: #0D3825;
+      font-size: 10.5pt;
+      font-weight: 700;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    p {
+      margin: 0 0 10px 0;
+      color: #334155;
+      font-size: 9.5pt;
+    }
+
+    ul, ol {
+      margin: 0 0 12px 0;
+      padding-left: 20px;
+      color: #334155;
+      font-size: 9.5pt;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    /* Callout Card */
+    .callout {
+      background: #F8FAFC;
+      border-left: 4px solid #00A86B;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-size: 9pt;
+      color: #1E293B;
+    }
+
+    .callout.terracotta {
+      border-left-color: #BD5324;
+      background: #FFF9F5;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      color: #0A261B;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 18px 0;
+      font-size: 8.8pt;
+    }
+
+    th {
+      background: #0A261B;
+      color: #ffffff;
+      font-weight: 700;
+      text-align: left;
+      padding: 8px 10px;
+      border: 1px solid #0A261B;
+    }
+
+    td {
+      padding: 8px 10px;
+      border: 1px solid #E2E8F0;
+      vertical-align: top;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background: #F8FAFC;
+    }
+
+    /* Flow diagram / Steps */
+    .steps-container {
+      display: flex;
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .step-box {
+      flex: 1;
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      position: relative;
+    }
+
+    .step-num {
+      font-size: 8pt;
+      font-weight: 800;
+      color: #15803D;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .step-title {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #0A261B;
+      margin-bottom: 4px;
+    }
+
+    .step-desc {
+      font-size: 8pt;
+      color: #475569;
+      line-height: 1.35;
+      margin: 0;
+    }
+
+    /* Grid for Audience */
+    .grid-2 {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card {
+      flex: 1;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 12px;
+      background: #FFFFFF;
+    }
+
+    .card-header {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #0A261B;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-desc {
+      font-size: 8.5pt;
+      color: #64748B;
+      margin-bottom: 6px;
+    }
+
+    .card-list {
+      font-size: 8.5pt;
+      padding-left: 16px;
+      margin: 0;
+      color: #334155;
+    }
+
+    .card-list li {
+      margin-bottom: 2px;
+    }
+
+    /* FAQ Box */
+    .faq-item {
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      background: #FAFAFA;
+      page-break-inside: avoid;
+    }
+
+    .faq-q {
+      font-weight: 700;
+      color: #0A261B;
+      font-size: 9pt;
+      margin-bottom: 3px;
+    }
+
+    .faq-a {
+      color: #475569;
+      font-size: 8.5pt;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    /* Page Breaks */
+    .page-break {
+      page-break-after: always;
+    }
+
+    .avoid-break {
+      page-break-inside: avoid;
+    }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid #E2E8F0;
+      padding-top: 10px;
+      margin-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8pt;
+      color: #94A3B8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER / COVER SECTION -->
+  <div class="header-banner">
+    <div class="brand-row">
+      <div>
+        <div class="brand-title">
+          <span>🛠️ Artifix</span>
+        </div>
+        <div class="brand-tagline">Find • Connect • Fix • Escrow Protected</div>
+      </div>
+      <div class="badge-pill">Non-Technical Whitepaper & Guide</div>
+    </div>
+    <div class="doc-main-title">Product Overview & Operational Architecture</div>
+    <div class="doc-subtitle">
+      A comprehensive guide to Africa's verified artisan marketplace, milestone-based escrow, customer guarantees, and dual payment rails.
+    </div>
+    <div class="meta-strip">
+      <span><strong>Platform:</strong> Artifix Network</span>
+      <span><strong>Document Type:</strong> Product Overview</span>
+      <span><strong>Target Audience:</strong> Clients, Investors, Partners, Operations</span>
+      <span><strong>Website:</strong> artifixhq.xyz</span>
+    </div>
+  </div>
+
+  <!-- 1. EXECUTIVE SUMMARY -->
+  <h2>1. Executive Summary</h2>
+  <p>
+    <strong>Artifix</strong> is a verified marketplace and digital escrow platform built to resolve the fundamental trust deficit in the skilled home and construction trades (electricians, plumbers, carpenters, solar technicians, painters, and HVAC contractors).
+  </p>
+  <p>
+    In emerging markets—and specifically across Nigeria—hiring skilled artisans is plagued by chronic friction:
+  </p>
+  <ul>
+    <li><strong>Property owners and homeowners</strong> are forced to make large upfront cash advances to unverified workers, frequently suffering from abandoned jobs, substandard materials, or disappeared artisans.</li>
+    <li><strong>Artisans and craftsmen</strong> routinely face unpaid labor, endless haggling after work completion, or delayed payments that jeopardize their livelihood.</li>
+  </ul>
+  <p>
+    Artifix eliminates this risk through <strong>Milestone-Based Escrow</strong>. Instead of direct cash handovers, client funds are securely locked into an automated digital vault. Artisans start work knowing their pay is 100% guaranteed, and clients release funds only after inspecting verifiable, photographic proof of completed deliverables.
+  </p>
+
+  <div class="callout">
+    <div class="callout-title">💡 The Core Philosophy: Complete Symmetry of Trust</div>
+    Artifix removes the need for blind trust. Clients never pay upfront in full without recourse, and artisans never work on empty promises.
+  </div>
+
+  <!-- 2. THE PROBLEM MATRIX -->
+  <h2>2. The Problem Artifix Solves</h2>
+  <p>
+    Traditional artisan hiring in Nigeria relies on roadside finding, informal word-of-mouth, or arbitrary cash advances. The table below illustrates the stark contrast between current industry practices and the Artifix standard:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 22%;">Area</th>
+        <th style="width: 39%;">Traditional Experience</th>
+        <th style="width: 39%;">The Artifix Standard</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Upfront Financial Risk</strong></td>
+        <td>Clients are asked for 50%–80% cash advances upfront with zero collateral. If the artisan defaults, the money is lost.</td>
+        <td><strong>Zero Cash Advance Risk:</strong> 100% of funds stay protected in escrow. Funds are disbursed strictly milestone-by-milestone upon client sign-off.</td>
+      </tr>
+      <tr>
+        <td><strong>Artisan Payment Security</strong></td>
+        <td>Artisans often complete hard physical labor only to face delayed transfers, arbitrary deductions, or clients refusing to pay.</td>
+        <td><strong>Guaranteed Payouts:</strong> Money is deposited before work begins. Once a milestone is verified, settlement is immediate into the artisan's bank.</td>
+      </tr>
+      <tr>
+        <td><strong>Quality &amp; Workmanship</strong></td>
+        <td>No standardized specifications. Artisans often use substandard or counterfeit materials to pocket difference.</td>
+        <td><strong>Proof-of-Work Docket:</strong> Work is broken into measurable phases backed by timestamped photographic and video inspections.</td>
+      </tr>
+      <tr>
+        <td><strong>Identity &amp; Safety</strong></td>
+        <td>Unverified strangers enter homes and construction sites with no background check or trackable identity.</td>
+        <td><strong>4-Tier Trade Passport:</strong> National Identity (NIN biometric match), physical address audit, and practical skill verification by senior guild examiners.</td>
+      </tr>
+      <tr>
+        <td><strong>Dispute Handling</strong></td>
+        <td>He-said-she-said arguments result in police harassment, abandoned job sites, and complete project collapse.</td>
+        <td><strong>Structured Mediation:</strong> 48-hour bilateral cure window backed by experienced neutral trade arbiters and transparent evidence vaults.</td>
+      </tr>
+      <tr>
+        <td><strong>Diaspora Remittance</strong></td>
+        <td>Diaspora Nigerians sending money home through relatives or third parties frequently experience fund diversion and ghost projects.</td>
+        <td><strong>Remote Transparency:</strong> Direct digital milestone funding with live photo/video proofs and instant international funding options.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 3. THE 4-STEP CUSTOMER JOURNEY -->
+  <h2>3. The 4-Step Customer Journey</h2>
+  <p>
+    Artifix transforms a stressful, unstructured process into an intuitive four-step workflow designed for everyday people:
+  </p>
+
+  <div class="steps-container">
+    <div class="step-box">
+      <div class="step-num">Step 01</div>
+      <div class="step-title">Scope &amp; Milestones</div>
+      <p class="step-desc">
+        Client and verified artisan agree on precise deliverables, material specifications, and clear project phases on a binding digital docket.
+      </p>
+    </div>
+    <div class="step-box">
+      <div class="step-num">Step 02</div>
+      <div class="step-title">Lock in Escrow</div>
+      <p class="step-desc">
+        Client deposits milestone funds via local bank card, bank transfer (Naira), or digital currency into a tamper-proof digital vault.
+      </p>
+    </div>
+    <div class="step-box">
+      <div class="step-num">Step 03</div>
+      <div class="step-title">Proof of Work</div>
+      <p class="step-desc">
+        Artisan performs work on site and uploads timestamped completion photos, test video logs, and notes to the job docket.
+      </p>
+    </div>
+    <div class="step-box">
+      <div class="step-num">Step 04</div>
+      <div class="step-title">Inspect &amp; Payout</div>
+      <p class="step-desc">
+        Client inspects and approves the deliverable. Escrow instantly disburses funds directly to the artisan's commercial bank account.
+      </p>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- 4. CORE PLATFORM CAPABILITIES -->
+  <h2>4. Core Platform Capabilities &amp; Safeguards</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">🛡️ 1. Milestone-Based Escrow Vault</div>
+      <div class="card-desc">Financial protection engineered for peace of mind.</div>
+      <ul class="card-list">
+        <li>Funds are held safely by the system, never in the personal possession of the artisan prior to inspection.</li>
+        <li>Large contracts are split into modular deliverables (e.g., Rough In, Cable Pulling, Distribution Panel).</li>
+        <li>Instant release to Nigerian bank accounts upon approval with zero payout delays.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">🪪 2. The Artisan "Trade Passport"</div>
+      <div class="card-desc">Strict, institutional-grade craftsman accreditation.</div>
+      <ul class="card-list">
+        <li><strong>NIN Biometric Verification:</strong> Government identity matching.</li>
+        <li><strong>Physical Address Audit:</strong> Verification of home or workshop location.</li>
+        <li><strong>Guild Competency Audit:</strong> Practical bench exams conducted by master guild evaluators.</li>
+        <li><strong>Permanent Reputation Score:</strong> Transparent, tamper-proof client reviews.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">💳 3. Dual Payment Rails (Naira &amp; Web3)</div>
+      <div class="card-desc">Built for local accessibility and diaspora convenience.</div>
+      <ul class="card-list">
+        <li><strong>Local Fiat (Naira):</strong> Pay with Mastercard, Visa, Verve, or direct bank transfer via Paystack. Zero crypto knowledge needed.</li>
+        <li><strong>Diaspora Global Rails:</strong> Fund building projects from the UK, US, or Europe via Monad ($MON), bypassing hefty bank wire fees and currency restrictions.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">📸 4. Verifiable Proof-of-Work Vault</div>
+      <div class="card-desc">Eliminates verbal arguments and "he-said-she-said".</div>
+      <ul class="card-list">
+        <li>Time-stamped photographic and video evidence required for every milestone completion.</li>
+        <li>Digital contract docket records all agreed quotes, scope variations, and receipts in one accessible place.</li>
+        <li>Forms an immutable record if a dispute ever arises.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">💬 5. Integrated Real-Time Communication</div>
+      <div class="card-desc">Centralized project coordination.</div>
+      <ul class="card-list">
+        <li>In-app direct messaging between clients and artisans with instant notifications.</li>
+        <li>Keeps discussions, material updates, and scheduling in a central place rather than scattered across WhatsApp.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header">⚖️ 6. Fair Dispute Resolution &amp; Arbitration</div>
+      <div class="card-desc">Equitable protection when things go wrong.</div>
+      <ul class="card-list">
+        <li><strong>48-Hour Bilateral Cure Period:</strong> Structured window for the artisan to rectify defects.</li>
+        <li><strong>Neutral Trade Arbiter:</strong> Senior trade inspectors evaluate physical evidence against agreed scope.</li>
+        <li><strong>Prompt Remediation:</strong> Arbiter can issue full refunds, partial compensation for materials, or order rework.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 5. TARGET AUDIENCE -->
+  <h2>5. Target Audience &amp; Real-World Use Cases</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">User Segment</th>
+        <th style="width: 35%;">Typical Needs &amp; Use Cases</th>
+        <th style="width: 40%;">Primary Value Proposition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Homeowners &amp; Tenants</strong></td>
+        <td>Emergency plumbing, generator repairs, solar inverter installation, painting, AC servicing, kitchen cabinetry.</td>
+        <td>Safety and peace of mind knowing the artisan in your home is verified, and you only pay when the fix is fully functional.</td>
+      </tr>
+      <tr>
+        <td><strong>Property Developers &amp; Facility Managers</strong></td>
+        <td>Multi-unit electrical wiring, roofing, plumbing installations, estate maintenance contracts.</td>
+        <td>Streamlined milestone management, transparent contractor tracking, and audited expense records across large teams.</td>
+      </tr>
+      <tr>
+        <td><strong>Diaspora Property Owners</strong></td>
+        <td>Building a home or maintaining family real estate in Nigeria while living in the UK, USA, Canada, or Europe.</td>
+        <td>100% remote transparency. Eliminates the risk of relatives or middlemen diverting construction funds. Direct photo inspection before release.</td>
+      </tr>
+      <tr>
+        <td><strong>Skilled Artisans &amp; Tradespeople</strong></td>
+        <td>Electricians, plumbers, carpenters, solar technicians, welders, painters seeking consistent, honest income.</td>
+        <td>Guaranteed payment security before picking up tools, access to serious clients, and a recognized digital trade reputation.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 6. BUSINESS MODEL & ECONOMICS -->
+  <h2>6. Business Model &amp; Transparent Economics</h2>
+  <p>
+    Artifix is built on complete pricing transparency with zero hidden charges or paywalls:
+  </p>
+  <ul>
+    <li><strong>Free Client Registration &amp; Job Posting:</strong> Homeowners and businesses post unlimited job requests at zero cost.</li>
+    <li><strong>Free Artisan Bidding:</strong> Verified artisans can browse opportunities and submit detailed proposals without paying for lead credits or bidding tokens.</li>
+    <li><strong>Flat 5% Platform Escrow Fee:</strong> Artifix charges a straightforward 5% platform commission deducted only upon the successful completion and approval of a milestone.</li>
+    <li><strong>100% Pre-Work Cancellation Refund:</strong> If a job is canceled before the artisan begins work, 100% of the escrowed funds are returned to the client without penalty.</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <!-- 7. OPERATIONAL HUBS -->
+  <h2>7. Physical Presence &amp; Operational Hubs</h2>
+  <p>
+    Unlike purely virtual platforms, Artifix pairs its digital technology with physical operational infrastructure in Nigeria to conduct practical tests and resolve complex issues:
+  </p>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">📍 Lagos Operational &amp; Testing Hub</div>
+      <div class="card-desc">Admiralty Way, Lekki Phase 1, Lagos State</div>
+      <p style="font-size: 8.5pt; color: #475569; margin: 0;">
+        Houses hands-on electrical bench testing, solar equipment calibration facilities, artisan biometric onboarding kiosks, and formal dispute hearing rooms.
+      </p>
+    </div>
+    <div class="card">
+      <div class="card-header">📍 Abuja Corporate Liaison Hub</div>
+      <div class="card-desc">Aminu Kano Crescent, Wuse II, FCT Abuja</div>
+      <p style="font-size: 8.5pt; color: #475569; margin: 0;">
+        Directs commercial facility management partnerships, corporate contractor onboarding, and regional public-private guild engagements across the Federal Capital Territory.
+      </p>
+    </div>
+  </div>
+
+  <!-- 8. FREQUENTLY ASKED QUESTIONS -->
+  <h2>8. Frequently Asked Questions (FAQ)</h2>
+
+  <div class="faq-item">
+    <div class="faq-q">Q: Do I need any cryptocurrency or technical knowledge to use Artifix?</div>
+    <div class="faq-a">
+      <strong>No.</strong> Over 85% of Artifix clients fund milestones using their regular Nigerian bank debit cards (Mastercard, Visa, Verve) or instant bank transfers via Paystack. The secure escrow logic operates seamlessly in the background without any crypto or wallet setup required.
+    </div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q: What happens if an artisan does substandard work or abandons a project?</div>
+    <div class="faq-a">
+      Your deposited funds remain 100% safe in the escrow vault. The artisan cannot access the money. If an issue occurs, a 48-hour cure window gives the artisan an opportunity to rectify the defect. If unresolved, neutral Artifix trade arbiters review the photos and site logs against the contract scope to disburse a prompt refund directly to your original payment method.
+    </div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q: How do artisans get paid, and how fast is payout settlement?</div>
+    <div class="faq-a">
+      Settlement happens instantly the moment the client inspects and approves a completed milestone. Funds are transferred immediately to the artisan's commercial bank account (GTBank, Access, Zenith, First Bank, Kuda, etc.) with zero holding delays or withdrawal fees.
+    </div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q: Can Artifix be used for small quick repairs as well as major multi-month construction?</div>
+    <div class="faq-a">
+      <strong>Yes.</strong> Artifix supports single-milestone "Rapid Fix" contracts for urgent plumbing leaks, generator repairs, or electrical troubleshooting, as well as complex multi-milestone contracts for large residential renovations, roof installation, and full solar setups.
+    </div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Q: How does Artifix verify its artisans?</div>
+    <div class="faq-a">
+      Every verified artisan completes our comprehensive 4-step accreditation: (1) National Identity (NIN and verified biometric match), (2) Physical workshop or residential address inspection, (3) Practical trade competency and previous work audit by senior guild examiners, and (4) Background screening.
+    </div>
+  </div>
+
+  <!-- 9. SUMMARY & CONCLUSION -->
+  <h2>9. Conclusion: Why Artifix Is the Future of Craft Services</h2>
+  <p>
+    By replacing verbal promises and risky cash advances with <strong>automated milestone escrow, authenticated trade credentials, and transparent photographic proofs</strong>, Artifix bridges the informal economy with modern digital security.
+  </p>
+  <p>
+    Whether you are a homeowner fixing a sudden leak, a diaspora investor building your dream property from abroad, or a skilled craftsman who wants to be treated with dignity and paid promptly—Artifix makes hiring and getting work done safe, predictable, and fair.
+  </p>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span>© 2026 Artifix Network • The Verified Artisan Trust Network</span>
+    <span>Production Web App: <strong>artifixhq.xyz</strong></span>
+    <span>Confidential &amp; Informational</span>
+  </div>
+
+</body>
+</html>

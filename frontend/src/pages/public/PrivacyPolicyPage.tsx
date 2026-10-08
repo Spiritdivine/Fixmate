@@ -30,7 +30,7 @@ export const PrivacyPolicyPage: React.FC = () => {
     { id: 'scope', title: '1. Scope & Data Controller' },
     { id: 'collection', title: '2. Personal Data We Collect' },
     { id: 'biometrics', title: '3. BVN & NIN Identity Safeguards' },
-    { id: 'blockchain', title: '4. On-Chain Privacy on Monad' },
+    { id: 'blockchain', title: '4. On-Chain Privacy & Escrow Transparency' },
     { id: 'usage', title: '5. Purpose & Legal Basis' },
     { id: 'retention', title: '6. Retention & Deletion Rights' },
     { id: 'cookies', title: '7. Cookies & Telemetry' },
@@ -224,11 +224,11 @@ export const PrivacyPolicyPage: React.FC = () => {
                   Section 4
                 </span>
                 <h2 className="text-xl sm:text-2xl font-bold text-[#141A16] mt-1">
-                  4. On-Chain Privacy on the Monad Blockchain
+                  4. On-Chain Privacy &amp; Escrow Transparency
                 </h2>
               </div>
               <p className="text-sm sm:text-[15px] text-stone-700 leading-relaxed">
-                Artifix utilizes the high-throughput Monad blockchain for smart contract escrow settlement. We maintain a strict boundary between public blockchain data and private personal information:
+                Artifix utilizes automated smart contract escrow for decentralized settlement. We maintain a strict boundary between public ledger state and private personal information:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-white border border-stone-200/80 shadow-xs">

@@ -59,7 +59,7 @@ export const ContractsOversightPage: React.FC = () => {
             <span>Contracts & Escrow Oversight</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-400">
-            Monitor active work agreements, milestone release progression, and Monad smart contract escrows.
+            Monitor active work agreements, milestone release progression, and automated smart contract escrows.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -150,7 +150,7 @@ export const ContractsOversightPage: React.FC = () => {
                       {c.onChainEscrowId && (
                         <p className="text-[10px] text-purple-400 font-mono flex items-center gap-1 mt-0.5">
                           <Layers className="w-3 h-3" />
-                          <span>Monad #{c.onChainEscrowId}</span>
+                          <span>Smart Escrow #{c.onChainEscrowId}</span>
                         </p>
                       )}
                     </td>

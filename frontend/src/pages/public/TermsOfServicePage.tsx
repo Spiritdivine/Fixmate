@@ -181,7 +181,7 @@ export const TermsOfServicePage: React.FC = () => {
                 <li className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-[#123E2A] mt-1 shrink-0" />
                   <span>
-                    <strong>Monad Blockchain Rail:</strong> Cryptocurrency settlements are locked into audited, non-custodial smart contracts deployed on the Monad network with cryptographic milestone release conditions.
+                    <strong>Digital Dollar Escrow Rail:</strong> Digital currency settlements (USDC) are locked into audited, non-custodial smart contracts with cryptographic milestone release conditions.
                   </span>
                 </li>
                 <li className="flex items-start gap-2.5">

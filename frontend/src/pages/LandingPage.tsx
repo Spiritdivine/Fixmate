@@ -221,7 +221,7 @@ export const LandingPage: React.FC = () => {
     <div className={`min-h-screen font-sans selection:bg-amber-200 selection:text-stone-900 ${isDarkMode ? 'dark bg-[#0E1310] text-stone-100' : 'bg-[#F5EFEB] text-stone-900'} dark:bg-[#0E1310] dark:text-stone-100 overflow-x-clip transition-colors duration-200`}>
       <SeoHead
         title="Artifix — The Verified Artisan Trust Network | Smart Escrow Protection"
-        description="Hire ID-verified plumbers, electricians, solar installers, and carpenters in Nigeria. Guaranteed zero-dispute milestone deliverables with Monad EVM smart contract escrow."
+        description="Hire ID-verified plumbers, electricians, solar installers, and carpenters in Nigeria. Guaranteed zero-dispute milestone deliverables with automated smart contract escrow."
         canonical="https://artifixhq.xyz/"
         ogType="website"
         ogImage="/api/v1/og/default"
@@ -599,7 +599,7 @@ export const LandingPage: React.FC = () => {
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
                   <p className="text-[11px] sm:text-xs text-stone-600 dark:text-stone-400 mt-1 leading-relaxed">
-                    Powered by blockchain and smart contracts.
+                    Powered by automated smart escrow.
                   </p>
                 </a>
               </div>

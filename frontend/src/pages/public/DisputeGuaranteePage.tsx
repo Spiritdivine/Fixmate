@@ -38,7 +38,7 @@ export const DisputeGuaranteePage: React.FC = () => {
     {
       title: '4. Tier 3: Cryptographic Multi-Sig Execution',
       content:
-        'Determinations are executed on-chain via Monad EVM smart contracts. The platform does not hold custody of funds in private bank accounts where they could be withheld indefinitely. Multi-sig cryptographic execution enforces either a full refund, full payout, or prorated split settlement in accordance with the formal arbiter ruling.',
+        'Determinations are executed on-chain via automated smart contracts. The platform does not hold custody of funds in private bank accounts where they could be withheld indefinitely. Multi-sig cryptographic execution enforces either a full refund, full payout, or prorated split settlement in accordance with the formal arbiter ruling.',
     },
     {
       title: '5. Abandonment & Non-Performance Protocol',
