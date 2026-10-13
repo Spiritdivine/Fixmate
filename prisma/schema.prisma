@@ -1042,6 +1042,8 @@ model AiDiagnosticSession {
   mediaFiles            DiagnosticMedia[]
   recommendations       DiagnosticMatch[]
   repairVerifications   AiRepairVerification[]
+  evidences             DiagnosticEvidence[]
+  matchSnapshots        MatchSnapshot[]
 
   @@index([userId])
   @@index([matchedCategoryId])
@@ -1104,3 +1106,97 @@ model AiRepairVerification {
   @@index([contractId])
   @@map("ai_repair_verifications")
 }
+
+model RegionalPriceIndex {
+  id              String   @id @default(uuid()) @db.Uuid
+  state           String   @db.VarChar(50)
+  city            String   @db.VarChar(50)
+  tradeCategory   String   @map("trade_category") @db.VarChar(50)
+  indexMultiplier Decimal  @default(1.00) @map("index_multiplier") @db.Decimal(5, 2)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([state, city, tradeCategory])
+  @@map("regional_price_indices")
+}
+
+model DiagnosticAuditLog {
+  id                  String   @id @default(uuid()) @db.Uuid
+  diagnosticSessionId String   @map("diagnostic_session_id") @db.Uuid
+  event               String   @db.VarChar(100)
+  payload             Json
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([diagnosticSessionId])
+  @@map("diagnostic_audit_logs")
+}
+
+model DiagnosticEvidence {
+  id                  String              @id @default(uuid()) @db.Uuid
+  diagnosticSessionId String              @map("diagnostic_session_id") @db.Uuid
+  evidenceType        String              @map("evidence_type") @db.VarChar(50) // USER_STATEMENT, PHOTO_FEATURE, VOICE_FEATURE, CLARIFICATION_ANSWER
+  normalizedFact      String              @map("normalized_fact") @db.Text
+  sourceTurnId        Int                 @default(1) @map("source_turn_id")
+  confidenceBand      String              @default("moderate") @map("confidence_band") @db.VarChar(20) // low, moderate, high
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  session             AiDiagnosticSession @relation(fields: [diagnosticSessionId], references: [id], onDelete: Cascade)
+
+  @@index([diagnosticSessionId])
+  @@map("diagnostic_evidences")
+}
+
+model KnowledgeSource {
+  id          String    @id @default(uuid()) @db.Uuid
+  sourceCode  String    @unique @map("source_code") @db.VarChar(100)
+  trade       String    @db.VarChar(100)
+  title       String    @db.VarChar(255)
+  content     String    @db.Text
+  riskLevel   String    @default("low") @map("risk_level") @db.VarChar(20) // low, moderate, high, professional_only
+  status      String    @default("APPROVED") @db.VarChar(50) // DRAFT, REVIEWED, APPROVED, DEPRECATED
+  version     Int       @default(1)
+  reviewedBy  String?   @map("reviewed_by") @db.VarChar(100)
+  reviewedAt  DateTime? @map("reviewed_at") @db.Timestamptz
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([trade, status])
+  @@map("knowledge_sources")
+}
+
+model PriceObservation {
+  id              String   @id @default(uuid()) @db.Uuid
+  itemId          String   @map("item_id") @db.VarChar(100)
+  itemDescription String   @map("item_description") @db.VarChar(255)
+  categorySlug    String   @map("category_slug") @db.VarChar(100)
+  locality        String   @db.VarChar(100) // e.g. Lagos, Ikeja, Lekki, Abuja
+  minPriceNgn     Decimal  @map("min_price_ngn") @db.Decimal(12, 2)
+  maxPriceNgn     Decimal  @map("max_price_ngn") @db.Decimal(12, 2)
+  currency        String   @default("NGN") @db.VarChar(10)
+  sourceType      String   @map("source_type") @db.VarChar(50) // MERCHANT_CATALOGUE, HISTORICAL_JOB, MARKET_SURVEY
+  sourceReference String   @map("source_reference") @db.VarChar(255)
+  sampleSize      Int      @default(1) @map("sample_size")
+  observedAt      DateTime @map("observed_at") @db.Timestamptz
+  verifiedAt      DateTime @map("verified_at") @db.Timestamptz
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([itemId, locality])
+  @@index([categorySlug, expiresAt])
+  @@map("price_observations")
+}
+
+model MatchSnapshot {
+  id                  String              @id @default(uuid()) @db.Uuid
+  diagnosticSessionId String              @map("diagnostic_session_id") @db.Uuid
+  candidateSnapshot   Json                @map("candidate_snapshot")
+  rankingPolicy       String              @default("HARD_FILTER_THEN_COMPOSITE_SCORE") @map("ranking_policy") @db.VarChar(50)
+  algorithmVersion    String              @default("2.1.0") @map("algorithm_version") @db.VarChar(20)
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  session             AiDiagnosticSession @relation(fields: [diagnosticSessionId], references: [id], onDelete: Cascade)
+
+  @@index([diagnosticSessionId])
+  @@map("match_snapshots")
+}
+
+

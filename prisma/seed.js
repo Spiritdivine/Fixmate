@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../src/config/db.js';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting database seeding...');
@@ -108,92 +106,258 @@ async function main() {
     console.log('✅ Created default Admin account: admin@artisanplatform.com (Password: Admin@123456)');
   }
 
-  // 4. Seed Default Artisan User
-  const artisanEmail = 'artisan@artifixhq.xyz';
-  const artisanPhone = '+2348077778888';
-  let existingArtisan = await prisma.user.findFirst({
-    where: { OR: [{ email: artisanEmail }, { phoneNumber: artisanPhone }] },
-  });
+  // 4. Seed Verified Multi-Trade Artisan Registry
+  const passwordHash = await bcrypt.hash('Password123!', 12);
 
-  if (!existingArtisan) {
-    const passwordHash = await bcrypt.hash('Password123!', 12);
-    existingArtisan = await prisma.user.create({
-      data: {
-        email: artisanEmail,
-        phoneNumber: artisanPhone,
-        passwordHash,
-        role: 'ARTISAN',
-        status: 'ACTIVE',
-        isEmailVerified: true,
-        isPhoneVerified: true,
-        isKycVerified: true,
-        wallet: {
-          create: {
-            availableBalance: 120000.0,
-            escrowLockedBalance: 45000.0,
-            currency: 'NGN',
-          },
-        },
-        bankAccounts: {
-          create: {
-            bankName: 'Guaranty Trust Bank',
-            bankCode: '058',
-            accountNumber: '0123456789',
-            accountName: 'Masterfix Electrical Services',
-            isDefault: true,
-          },
-        },
-        artisanProfile: {
-          create: {
-            businessName: 'Masterfix Electrical & Solar Tech',
-            tagline: 'Certified Solar Inverter & Smart Home Installation Expert',
-            bio: 'Over 8 years experience delivering high-voltage domestic wiring, 5kVA - 20kVA solar inverter banks, and industrial electrical maintenance across Lagos State.',
-            yearsOfExperience: 8,
-            hourlyRate: 7500.0,
-            state: 'Lagos',
-            lgaCity: 'Ikeja',
-            address: 'Plot 12, Commercial Avenue, Ikeja, Lagos',
-            ratingAvg: 4.9,
-            reviewCount: 14,
-            completedJobsCount: 22,
-            isAvailable: true,
-            portfolios: {
-              create: [
-                {
-                  title: '10kVA Hybrid Solar Inverter System Setup',
-                  description: 'Installed 16 x 550W Canadian mono solar panels with 2 x 10kWh lithium battery bank and surge protection units.',
-                  mediaUrls: ['https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800&auto=format&fit=crop'],
-                },
-                {
-                  title: 'Full Duplex Conduit Piping & DB Screeding',
-                  description: 'Complete 5-bedroom duplex conduit installation, distribution board layout, and earthing installation.',
-                  mediaUrls: ['https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop'],
-                },
-              ],
-            },
-            services: {
-              create: [
-                {
-                  title: 'Solar Inverter Inspection & Battery Health Diagnostic',
-                  description: 'Full battery internal resistance test, inverter firmware calibration, and load optimization.',
-                  price: 25000.0,
-                  deliveryDays: 1,
-                  isActive: true,
-                },
-                {
-                  title: 'Distribution Board (DB) Re-wiring & Surge Protection',
-                  description: 'Removal of faulty circuit breakers, installation of new Schneider MCBs and RCD lightning arresters.',
-                  price: 45000.0,
-                  deliveryDays: 2,
-                  isActive: true,
-                },
-              ],
-            },
-          },
-        },
-      },
+  const artisanSeedMatrix = [
+    // A. Masterfix Electrical & Solar Tech - Ikeja, Lagos
+    {
+      email: 'artisan@artifixhq.xyz',
+      phone: '+2348077778888',
+      firstName: 'Sunday',
+      lastName: 'Ogundipe',
+      businessName: 'Masterfix Electrical & Solar Tech',
+      tagline: 'Certified Solar Inverter & Smart Home Installation Expert',
+      bio: 'Over 8 years experience delivering high-voltage domestic wiring, 5kVA - 20kVA solar inverter banks, and industrial electrical maintenance across Lagos State.',
+      yearsOfExperience: 8,
+      hourlyRate: 7500.0,
+      state: 'Lagos',
+      lgaCity: 'Ikeja',
+      address: 'Plot 12, Commercial Avenue, Ikeja, Lagos',
+      latitude: 6.5952,
+      longitude: 3.3512,
+      ratingAvg: 4.92,
+      reviewCount: 42,
+      completedJobsCount: 61,
+      categorySlug: 'electrical-and-wiring',
+      skills: ['Inverter Installation', 'Solar Panel Wiring', 'Conduit Piping', 'Fault Finding', 'House Wiring'],
+    },
+    // B. Lekki Circuit & Surge Defense - Lekki Phase 1, Lagos
+    {
+      email: 'electrical.lekki@artifixhq.xyz',
+      phone: '+2348031110003',
+      firstName: 'Oluwaseun',
+      lastName: 'Fashola',
+      businessName: 'Lekki Circuit & Surge Defense Systems',
+      tagline: 'Distribution Board Re-wiring & Arc Fault Specialist',
+      bio: 'Specialized in single-phase and three-phase domestic distribution boards, surge protection, earthing installation, and emergency electrical troubleshooting in Lekki and Ikoyi.',
+      yearsOfExperience: 10,
+      hourlyRate: 9000.0,
+      state: 'Lagos',
+      lgaCity: 'Lekki Phase 1',
+      address: '15 Freedom Way, Lekki Phase 1, Lagos',
+      latitude: 6.4421,
+      longitude: 3.4812,
+      ratingAvg: 4.97,
+      reviewCount: 29,
+      completedJobsCount: 45,
+      categorySlug: 'electrical-and-wiring',
+      skills: ['House Wiring', 'Fault Finding', 'Conduit Piping', 'Inverter Installation'],
+    },
+    // C. Adeleke Hydro-Works & Sanitary Tech - Lekki Phase 1, Lagos (PLUMBING)
+    {
+      email: 'plumber.lekki@artifixhq.xyz',
+      phone: '+2348031110001',
+      firstName: 'Babajide',
+      lastName: 'Adeleke',
+      businessName: 'Adeleke Hydro-Works & Sanitary Tech',
+      tagline: 'Certified PPR Fusion Welder & Master Pipefitter',
+      bio: 'Over 9 years of specialized experience in high-pressure plumbing, PPR leak diagnostics, bathroom sanitary fittings, and water heater engineering across Lekki, Ikoyi, and Victoria Island.',
+      yearsOfExperience: 9,
+      hourlyRate: 8500.0,
+      state: 'Lagos',
+      lgaCity: 'Lekki Phase 1',
+      address: 'Plot 8, Admiralty Way, Lekki Phase 1, Lagos',
+      latitude: 6.4474,
+      longitude: 3.4731,
+      ratingAvg: 4.95,
+      reviewCount: 38,
+      completedJobsCount: 52,
+      categorySlug: 'plumbing-and-pipefitting',
+      skills: ['PPR Pipe Welding', 'Bathroom Sanitary Fitting', 'Water Heater Repair', 'Drainage Unclogging'],
+    },
+    // D. Apex Piping & Leak Diagnostics - Ikeja / Mainland, Lagos (PLUMBING)
+    {
+      email: 'plumber.ikeja@artifixhq.xyz',
+      phone: '+2348031110002',
+      firstName: 'Emeka',
+      lastName: 'Nnamdi',
+      businessName: 'Apex Hydro Pressure & Leak Diagnostics',
+      tagline: 'Industrial Drainage Unclogging & Submersible Pump Specialist',
+      bio: 'Expert in plumbing diagnostic inspections, burst pipe mitigation, sewage piping, and domestic pumping machine repair across the Lagos Mainland.',
+      yearsOfExperience: 7,
+      hourlyRate: 7000.0,
+      state: 'Lagos',
+      lgaCity: 'Ikeja',
+      address: '22 Allen Avenue, Ikeja, Lagos',
+      latitude: 6.5952,
+      longitude: 3.3512,
+      ratingAvg: 4.88,
+      reviewCount: 24,
+      completedJobsCount: 39,
+      categorySlug: 'plumbing-and-pipefitting',
+      skills: ['PPR Pipe Welding', 'Pumping Machine Repair', 'Drainage Unclogging', 'Water Heater Repair'],
+    },
+    // E. CoolBreeze HVAC & Chiller Services - Victoria Island, Lagos (HVAC)
+    {
+      email: 'hvac.lagos@artifixhq.xyz',
+      phone: '+2348031110004',
+      firstName: 'Kabir',
+      lastName: 'Suleiman',
+      businessName: 'CoolBreeze HVAC & Chiller Engineering',
+      tagline: 'Inverter AC Precision Diagnosis & Chemical Coil Descaling',
+      bio: 'Commercial and residential HVAC technician. Certified in R410a/R32 gas charging, compressor replacements, and split-unit inverter PCB troubleshooting.',
+      yearsOfExperience: 8,
+      hourlyRate: 8000.0,
+      state: 'Lagos',
+      lgaCity: 'Victoria Island',
+      address: 'Ahmadu Bello Way, VI, Lagos',
+      latitude: 6.4281,
+      longitude: 3.4219,
+      ratingAvg: 4.91,
+      reviewCount: 31,
+      completedJobsCount: 48,
+      categorySlug: 'hvac-and-ac-repair',
+      skills: ['AC Gas Refill', 'Compressor Replacement', 'Split Unit Servicing'],
+    },
+    // F. Capital Hydrotech & Pipe Reticulation - Maitama, Abuja (PLUMBING)
+    {
+      email: 'plumber.abuja@artifixhq.xyz',
+      phone: '+2348031110005',
+      firstName: 'Mustapha',
+      lastName: 'Aliyu',
+      businessName: 'Capital Hydrotech & Borehole Systems',
+      tagline: 'FCT Certified Sanitary & Pipe Reticulation Engineer',
+      bio: 'Premier plumbing contractor serving Maitama, Asokoro, and Wuse 2. Turnkey residential piping, booster pump systems, and leak containment.',
+      yearsOfExperience: 11,
+      hourlyRate: 10000.0,
+      state: 'FCT',
+      lgaCity: 'Maitama',
+      address: 'Gana Street, Maitama, Abuja',
+      latitude: 9.0820,
+      longitude: 7.4913,
+      ratingAvg: 4.98,
+      reviewCount: 46,
+      completedJobsCount: 72,
+      categorySlug: 'plumbing-and-pipefitting',
+      skills: ['PPR Pipe Welding', 'Borehole Drilling', 'Bathroom Sanitary Fitting', 'Drainage Unclogging'],
+    },
+    // G. Abuja Grid-Tie Power & Maintenance - Wuse 2, Abuja (ELECTRICAL)
+    {
+      email: 'electrical.abuja@artifixhq.xyz',
+      phone: '+2348031110006',
+      firstName: 'Ibrahim',
+      lastName: 'Garba',
+      businessName: 'Abuja Grid-Tie Solar & Power Maintenance',
+      tagline: 'Solar Hybrid Systems & Industrial Automation',
+      bio: 'Certified automation and power plant technician. Residential load balancing, changeover switches, and automatic voltage regulator (AVR) repairs.',
+      yearsOfExperience: 9,
+      hourlyRate: 9500.0,
+      state: 'FCT',
+      lgaCity: 'Wuse 2',
+      address: 'Aminu Kano Crescent, Wuse 2, Abuja',
+      latitude: 9.0765,
+      longitude: 7.4722,
+      ratingAvg: 4.89,
+      reviewCount: 22,
+      completedJobsCount: 35,
+      categorySlug: 'electrical-and-wiring',
+      skills: ['Inverter Installation', 'Generator Maintenance', 'House Wiring', 'Fault Finding'],
+    },
+  ];
+
+  for (const item of artisanSeedMatrix) {
+    let user = await prisma.user.findFirst({
+      where: { OR: [{ email: item.email }, { phoneNumber: item.phone }] },
+      include: { artisanProfile: true },
     });
-    console.log('✅ Created default Artisan account: artisan@artifixhq.xyz (Password: Password123!)');
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: item.email,
+          phoneNumber: item.phone,
+          passwordHash,
+          role: 'ARTISAN',
+          status: 'ACTIVE',
+          isEmailVerified: true,
+          isPhoneVerified: true,
+          isKycVerified: true,
+          wallet: {
+            create: {
+              availableBalance: 150000.0,
+              escrowLockedBalance: 0.0,
+              currency: 'NGN',
+            },
+          },
+          artisanProfile: {
+            create: {
+              firstName: item.firstName,
+              lastName: item.lastName,
+              businessName: item.businessName,
+              tagline: item.tagline,
+              bio: item.bio,
+              yearsOfExperience: item.yearsOfExperience,
+              hourlyRate: item.hourlyRate,
+              state: item.state,
+              lgaCity: item.lgaCity,
+              address: item.address,
+              latitude: item.latitude,
+              longitude: item.longitude,
+              ratingAvg: item.ratingAvg,
+              reviewCount: item.reviewCount,
+              completedJobsCount: item.completedJobsCount,
+              isAvailable: true,
+            },
+          },
+        },
+        include: { artisanProfile: true },
+      });
+    } else if (user.artisanProfile) {
+      // Ensure existing profile has up-to-date coordinates, availability, and details
+      await prisma.artisanProfile.update({
+        where: { id: user.artisanProfile.id },
+        data: {
+          firstName: item.firstName,
+          lastName: item.lastName,
+          businessName: item.businessName,
+          state: item.state,
+          lgaCity: item.lgaCity,
+          address: item.address,
+          latitude: item.latitude,
+          longitude: item.longitude,
+          isAvailable: true,
+          ratingAvg: item.ratingAvg,
+          reviewCount: item.reviewCount,
+        },
+      });
+    }
+
+    // Connect skills to ArtisanSkill
+    if (user?.artisanProfile) {
+      for (const skillName of item.skills) {
+        const skillRecord = await prisma.skill.findFirst({
+          where: { name: skillName },
+        });
+        if (skillRecord) {
+          await prisma.artisanSkill.upsert({
+            where: {
+              artisanProfileId_skillId: {
+                artisanProfileId: user.artisanProfile.id,
+                skillId: skillRecord.id,
+              },
+            },
+            update: {},
+            create: {
+              artisanProfileId: user.artisanProfile.id,
+              skillId: skillRecord.id,
+            },
+          });
+        }
+      }
+    }
+
+    console.log(`✅ Seeded Verified Specialist: ${item.businessName} (${item.state})`);
   }
 
   // 5. Seed Default Client & Sample Job
@@ -204,7 +368,6 @@ async function main() {
   });
 
   if (!existingClient) {
-    const passwordHash = await bcrypt.hash('Password123!', 12);
     existingClient = await prisma.user.create({
       data: {
         email: clientEmail,

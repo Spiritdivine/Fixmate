@@ -182,9 +182,14 @@ export class ProfileService {
     const { state, lgaCity, skillId, categoryId, search, page = 1, limit = 20 } = filters;
     const skip = (Number(page) - 1) * Number(limit);
 
+    const isFct = state && (state.toLowerCase().includes('fct') || state.toLowerCase().includes('abuja'));
+    const stateCondition = isFct
+      ? { in: ['FCT', 'Federal Capital Territory', 'Abuja'], mode: 'insensitive' }
+      : { equals: state, mode: 'insensitive' };
+
     const where = {
       isAvailable: true,
-      ...(state && { state: { equals: state, mode: 'insensitive' } }),
+      ...(state && { state: stateCondition }),
       ...(lgaCity && { lgaCity: { equals: lgaCity, mode: 'insensitive' } }),
       ...(skillId && { skills: { some: { skillId: Number(skillId) } } }),
       ...(categoryId && { skills: { some: { skill: { categoryId: Number(categoryId) } } } }),

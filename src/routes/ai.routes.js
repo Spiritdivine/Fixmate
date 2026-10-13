@@ -43,10 +43,25 @@ router.post('/session/:id/claim-sos', authenticate, AiController.claimEmergencyS
 // Phase 4: AI Post-Repair Before/After Verification
 router.post('/session/:id/verify-repair', uploadDiagnosticMedia, AiController.verifyRepair);
 
-// Phase 4: Diagnostic Performance Cache Telemetry
+// Phase 4 & 6: Diagnostic Performance Cache Telemetry & Invalidation
 router.get('/cache-stats', AiController.getCacheStats);
+router.post('/cache/invalidate', authenticate, AiController.invalidateCache);
+router.get('/telemetry', authenticate, AiController.getTelemetry);
 
 // Conversational Chat & Follow-up Messaging (accepts text, optional photos or voice notes)
 router.post('/session/:id/message', uploadDiagnosticMedia, AiController.sendChatMessage);
+
+// Automatic IP-based location detection fallback
+router.get('/detect-ip-location', AiController.detectIpLocation);
+
+// Phase 5 Hardening: Guest session re-association
+router.post('/link-guest-session', authenticate, AiController.linkGuestSession);
+
+// Phase 5 Hardening: Two-stage BOM merchant invoice variance check
+router.post('/milestone/:milestoneId/evaluate-variance', authenticate, AiController.evaluateInvoiceVariance);
+
+// Phase 5 Hardening: Non-visual repair OTP handshake
+router.post('/milestone/:milestoneId/generate-nonvisual-otp', authenticate, AiController.generateNonVisualOtp);
+router.post('/milestone/:milestoneId/verify-nonvisual-otp', authenticate, AiController.verifyNonVisualOtp);
 
 export default router;

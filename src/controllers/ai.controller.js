@@ -6,6 +6,8 @@ import { EmergencyDispatchService } from '../services/emergency-dispatch.service
 import { AiVerificationService } from '../services/ai-verification.service.js';
 import { AiCacheService } from '../services/ai-cache.service.js';
 import { UploadService } from '../services/upload.service.js';
+import { GuestSessionLinker } from '../services/guest-session-linker.service.js';
+import { BomPricingService } from '../services/bom-pricing.service.js';
 import { ApiResponse } from '../utils/api-response.js';
 import { ApiError } from '../utils/api-error.js';
 import { verifyAccessToken } from '../utils/token.util.js';
@@ -53,7 +55,7 @@ export class AiController {
    */
   static async diagnose(req, res, next) {
     try {
-      const { textPrompt, latitude, longitude, address, clientSessionToken, clientRequestedArtisan } = req.body;
+      const { textPrompt, latitude, longitude, address, state, lga, clientSessionToken, clientRequestedArtisan } = req.body;
       
       let photoFiles = [];
       let voiceFile = null;
@@ -71,17 +73,26 @@ export class AiController {
 
       // Check optional user auth from bearer token header
       let userId = req.user?.id || null;
+      let authenticatedProfile = req.user?.clientProfile || null;
       if (!userId && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
         try {
           const token = req.headers.authorization.split(' ')[1];
           const decoded = verifyAccessToken(token);
           if (decoded?.userId) {
-            const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
-            if (user) userId = user.id;
+            const user = await prisma.user.findUnique({
+              where: { id: decoded.userId },
+              include: { clientProfile: true },
+            });
+            if (user) {
+              userId = user.id;
+              authenticatedProfile = user.clientProfile;
+            }
           }
         } catch {
           // Token invalid or expired, continue as guest
         }
+      } else if (userId && !authenticatedProfile) {
+        authenticatedProfile = await prisma.clientProfile.findUnique({ where: { userId } }).catch(() => null);
       }
 
       // Prepare direct base64 data URIs for immediate, exact vision analysis
@@ -123,8 +134,13 @@ export class AiController {
         }
       }
 
-      const clientCoords = latitude && longitude ? { latitude, longitude } : null;
+      const clientCoords = latitude && longitude ? { latitude: Number(latitude), longitude: Number(longitude) } : null;
       const wantsArtisan = clientRequestedArtisan === 'true' || clientRequestedArtisan === true;
+
+      // Auto-inherit address, state, and city from client profile if not explicitly provided
+      const resolvedAddress = address || authenticatedProfile?.address || (authenticatedProfile?.city ? `${authenticatedProfile.city}, ${authenticatedProfile.state || 'Lagos'}` : null);
+      const resolvedState = state || authenticatedProfile?.state || 'Lagos';
+      const resolvedLga = lga || authenticatedProfile?.city || null;
 
       const result = await AiDiagnosticService.runDiagnostic({
         textPrompt,
@@ -134,7 +150,9 @@ export class AiController {
         voiceMimeType,
         voiceAudioUrl,
         clientCoords,
-        clientAddress: address,
+        clientAddress: resolvedAddress,
+        clientState: resolvedState,
+        clientLga: resolvedLga,
         userId,
         clientSessionToken,
         clientRequestedArtisan: wantsArtisan,
@@ -379,7 +397,7 @@ export class AiController {
   static async verifyRepair(req, res, next) {
     try {
       const { id } = req.params;
-      const { contractId, milestoneId, postRepairPhotoUrls = [] } = req.body || {};
+      const { contractId, milestoneId, postRepairPhotoUrls = [], preRepairPhotoUrls = [] } = req.body || {};
       
       let photoUrls = Array.isArray(postRepairPhotoUrls) ? [...postRepairPhotoUrls] : [];
 
@@ -405,6 +423,7 @@ export class AiController {
         sessionId: id,
         contractId,
         milestoneId,
+        preRepairPhotoUrls,
         postRepairPhotoUrls: photoUrls,
       });
 
@@ -424,6 +443,55 @@ export class AiController {
     try {
       const stats = AiCacheService.getStats();
       return res.json(new ApiResponse(200, stats, 'AI diagnostic cache telemetry retrieved.'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/ai/cache/invalidate
+   * Invalidate cache by key, category, locality, or pattern
+   */
+  static async invalidateCache(req, res, next) {
+    try {
+      const { key, categorySlug, locality, pattern } = req.body || {};
+      let invalidatedCount = 0;
+
+      if (key) {
+        invalidatedCount = AiCacheService.invalidate(key) ? 1 : 0;
+      } else if (categorySlug) {
+        invalidatedCount = AiCacheService.invalidateByCategory(categorySlug);
+      } else if (locality) {
+        invalidatedCount = AiCacheService.invalidateByLocality(locality);
+      } else if (pattern) {
+        invalidatedCount = AiCacheService.invalidatePattern(pattern);
+      } else {
+        AiCacheService.clear();
+        invalidatedCount = -1; // cleared all
+      }
+
+      return res.json(
+        new ApiResponse(
+          200,
+          { invalidatedCount, currentStats: AiCacheService.getStats() },
+          'AI diagnostic cache successfully invalidated.'
+        )
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/ai/telemetry
+   * Redacted diagnostic telemetry events
+   */
+  static async getTelemetry(req, res, next) {
+    try {
+      const limit = parseInt(req.query.limit, 10) || 50;
+      const filterType = req.query.type || null;
+      const telemetry = AiCacheService.getTelemetry(limit, filterType);
+      return res.json(new ApiResponse(200, telemetry, 'Redacted telemetry events retrieved.'));
     } catch (error) {
       next(error);
     }
@@ -486,7 +554,18 @@ export class AiController {
       let voiceAudioBuffer = voiceFile?.buffer || null;
       let voiceMimeType = voiceFile?.mimetype || 'audio/webm';
 
-      const clientCoords = latitude && longitude ? { latitude, longitude } : null;
+      const clientCoords = latitude && longitude ? { latitude: Number(latitude), longitude: Number(longitude) } : null;
+
+      // Update session coordinates if previously null and now provided
+      if (clientCoords) {
+        await prisma.aiDiagnosticSession.update({
+          where: { id },
+          data: {
+            clientLatitude: clientCoords.latitude,
+            clientLongitude: clientCoords.longitude,
+          },
+        }).catch(() => {});
+      }
 
       const chatResult = await AiDiagnosticService.processChatMessage({
         sessionId: id,
@@ -501,6 +580,168 @@ export class AiController {
       return res.json(new ApiResponse(200, chatResult, 'Message processed successfully.'));
     } catch (error) {
       next(error);
+    }
+  }
+
+  /**
+   * POST /api/ai/link-guest-session
+   * Link anonymous guest session token to authenticated user ID
+   */
+  static async linkGuestSession(req, res, next) {
+    try {
+      const { clientSessionToken } = req.body;
+      const authenticatedUserId = req.user?.id;
+
+      if (!clientSessionToken) {
+        throw ApiError.badRequest('Client session token is required.');
+      }
+      if (!authenticatedUserId) {
+        throw ApiError.unauthorized('Authentication required to link session.');
+      }
+
+      const count = await GuestSessionLinker.linkGuestSession({
+        clientSessionToken,
+        authenticatedUserId,
+      });
+
+      return res.json(
+        new ApiResponse(200, { linkedCount: count }, `${count} guest session(s) successfully linked to user.`)
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/ai/milestone/:milestoneId/evaluate-variance
+   * Evaluate merchant counter-invoice variance against budgeted BOM milestone
+   */
+  static async evaluateInvoiceVariance(req, res, next) {
+    try {
+      const { milestoneId } = req.params;
+      const { actualInvoiceAmountNgn } = req.body;
+
+      if (!actualInvoiceAmountNgn || isNaN(actualInvoiceAmountNgn)) {
+        throw ApiError.badRequest('Valid actual invoice amount in NGN is required.');
+      }
+
+      const evaluation = await BomPricingService.evaluateProcurementVariance({
+        milestoneId,
+        actualInvoiceAmountNgn: Number(actualInvoiceAmountNgn),
+      });
+
+      return res.json(new ApiResponse(200, evaluation, 'Invoice procurement variance evaluated.'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/ai/milestone/:milestoneId/generate-nonvisual-otp
+   * Generate 6-digit confirmation PIN for non-visual trade repair validation
+   */
+  static async generateNonVisualOtp(req, res, next) {
+    try {
+      const { milestoneId } = req.params;
+      const clientId = req.user?.id || req.body.clientId;
+
+      const otpResult = AiVerificationService.generateNonVisualOtp({
+        milestoneId,
+        clientId,
+      });
+
+      return res.json(new ApiResponse(200, otpResult, 'Non-visual repair confirmation PIN generated.'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/ai/milestone/:milestoneId/verify-nonvisual-otp
+   * Client enters PIN to confirm physical operation and release milestone funds
+   */
+  static async verifyNonVisualOtp(req, res, next) {
+    try {
+      const { milestoneId } = req.params;
+      const { otpCode } = req.body;
+      const clientId = req.user?.id || req.body.clientId;
+
+      if (!otpCode) {
+        throw ApiError.badRequest('Verification OTP code is required.');
+      }
+
+      const verifyResult = await AiVerificationService.verifyNonVisualOtp({
+        milestoneId,
+        otpCode,
+        clientId,
+      });
+
+      return res.json(new ApiResponse(200, verifyResult, 'Milestone successfully validated and released.'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/ai/detect-ip-location
+   * Auto-detect client location via IP address (GeoIP) fallback
+   */
+  static async detectIpLocation(req, res, next) {
+    try {
+      // 1. Check if authenticated user has saved profile location
+      if (req.user?.clientProfile?.city || req.user?.clientProfile?.state) {
+        const cp = req.user.clientProfile;
+        const isAbuja = cp.state?.toLowerCase().includes('abuja') || cp.state?.toLowerCase().includes('fct') || cp.city?.toLowerCase().includes('abuja');
+        return res.json(new ApiResponse(200, {
+          city: cp.city || (isAbuja ? 'Abuja' : 'Lagos'),
+          state: cp.state || (isAbuja ? 'FCT' : 'Lagos'),
+          formattedAddress: [cp.address, cp.city, cp.state].filter(Boolean).join(', '),
+          latitude: isAbuja ? 9.0567 : 6.5244,
+          longitude: isAbuja ? 7.4969 : 3.3792,
+          source: 'PROFILE'
+        }));
+      }
+
+      // 2. Extract public IP
+      let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.socket?.remoteAddress;
+      if (ip === '::1' || ip === '127.0.0.1' || ip?.startsWith('192.168.') || ip?.startsWith('10.')) {
+        ip = ''; // dev environment: query without IP to get host's public IP
+      }
+
+      const lookupUrl = ip ? `http://ip-api.com/json/${ip}` : 'http://ip-api.com/json';
+      const ipRes = await fetch(lookupUrl, { signal: AbortSignal.timeout(3000) });
+      if (ipRes.ok) {
+        const data = await ipRes.json();
+        if (data.status === 'success') {
+          const region = data.regionName === 'Federal Capital Territory' || data.region === 'FC' ? 'FCT' : data.regionName || 'Lagos';
+          return res.json(new ApiResponse(200, {
+            city: data.city || 'Abuja',
+            state: region,
+            formattedAddress: `${data.city || 'Abuja'}, ${region}`,
+            latitude: data.lat,
+            longitude: data.lon,
+            source: 'IP_GEOIP'
+          }));
+        }
+      }
+
+      return res.json(new ApiResponse(200, {
+        city: 'Abuja',
+        state: 'FCT',
+        formattedAddress: 'Abuja, Federal Capital Territory',
+        latitude: 9.0567,
+        longitude: 7.4969,
+        source: 'DEFAULT'
+      }));
+    } catch (err) {
+      return res.json(new ApiResponse(200, {
+        city: 'Abuja',
+        state: 'FCT',
+        formattedAddress: 'Abuja, Federal Capital Territory',
+        latitude: 9.0567,
+        longitude: 7.4969,
+        source: 'DEFAULT'
+      }));
     }
   }
 }
