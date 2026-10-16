@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { AiController, uploadDiagnosticMedia } from '../controllers/ai.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
+import { aiDiagnosticLimiter } from '../config/rate-limiter.js';
 
 const router = Router();
 
 // Diagnostic endpoint: accepts text, photos (up to 4), and voice audio note
-router.post('/diagnose', uploadDiagnosticMedia, AiController.diagnose);
+router.post('/diagnose', aiDiagnosticLimiter, uploadDiagnosticMedia, AiController.diagnose);
 
 // Fetch diagnostic session by ID
 router.get('/session/:id', AiController.getSession);

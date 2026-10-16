@@ -79,10 +79,32 @@ export class JobController {
     try {
       const categories = await prisma.jobCategory.findMany({
         where: { isActive: true, parentId: null },
-        include: {
-          children: true,
-          skills: true,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          iconUrl: true,
+          children: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              parentId: true,
+              name: true,
+              slug: true,
+              iconUrl: true,
+            },
+            orderBy: { name: 'asc' },
+          },
+          skills: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+            orderBy: { name: 'asc' },
+          },
         },
+        orderBy: { name: 'asc' },
       });
       res.status(200).json(new ApiResponse(200, categories, 'Categories fetched'));
     } catch (error) {

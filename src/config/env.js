@@ -54,6 +54,13 @@ const envSchema = z.object({
   // AI Diagnostics Configuration
   GEMINI_API_KEY: optionalCleanString,
   OPENAI_API_KEY: optionalCleanString,
+
+  // Redis Configuration (Optional, defaults to local or fallback)
+  REDIS_URL: optionalCleanString,
+  REDIS_HOST: optionalCleanString,
+  REDIS_PORT: optionalCleanString,
+  REDIS_PASSWORD: optionalCleanString,
+  REDIS_TLS: optionalCleanString,
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

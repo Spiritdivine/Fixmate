@@ -183,9 +183,9 @@ export class AiDiagnosticService {
         : null;
 
     if (cacheKey) {
-      const cached = AiCacheService.get(cacheKey);
+      const cached = await AiCacheService.getAsync(cacheKey);
       if (cached) {
-        parsedResult = { ...cached };
+        parsedResult = { ...cached, isCacheHit: true };
       }
     }
 
@@ -441,6 +441,40 @@ export class AiDiagnosticService {
     if (requiresProfessionalCare && !alreadyOffersReferral && !clientRequestedArtisan && !shouldMatchArtisans) {
       const tradeLabel = category?.name || 'specialist';
       conversationalReply += `\n\nThis fault requires specialized tools and trade precautions. Would you like me to connect you with a verified ${tradeLabel} nearby?`;
+    }
+
+    // Persist finalized conversationalReply and matchedArtisans into assistant turn
+    try {
+      await prisma.aiDiagnosticTurn.updateMany({
+        where: { diagnosticSessionId: session.id, role: 'assistant' },
+        data: {
+          content: conversationalReply,
+          structuredDecision: {
+            ...parsedResult,
+            matchedArtisans,
+          },
+        },
+      });
+
+      if (matchedArtisans && matchedArtisans.length > 0) {
+        for (const artisan of matchedArtisans) {
+          try {
+            await prisma.diagnosticMatch.create({
+              data: {
+                diagnosticSessionId: session.id,
+                artisanProfileId: artisan.id,
+                matchScore: artisan.matchScore || 90.0,
+                distanceKm: artisan.distanceKm ? Number(artisan.distanceKm) : null,
+                matchRationale: 'Recommended during initial diagnostic intake',
+              },
+            });
+          } catch (matchErr) {
+            // Ignore duplicate or non-fatal constraint errors
+          }
+        }
+      }
+    } catch (saveErr) {
+      console.warn('⚠️ Could not update initial diagnostic turn with matched artisans:', saveErr.message);
     }
 
     return {
@@ -1586,8 +1620,34 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
 
     const finalReply = parsedResponse.conversationalReply || 'Understood. Let me know if you would like me to connect you with a verified artisan.';
     await prisma.aiDiagnosticTurn.create({
-      data: { diagnosticSessionId: sessionId, role: 'assistant', content: finalReply, structuredDecision: parsedResponse },
+      data: {
+        diagnosticSessionId: sessionId,
+        role: 'assistant',
+        content: finalReply,
+        structuredDecision: {
+          ...parsedResponse,
+          matchedArtisans,
+        },
+      },
     });
+
+    if (matchedArtisans && matchedArtisans.length > 0) {
+      for (const artisan of matchedArtisans) {
+        try {
+          await prisma.diagnosticMatch.create({
+            data: {
+              diagnosticSessionId: sessionId,
+              artisanProfileId: artisan.id,
+              matchScore: artisan.matchScore || 90.0,
+              distanceKm: artisan.distanceKm ? Number(artisan.distanceKm) : null,
+              matchRationale: 'Recommended during conversational consultation',
+            },
+          });
+        } catch (matchErr) {
+          // Ignore duplicate or non-fatal constraint errors
+        }
+      }
+    }
 
     return {
       reply: finalReply,

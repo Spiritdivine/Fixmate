@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { JobController } from '../controllers/job.controller.js';
 import { authenticate, requireRoles } from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
+import { httpCache } from '../middlewares/http-cache.middleware.js';
 import {
   createJobSchema,
   updateJobSchema,
@@ -14,9 +15,9 @@ import {
 
 const router = Router();
 
-// Public Discovery
-router.get('/categories', JobController.listCategories);
-router.get('/', JobController.list);
+// Public Discovery (Cached for optimal client & CDN throughput)
+router.get('/categories', httpCache({ maxAge: 3600, staleWhileRevalidate: 86400 }), JobController.listCategories);
+router.get('/', httpCache({ maxAge: 30, staleWhileRevalidate: 60 }), JobController.list);
 
 // Saved Jobs (Bookmarks)
 router.get('/saved', authenticate, requireRoles('ARTISAN'), JobController.getSavedJobs);

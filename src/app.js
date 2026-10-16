@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import compression from 'compression';
 import { env } from './config/env.js';
 import apiRouter from './routes/index.js';
 import seoRoutes from './routes/seo.routes.js';
@@ -11,6 +12,9 @@ import { ApiError } from './utils/api-error.js';
 import { standardApiLimiter } from './config/rate-limiter.js';
 
 const app = express();
+
+// Enable ETag generation for HTTP 304 conditional cache negotiation
+app.set('etag', 'weak');
 
 // Security & Utility Middlewares
 app.use(helmet({
@@ -38,6 +42,20 @@ app.use(
     credentials: true,
   })
 );
+
+// High-Performance Response Compression (threshold: 1KB)
+app.use(
+  compression({
+    threshold: 1024,
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+  })
+);
+
 app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'));
 
 // Body parser with raw body buffer preservation for Webhook HMAC validation

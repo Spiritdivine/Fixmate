@@ -208,9 +208,20 @@ export class ProfileService {
         skip,
         take: Number(limit),
         include: {
-          user: { select: { id: true, email: true, phoneNumber: true, isKycVerified: true, avatarUrl: true } },
-          skills: { include: { skill: true } },
-          portfolios: true,
+          user: {
+            select: { id: true, email: true, phoneNumber: true, isKycVerified: true, avatarUrl: true },
+          },
+          skills: {
+            select: {
+              skill: {
+                select: { id: true, name: true, slug: true },
+              },
+            },
+          },
+          portfolios: {
+            take: 3,
+            select: { id: true, title: true, mediaUrls: true },
+          },
         },
         orderBy: [{ ratingAvg: 'desc' }, { completedJobsCount: 'desc' }],
       }),

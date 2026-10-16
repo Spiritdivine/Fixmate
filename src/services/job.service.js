@@ -165,12 +165,52 @@ export class JobService {
         where,
         skip,
         take: Number(limit),
-        include: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          budgetMin: true,
+          budgetMax: true,
+          budgetType: true,
+          status: true,
+          state: true,
+          lgaCity: true,
+          createdAt: true,
           client: {
-            select: { id: true, email: true, clientProfile: true, avatarUrl: true },
+            select: {
+              id: true,
+              email: true,
+              avatarUrl: true,
+              clientProfile: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  companyName: true,
+                  state: true,
+                  city: true,
+                },
+              },
+            },
           },
-          category: true,
-          skills: { include: { skill: true } },
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              iconUrl: true,
+            },
+          },
+          skills: {
+            select: {
+              skill: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
       }),

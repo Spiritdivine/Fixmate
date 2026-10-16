@@ -1,7 +1,9 @@
 import { Server } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
 import { verifyAccessToken } from '../utils/token.util.js';
 import prisma from '../config/db.js';
 import { env } from '../config/env.js';
+import redis from '../config/redis.js';
 
 let ioInstance = null;
 
@@ -29,6 +31,18 @@ export const initSocketServer = (httpServer) => {
       credentials: true,
     },
   });
+
+  // Attach Redis adapter if Redis client is configured
+  if (redis) {
+    try {
+      const pubClient = redis.duplicate();
+      const subClient = redis.duplicate();
+      io.adapter(createAdapter(pubClient, subClient));
+      console.log('📡 Socket.IO Redis Adapter attached for multi-core cluster scaling');
+    } catch (err) {
+      console.warn('⚠️ Could not attach Socket.IO Redis adapter, running in local memory mode:', err.message);
+    }
+  }
 
   // Socket Authentication Middleware
   io.use(async (socket, next) => {

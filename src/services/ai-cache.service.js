@@ -1,456 +1,278 @@
 import crypto from 'crypto';
+import { cacheStore, redis } from '../config/redis.js';
 
-class DiagnosticCacheEngine {
-  constructor() {
-    this.cache = new Map();
-    this.ttlMs = 48 * 60 * 60 * 1000; // 48 hours
-    this.tokenStats = {
-      totalCalls: 0,
-      cacheHits: 0,
-      cacheMisses: 0,
-      estimatedTokensSaved: 0,
-      invalidatedEntries: 0,
-    };
+// Provider circuit-breaker tracking
+const providerHealth = {
+  openai: { failures: 0, lastFailure: null, isHealthy: true },
+  gemini: { failures: 0, lastFailure: null, isHealthy: true },
+};
 
-    // Telemetry buffer with circular capacity
-    this.telemetryBuffer = [];
-    this.maxTelemetryEvents = 250;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 60000; // 1 minute cooldown after consecutive failures
+const MAX_CONSECUTIVE_FAILURES = 3;
 
-    // Circuit Breakers for external AI providers (Gemini, OpenAI)
-    this.circuitBreakers = {
-      gemini: {
-        state: 'CLOSED', // 'CLOSED' | 'OPEN' | 'HALF_OPEN'
-        consecutiveFailures: 0,
-        failureThreshold: 3,
-        lastFailureAt: null,
-        cooldownMs: 60 * 1000, // 60s cooldown
-        isSimulatedOutage: false,
-      },
-      openai: {
-        state: 'CLOSED',
-        consecutiveFailures: 0,
-        failureThreshold: 3,
-        lastFailureAt: null,
-        cooldownMs: 60 * 1000,
-        isSimulatedOutage: false,
-      },
-    };
+// Fast local memory cache for synchronous instant reads
+const localMemoryMap = new Map();
+
+export class AiCacheService {
+  static PREFIX = 'artisan:ai_diag:symptom:';
+  static DEFAULT_TTL_SECONDS = 172800; // 48 Hours
+
+  /**
+   * Normalizes client symptom text into a deterministic, order-invariant canonical representation.
+   * Strips regional Nigerian dialect fillers and conversational noise words.
+   *
+   * @param {string} text
+   * @returns {string}
+   */
+  static normalizeSymptomText(text) {
+    if (!text || typeof text !== 'string') return '';
+
+    // Stopwords, colloquial fillers, and non-diagnostic conversational fluff
+    const fillerWords = new Set([
+      'abeg', 'biko', 'dey', 'wetin', 'pls', 'please', 'help', 'sir',
+      'ma', 'my', 'the', 'is', 'are', 'doing', 'since', 'yesterday',
+      'today', 'now', 'just', 'started', 'been', 'having', 'issue',
+      'wahala', 'kuku', 'sharp', 'bro', 'oga', 'john'
+    ]);
+
+    return text
+      .toLowerCase()
+      // Preserve decimal numbers (e.g., 1.5hp -> 1_5hp) so numbers are not stripped
+      .replace(/(\d+)\.(\d+)/g, '$1_$2')
+      .replace(/[^\w\s]/gi, ' ')
+      .split(/\s+/)
+      .filter((word) => word.length > 1 && !fillerWords.has(word))
+      .sort() // Order invariance: "ac warm air" === "warm air ac"
+      .join(' ')
+      .trim();
   }
 
   /**
-   * Compute normalized deterministic hash for symptom description
-   * @param {string} prompt
-   * @param {string} categorySlug
-   * @param {string} locality
+   * Legacy and advanced hash key generator
    */
-  hashKey(prompt = '', categorySlug = '', locality = '') {
-    const normalized = `${prompt.toLowerCase().trim().replace(/[^a-z0-9]/g, '')}_${categorySlug}_${locality}`;
-    return crypto.createHash('sha256').update(normalized).digest('hex');
+  static hashKey(textPrompt, category = '', locality = '') {
+    const normalized = this.normalizeSymptomText(textPrompt);
+    const raw = `${category || 'GENERIC'}:${locality || 'NG'}:${normalized}`;
+    return `${this.PREFIX}${crypto.createHash('sha256').update(raw).digest('hex')}`;
   }
 
   /**
-   * Get cached diagnostic result
+   * Generates a deterministic SHA-256 cache key for an AI diagnostic inquiry
    */
-  get(key) {
-    this.tokenStats.totalCalls++;
-    const entry = this.cache.get(key);
-    if (!entry) {
-      this.tokenStats.cacheMisses++;
-      return null;
+  static generateKey({ categoryId, categoryName, symptoms, locationZone = 'NG_DEFAULT' }) {
+    return this.hashKey(symptoms, categoryId || categoryName, locationZone);
+  }
+
+  /**
+   * Synchronous / Instant read wrapper (checks local map, background syncs with Redis)
+   */
+  static get(key) {
+    if (!key) return null;
+    const entry = localMemoryMap.get(key);
+    if (entry) {
+      if (entry.expiresAt && Date.now() > entry.expiresAt) {
+        localMemoryMap.delete(key);
+        return null;
+      }
+      return entry.data;
     }
-
-    if (Date.now() > entry.expiresAt) {
-      this.cache.delete(key);
-      this.tokenStats.cacheMisses++;
-      return null;
-    }
-
-    this.tokenStats.cacheHits++;
-    this.tokenStats.estimatedTokensSaved += 1200; // Average prompt+response token size
-    this.recordTelemetry('CACHE_HIT', { key, categorySlug: entry.categorySlug, locality: entry.locality });
-    return entry.value;
+    return null;
   }
 
   /**
-   * Set cached diagnostic result
+   * Asynchronous Redis-backed cache retrieval
    */
-  set(key, value, options = {}) {
-    const categorySlug = options.categorySlug || value?.category?.slug || '';
-    const locality = options.locality || '';
-    const ttl = options.ttlMs || this.ttlMs;
+  static async getAsync(key) {
+    if (!key) return null;
+    // Check local memory first (< 1ms)
+    const local = this.get(key);
+    if (local) return { ...local, isCacheHit: true };
 
-    this.cache.set(key, {
-      value,
-      categorySlug,
-      locality,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + ttl,
+    // Check Redis store (< 15ms)
+    try {
+      const cached = await cacheStore.get(key);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        localMemoryMap.set(key, { data: parsed, expiresAt: Date.now() + 600000 }); // 10m local warm buffer
+        return {
+          ...parsed,
+          isCacheHit: true,
+        };
+      }
+    } catch (err) {
+      console.warn('[AiCache] getAsync error:', err.message);
+    }
+    return null;
+  }
+
+  /**
+   * Synchronous / Async setter compatible with legacy and Redis pipelines
+   */
+  static set(key, data, ttlSeconds = this.DEFAULT_TTL_SECONDS) {
+    if (!key || !data) return;
+
+    // 1. Immediately store in local fast memory map
+    localMemoryMap.set(key, {
+      data,
+      expiresAt: Date.now() + ttlSeconds * 1000,
     });
 
-    this.recordTelemetry('CACHE_STORE', { key, categorySlug, locality, ttlMs: ttl });
+    // 2. Persist asynchronously to Redis cluster / persistent store
+    cacheStore.set(key, JSON.stringify(data), 'EX', ttlSeconds).catch((err) => {
+      console.warn('[AiCache] Async Redis set failed:', err.message);
+    });
   }
 
   /**
-   * Invalidate specific cache key
+   * High-level diagnostic retrieval by symptom attributes
    */
-  invalidate(key) {
-    const deleted = this.cache.delete(key);
-    if (deleted) {
-      this.tokenStats.invalidatedEntries++;
-      this.recordTelemetry('CACHE_INVALIDATE_KEY', { key });
-    }
-    return deleted;
+  static async getCachedDiagnostic(params) {
+    const key = this.generateKey(params);
+    return this.getAsync(key);
   }
 
   /**
-   * Invalidate all cache entries matching category slug
+   * High-level diagnostic caching
    */
-  invalidateByCategory(categorySlug) {
-    if (!categorySlug) return 0;
-    let count = 0;
-    const target = categorySlug.toLowerCase().trim();
-
-    for (const [key, entry] of this.cache.entries()) {
-      if (entry.categorySlug && entry.categorySlug.toLowerCase().includes(target)) {
-        this.cache.delete(key);
-        count++;
-      }
-    }
-
-    this.tokenStats.invalidatedEntries += count;
-    this.recordTelemetry('CACHE_INVALIDATE_CATEGORY', { categorySlug, count });
-    return count;
+  static async setCachedDiagnostic(params, diagnosticData, ttl = this.DEFAULT_TTL_SECONDS) {
+    const key = this.generateKey(params);
+    this.set(key, diagnosticData, ttl);
+    return key;
   }
 
   /**
-   * Invalidate all cache entries matching locality
+   * Circuit breaker health checks for LLM providers
    */
-  invalidateByLocality(locality) {
-    if (!locality) return 0;
-    let count = 0;
-    const target = locality.toLowerCase().trim();
+  static isProviderHealthy(provider) {
+    const info = providerHealth[provider];
+    if (!info) return true;
 
-    for (const [key, entry] of this.cache.entries()) {
-      if (entry.locality && entry.locality.toLowerCase().includes(target)) {
-        this.cache.delete(key);
-        count++;
-      }
-    }
-
-    this.tokenStats.invalidatedEntries += count;
-    this.recordTelemetry('CACHE_INVALIDATE_LOCALITY', { locality, count });
-    return count;
-  }
-
-  /**
-   * Invalidate by regex or substring match on key
-   */
-  invalidatePattern(pattern) {
-    let count = 0;
-    const isRegex = pattern instanceof RegExp;
-
-    for (const key of this.cache.keys()) {
-      const matches = isRegex ? pattern.test(key) : key.includes(pattern);
-      if (matches) {
-        this.cache.delete(key);
-        count++;
-      }
-    }
-
-    this.tokenStats.invalidatedEntries += count;
-    this.recordTelemetry('CACHE_INVALIDATE_PATTERN', { pattern: pattern.toString(), count });
-    return count;
-  }
-
-  /**
-   * Prune expired cache items
-   */
-  pruneExpired() {
-    const now = Date.now();
-    let count = 0;
-    for (const [key, entry] of this.cache.entries()) {
-      if (now > entry.expiresAt) {
-        this.cache.delete(key);
-        count++;
-      }
-    }
-    return count;
-  }
-
-  /**
-   * Automated PII & Secrets Redaction Engine
-   * Recursively sanitizes phone numbers, emails, credit cards, BVN, NIN, and API keys.
-   */
-  redact(data) {
-    if (data == null) return data;
-
-    if (typeof data === 'string') {
-      return this._redactString(data);
-    }
-
-    if (Array.isArray(data)) {
-      return data.map((item) => this.redact(item));
-    }
-
-    if (typeof data === 'object') {
-      const sanitized = {};
-      const sensitiveKeys = new Set([
-        'password',
-        'token',
-        'secret',
-        'authorization',
-        'privatekey',
-        'apikey',
-        'bvn',
-        'nin',
-        'creditcard',
-      ]);
-
-      for (const [key, val] of Object.entries(data)) {
-        if (sensitiveKeys.has(key.toLowerCase())) {
-          sanitized[key] = '[REDACTED_SECRET]';
-        } else {
-          sanitized[key] = this.redact(val);
-        }
-      }
-      return sanitized;
-    }
-
-    return data;
-  }
-
-  /**
-   * Internal regex-based string sanitizer
-   */
-  _redactString(str) {
-    if (!str || typeof str !== 'string') return str;
-
-    let result = str;
-
-    // 1. API Keys, Bearer tokens & Secrets
-    result = result.replace(/(?:AIza[0-9A-Za-z-_]{35}|sk-[0-9A-Za-z-_]{20,})/g, '[REDACTED_API_KEY]');
-    result = result.replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, 'Bearer [REDACTED_TOKEN]');
-
-    // 2. Email addresses
-    result = result.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED_EMAIL]');
-
-    // 3. Nigerian Phone Numbers (+234, 080, 070, 090, 081, 234)
-    result = result.replace(/(?:\+?234|0)[789][01]\d{8}\b/g, '[REDACTED_PHONE]');
-
-    // 4. Credit Card Numbers (13-19 digits with optional hyphens/spaces)
-    result = result.replace(/\b(?:\d{4}[ -]?){3}\d{4}\b/g, '[REDACTED_CARD]');
-
-    // 5. Nigerian BVN / NIN (standalone 11 consecutive digits)
-    result = result.replace(/\b\d{11}\b/g, '[REDACTED_ID_NUMBER]');
-
-    return result;
-  }
-
-  /**
-   * Record telemetry event with automated redaction
-   */
-  recordTelemetry(eventType, payload = {}) {
-    const sanitizedPayload = this.redact(payload);
-    const eventRecord = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
-      timestamp: new Date().toISOString(),
-      eventType,
-      payload: sanitizedPayload,
-    };
-
-    this.telemetryBuffer.push(eventRecord);
-    if (this.telemetryBuffer.length > this.maxTelemetryEvents) {
-      this.telemetryBuffer.shift();
-    }
-
-    return eventRecord;
-  }
-
-  /**
-   * Retrieve redacted telemetry events
-   */
-  getTelemetry(limit = 50, filterType = null) {
-    let events = [...this.telemetryBuffer];
-    if (filterType) {
-      events = events.filter((e) => e.eventType === filterType);
-    }
-    return events.slice(-limit);
-  }
-
-  /**
-   * Circuit Breaker: Check if provider is healthy
-   */
-  isProviderHealthy(provider = 'gemini') {
-    const cb = this.circuitBreakers[provider.toLowerCase()];
-    if (!cb) return true;
-
-    if (cb.isSimulatedOutage) {
-      return false;
-    }
-
-    if (cb.state === 'OPEN') {
-      const now = Date.now();
-      if (cb.lastFailureAt && now - cb.lastFailureAt > cb.cooldownMs) {
-        cb.state = 'HALF_OPEN';
-        this.recordTelemetry('PROVIDER_CIRCUIT_HALF_OPEN', { provider });
+    if (!info.isHealthy) {
+      // Check if cooldown window has expired
+      if (info.lastFailure && Date.now() - info.lastFailure > CIRCUIT_BREAKER_COOLDOWN_MS) {
+        info.isHealthy = true;
+        info.failures = 0;
+        console.log(`[Circuit Breaker] Provider ${provider} health restored after cooldown`);
         return true;
       }
       return false;
     }
-
     return true;
   }
 
+  static recordProviderSuccess(provider) {
+    if (providerHealth[provider]) {
+      providerHealth[provider].failures = 0;
+      providerHealth[provider].isHealthy = true;
+    }
+  }
+
+  static recordProviderFailure(provider, error) {
+    if (!providerHealth[provider]) return;
+    providerHealth[provider].failures += 1;
+    providerHealth[provider].lastFailure = Date.now();
+
+    if (providerHealth[provider].failures >= MAX_CONSECUTIVE_FAILURES) {
+      providerHealth[provider].isHealthy = false;
+      console.warn(
+        `🚨 [Circuit Breaker] Tripped for provider "${provider}" after ${providerHealth[provider].failures} consecutive failures (${error?.message}). Cooldown: ${CIRCUIT_BREAKER_COOLDOWN_MS / 1000}s`
+      );
+    }
+  }
+
   /**
-   * Circuit Breaker: Record provider failure
+   * Distributed lock stampede protection helper
    */
-  recordProviderFailure(provider = 'gemini', error = null) {
-    const key = provider.toLowerCase();
-    const cb = this.circuitBreakers[key];
-    if (!cb) return;
+  static async withSingleFlight(key, ttlSeconds, fetcherFn) {
+    const cached = await this.getAsync(key);
+    if (cached) return cached;
 
-    cb.consecutiveFailures++;
-    cb.lastFailureAt = Date.now();
+    const lockKey = `lock:${key}`;
+    const acquiredLock = await cacheStore.set(lockKey, 'locked', 'EX', 10, 'NX');
 
-    const errorMessage = error?.message || String(error || 'Unknown failure');
-
-    if (cb.consecutiveFailures >= cb.failureThreshold || cb.state === 'HALF_OPEN') {
-      cb.state = 'OPEN';
-      this.recordTelemetry('PROVIDER_CIRCUIT_TRIPPED', {
-        provider: key,
-        consecutiveFailures: cb.consecutiveFailures,
-        error: errorMessage,
-      });
+    if (acquiredLock) {
+      try {
+        const freshData = await fetcherFn();
+        if (freshData) {
+          this.set(key, freshData, ttlSeconds);
+        }
+        return freshData;
+      } finally {
+        await cacheStore.del(lockKey);
+      }
     } else {
-      this.recordTelemetry('PROVIDER_FAILURE_RECORDED', {
-        provider: key,
-        consecutiveFailures: cb.consecutiveFailures,
-        error: errorMessage,
-      });
+      // Concurrently poll for the single worker to populate cache
+      for (let i = 0; i < 15; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        const retryCached = await this.getAsync(key);
+        if (retryCached) return retryCached;
+      }
+      return fetcherFn();
     }
   }
 
   /**
-   * Circuit Breaker: Record provider success
+   * Cache Invalidation & Telemetry
    */
-  recordProviderSuccess(provider = 'gemini') {
-    const key = provider.toLowerCase();
-    const cb = this.circuitBreakers[key];
-    if (!cb) return;
-
-    if (cb.state === 'HALF_OPEN' || cb.consecutiveFailures > 0) {
-      this.recordTelemetry('PROVIDER_CIRCUIT_RESTORED', {
-        provider: key,
-        previousState: cb.state,
-      });
-    }
-
-    cb.state = 'CLOSED';
-    cb.consecutiveFailures = 0;
-    cb.lastFailureAt = null;
+  static invalidate(key) {
+    if (!key) return false;
+    localMemoryMap.delete(key);
+    cacheStore.del(key).catch(() => {});
+    return true;
   }
 
-  /**
-   * Outage Simulation: Explicitly simulate or clear an outage
-   */
-  simulateOutage(provider = 'gemini', enabled = true) {
-    const key = provider.toLowerCase();
-    const cb = this.circuitBreakers[key];
-    if (!cb) return;
-
-    cb.isSimulatedOutage = Boolean(enabled);
-    if (enabled) {
-      cb.state = 'OPEN';
-      cb.lastFailureAt = Date.now();
-      this.recordTelemetry('SIMULATED_OUTAGE_TRIGGERED', { provider: key });
-    } else {
-      cb.state = 'CLOSED';
-      cb.consecutiveFailures = 0;
-      cb.lastFailureAt = null;
-      this.recordTelemetry('SIMULATED_OUTAGE_RESOLVED', { provider: key });
+  static invalidateByCategory(categorySlug) {
+    let count = 0;
+    const target = (categorySlug || '').toLowerCase();
+    for (const [key] of localMemoryMap.entries()) {
+      if (key.toLowerCase().includes(target)) {
+        this.invalidate(key);
+        count++;
+      }
     }
+    return count;
   }
 
-  /**
-   * Get Circuit Breakers Status
-   */
-  getCircuitStatus() {
-    const status = {};
-    for (const [provider, cb] of Object.entries(this.circuitBreakers)) {
-      status[provider] = {
-        state: cb.state,
-        consecutiveFailures: cb.consecutiveFailures,
-        isSimulatedOutage: cb.isSimulatedOutage,
-        isHealthy: this.isProviderHealthy(provider),
-      };
+  static invalidateByLocality(locality) {
+    let count = 0;
+    const target = (locality || '').toLowerCase();
+    for (const [key] of localMemoryMap.entries()) {
+      if (key.toLowerCase().includes(target)) {
+        this.invalidate(key);
+        count++;
+      }
     }
-    return status;
+    return count;
   }
 
-  /**
-   * Deterministic Safe Fallback Diagnostic Response during Outages
-   */
-  getOutageFallbackResponse(categorySlug = 'plumbing-and-pipefitting', locality = 'Lagos') {
+  static invalidatePattern(pattern) {
+    let count = 0;
+    const regex = new RegExp(pattern, 'i');
+    for (const [key] of localMemoryMap.entries()) {
+      if (regex.test(key)) {
+        this.invalidate(key);
+        count++;
+      }
+    }
+    return count;
+  }
+
+  static clear() {
+    localMemoryMap.clear();
+  }
+
+  static getStats() {
+    const totalLocalKeys = localMemoryMap.size;
     return {
-      session: {
-        id: `outage-fallback-${Date.now()}`,
-        diagnosticTitle: 'Technical Fault Inspection (Offline Resilience Mode)',
-        probableCause: 'AI providers are temporarily under maintenance or degraded. Deterministic safety protocol activated.',
-        severity: 'MODERATE',
-        urgency: 'SCHEDULED',
-        isHazardous: false,
-        safetyInstructions: [
-          'Isolate electrical circuit breaker or main water stopcock if leakage or abnormal sounds persist.',
-          'Do not expose wet surfaces to active live current.',
-        ],
-        diyAllowed: false,
-        clarificationQuestion: 'What is the primary visible manifestation of this issue?',
-        clarificationOptions: ['Abnormal noise or vibration', 'Fluid or gas leakage', 'Total loss of power / function'],
-        currency: 'NGN',
-        estimatedLaborMin: 5000,
-        estimatedLaborMax: 12000,
-        estimatedBOM: [
-          {
-            item: 'Standard Diagnostic & Inspection Materials',
-            specification: 'Preliminary Service Pack',
-            quantity: 1,
-            unit: 'SET',
-            estimatedCostMin: 2500,
-            estimatedCostMax: 5000,
-            sourceType: 'REGIONAL_INDEX',
-            isPriceIndexed: true,
-            pricingDisclaimer: 'Indicative base rate during temporary maintenance mode.',
-          },
-        ],
+      totalKeys: totalLocalKeys,
+      redisActive: cacheStore.isRedisActive(),
+      providers: {
+        openai: providerHealth.openai,
+        gemini: providerHealth.gemini,
       },
-      conversationalReply:
-        "Hello! I'm Oga John. Our primary neural diagnostic engine is experiencing brief scheduled network maintenance, but my core engineering protocols remain fully active. Please isolate any leaking valves or breakers, and I can immediately match you with a verified specialist in your area.",
-      isResilienceFallback: true,
+      ttlSeconds: this.DEFAULT_TTL_SECONDS,
     };
-  }
-
-  /**
-   * Retrieve cache telemetry stats & provider health
-   */
-  getStats() {
-    const hitRate =
-      this.tokenStats.totalCalls > 0
-        ? Number(((this.tokenStats.cacheHits / this.tokenStats.totalCalls) * 100).toFixed(1))
-        : 0;
-
-    return {
-      ...this.tokenStats,
-      hitRatePercent: hitRate,
-      activeCachedEntries: this.cache.size,
-      circuitBreakers: this.getCircuitStatus(),
-      recentTelemetryCount: this.telemetryBuffer.length,
-    };
-  }
-
-  clear() {
-    this.cache.clear();
-    this.telemetryBuffer = [];
   }
 }
 
-export const AiCacheService = new DiagnosticCacheEngine();
+export default AiCacheService;

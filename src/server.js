@@ -34,10 +34,14 @@ const startServer = async () => {
       console.log(`📡 Socket.IO Server active and listening for connections`);
       console.log(`📚 API Health check available at: http://localhost:${PORT}/api/v1/health`);
 
-      // Initialize Monad event listener in background (Monad Testnet)
-      MonadListenerService.startListening().catch((err) => {
-        console.warn(`⚠️ Monad Event Listener notice: ${err.message}`);
-      });
+      // Initialize Monad event listener conditionally (Decoupled in production worker)
+      if (process.env.ENABLE_INLINE_BLOCKCHAIN_LISTENER === 'true' || env.NODE_ENV === 'development') {
+        MonadListenerService.startListening().catch((err) => {
+          console.warn(`⚠️ Monad Event Listener notice: ${err.message}`);
+        });
+      } else {
+        console.log(`⛓️ Blockchain event listening decoupled to background worker process ('npm run start:worker').`);
+      }
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

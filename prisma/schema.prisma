@@ -269,6 +269,7 @@ model ArtisanProfile {
 
   @@index([state, lgaCity])
   @@index([latitude, longitude])
+  @@index([isAvailable, ratingAvg(sort: Desc), completedJobsCount(sort: Desc)])
   @@map("artisan_profiles")
 }
 
@@ -427,6 +428,8 @@ model Job {
 
   @@index([categoryId, status])
   @@index([clientId])
+  @@index([clientId, status])
+  @@index([status, createdAt(sort: Desc)])
   @@index([state, lgaCity])
   @@map("jobs")
 }
@@ -576,7 +579,9 @@ model Contract {
   repairVerifications  AiRepairVerification[]
 
   @@index([clientId])
+  @@index([clientId, status])
   @@index([artisanId])
+  @@index([artisanId, status])
   @@index([status])
   @@index([onChainEscrowId])
   @@map("contracts")
@@ -913,6 +918,8 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, isRead, createdAt(sort: Desc)])
   @@map("notifications")
 }
 
@@ -1060,6 +1067,8 @@ model AiDiagnosticSession {
   matchSnapshots        MatchSnapshot[]
 
   @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([diagnosticStatus, createdAt(sort: Desc)])
   @@index([matchedCategoryId])
   @@index([createdAt])
   @@map("ai_diagnostic_sessions")

@@ -42,6 +42,7 @@ import {
 } from 'lucide-react-native';
 import { colors, radius, spacing, typography, shadows } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
+import { Storage } from '../../lib/storage';
 import { AiService } from '../../services/ai.service';
 import { ChatService } from '../../services/chat.service';
 import { LocationProvider } from '../../lib/location-provider';
@@ -86,20 +87,33 @@ interface ChatMessage {
   timestamp: string;
 }
 
+const LAST_SESSION_STORAGE_KEY = 'last_active_oga_john_session_id';
+
+const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
+  id: 'welcome',
+  sender: 'assistant',
+  text: "Hello! I am Oga John, your Artifix technical advisor.\n\nDescribe any fault or repair in your home, attach photos or record a voice note, and I will diagnose the issue and guide you on what to do.",
+  timestamp: 'Just now',
+};
+
+// Module-level in-memory cache to retain active consultation across screen unmounts / navigation
+let cachedActiveSessionId: string | null = null;
+let cachedGuestAccessToken: string | null = null;
+let cachedMessages: ChatMessage[] | null = null;
+let cachedSessionBom: DiagnosticBOMItem[] = [];
+
 export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
   onBack,
   onPostJobWithDiagnosis,
   onViewArtisanProfile,
   onBookArtisanChat,
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      sender: 'assistant',
-      text: "Hello! I am Oga John, your Artifix technical advisor.\n\nDescribe any fault or repair in your home, attach photos or record a voice note, and I will diagnose the issue and guide you on what to do.",
-      timestamp: 'Just now',
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (cachedMessages && cachedMessages.length > 0) {
+      return cachedMessages;
+    }
+    return [DEFAULT_WELCOME_MESSAGE];
+  });
   const [inputText, setInputText] = useState('');
   const [attachedPhotos, setAttachedPhotos] = useState<string[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -107,9 +121,9 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
   const [recordedAudioUri, setRecordedAudioUri] = useState<string | null>(null);
   const [recordedAudioSeconds, setRecordedAudioSeconds] = useState(0);
   const [isSending, setIsSending] = useState(false);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [guestAccessToken, setGuestAccessToken] = useState<string | null>(null);
-  const [sessionBom, setSessionBom] = useState<DiagnosticBOMItem[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(() => cachedActiveSessionId);
+  const [guestAccessToken, setGuestAccessToken] = useState<string | null>(() => cachedGuestAccessToken);
+  const [sessionBom, setSessionBom] = useState<DiagnosticBOMItem[]>(() => cachedSessionBom);
   const [bookingArtisanId, setBookingArtisanId] = useState<string | null>(null);
 
   // Conversation history & memory management
@@ -121,6 +135,54 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
   const flatListRef = useRef<FlatList>(null);
   const audioRecorderRef = useRef<AudioRecorder>(new AudioRecorder());
   const timerRef = useRef<any>(null);
+
+  // Synchronize component state with module-level retention cache & persistent storage
+  useEffect(() => {
+    cachedMessages = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    cachedActiveSessionId = activeSessionId;
+    if (activeSessionId) {
+      Storage.setItem(LAST_SESSION_STORAGE_KEY, activeSessionId).catch(() => {});
+    }
+  }, [activeSessionId]);
+
+  useEffect(() => {
+    cachedGuestAccessToken = guestAccessToken;
+  }, [guestAccessToken]);
+
+  useEffect(() => {
+    cachedSessionBom = sessionBom;
+  }, [sessionBom]);
+
+  // Auto-restore last session on mount if in-memory cache has not yet been loaded
+  useEffect(() => {
+    const autoRestoreLastSession = async () => {
+      // If we already have in-memory messages with user turns, keep them intact
+      if (cachedMessages && cachedMessages.length > 1) {
+        return;
+      }
+
+      try {
+        let lastSessionId = await Storage.getItem(LAST_SESSION_STORAGE_KEY);
+        if (!lastSessionId) {
+          const history = await AiService.getUserHistory();
+          if (history && history.length > 0 && history[0].id) {
+            lastSessionId = history[0].id;
+          }
+        }
+
+        if (lastSessionId) {
+          await loadSessionById(lastSessionId, true);
+        }
+      } catch (err) {
+        console.warn('[OgaJohn] Failed to auto-restore last session:', err);
+      }
+    };
+
+    autoRestoreLastSession();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -146,22 +208,21 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
   };
 
   const handleStartNewChat = () => {
+    cachedActiveSessionId = null;
+    cachedGuestAccessToken = null;
+    cachedMessages = null;
+    cachedSessionBom = [];
+    Storage.removeItem(LAST_SESSION_STORAGE_KEY).catch(() => {});
+
     setActiveSessionId(null);
     setGuestAccessToken(null);
     setSessionBom([]);
-    setMessages([
-      {
-        id: 'welcome',
-        sender: 'assistant',
-        text: "Hello! I am Oga John, your Artifix technical advisor.\n\nDescribe any fault or repair in your home, attach photos or record a voice note, and I will diagnose the issue and guide you on what to do.",
-        timestamp: 'Just now',
-      },
-    ]);
+    setMessages([DEFAULT_WELCOME_MESSAGE]);
     setShowHistoryModal(false);
   };
 
-  const handleSelectSession = async (sessionId: string) => {
-    if (sessionId === activeSessionId) {
+  const loadSessionById = async (sessionId: string, isAutoRestore = false) => {
+    if (!isAutoRestore && sessionId === activeSessionId) {
       setShowHistoryModal(false);
       return;
     }
@@ -169,22 +230,53 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
     try {
       const sessionData = await AiService.getSession(sessionId);
       if (!sessionData) {
-        Alert.alert('Session Not Found', 'Could not retrieve this past diagnostic conversation.');
+        if (!isAutoRestore) {
+          Alert.alert('Session Not Found', 'Could not retrieve this past diagnostic conversation.');
+        }
         return;
       }
 
       setActiveSessionId(sessionData.id);
+      cachedActiveSessionId = sessionData.id;
+      await Storage.setItem(LAST_SESSION_STORAGE_KEY, sessionData.id).catch(() => {});
+
       if (sessionData.estimatedBOM && Array.isArray(sessionData.estimatedBOM)) {
         setSessionBom(sessionData.estimatedBOM);
+        cachedSessionBom = sessionData.estimatedBOM;
       } else {
         setSessionBom([]);
+        cachedSessionBom = [];
       }
+
+      // Transform any persistent recommendations from the database as fallback/supplement
+      const fallbackArtisans: MatchedArtisanDossier[] = (sessionData.recommendations || []).map((r: any) => ({
+        id: r.artisan?.id || r.artisanProfileId,
+        userId: r.artisan?.userId || r.artisan?.user?.id,
+        name: `${r.artisan?.firstName || ''} ${r.artisan?.lastName || ''}`.trim() || r.artisan?.businessName || 'Verified Specialist',
+        businessName: r.artisan?.businessName || undefined,
+        tradeCategory: sessionData.category?.name || undefined,
+        ratingAvg: Number(r.artisan?.ratingAvg || 5.0),
+        completedJobsCount: Number(r.artisan?.completedJobsCount || 0),
+        distanceKm: r.distanceKm ? Number(r.distanceKm) : undefined,
+        hourlyRate: r.artisan?.hourlyRate ? Number(r.artisan?.hourlyRate) : undefined,
+        avatarUrl: r.artisan?.user?.avatarUrl || undefined,
+        matchScore: r.matchScore ? Number(r.matchScore) : undefined,
+      }));
 
       if (sessionData.turns && sessionData.turns.length > 0) {
         const restored: ChatMessage[] = sessionData.turns.map((turn: any, index: number) => {
           const isAssistant = turn.role === 'assistant';
           const sd = turn.structuredDecision || {};
-          const matchedArtisans = sd.matchedArtisans || [];
+          let matchedArtisans: MatchedArtisanDossier[] = sd.matchedArtisans || [];
+
+          // If turn didn't save matchedArtisans in sd, fallback to sessionData.recommendations
+          if (matchedArtisans.length === 0 && fallbackArtisans.length > 0 && isAssistant) {
+            const isLastAssistant = !sessionData.turns.slice(index + 1).some((t: any) => t.role === 'assistant');
+            if (isLastAssistant || sd.intent === 'MATCH_REQUESTED' || sd.intent === 'MATCH_ONLY' || sd.intent === 'PROCEED_DISPATCH') {
+              matchedArtisans = fallbackArtisans;
+            }
+          }
+
           const hasPros = matchedArtisans.length > 0;
           return {
             id: turn.id || `turn_${index}_${Date.now()}`,
@@ -207,8 +299,9 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
           };
         });
         setMessages(restored);
+        cachedMessages = restored;
       } else {
-        setMessages([
+        const singleMsg: ChatMessage[] = [
           {
             id: `restored_${sessionData.id}`,
             sender: 'assistant',
@@ -216,16 +309,26 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
             timestamp: 'Earlier',
             detectedTrade: sessionData.category?.name,
             diagnosticTitle: sessionData.diagnosticTitle,
+            matchedArtisans: fallbackArtisans.length > 0 ? fallbackArtisans : undefined,
+            showArtisanMatch: fallbackArtisans.length > 0,
           },
-        ]);
+        ];
+        setMessages(singleMsg);
+        cachedMessages = singleMsg;
       }
       setShowHistoryModal(false);
     } catch (err) {
       console.warn('[OgaJohn] Error loading session:', err);
-      Alert.alert('Error', 'Failed to load consultation session.');
+      if (!isAutoRestore) {
+        Alert.alert('Error', 'Failed to load consultation session.');
+      }
     } finally {
       setIsLoadingSession(false);
     }
+  };
+
+  const handleSelectSession = (sessionId: string) => {
+    loadSessionById(sessionId, false);
   };
 
   // Helper to detect if user explicitly asked for BOM/materials

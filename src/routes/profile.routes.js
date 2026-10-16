@@ -21,13 +21,14 @@ import {
   nearbyArtisansQuerySchema,
 } from '../validators/profile.validator.js';
 import { updateAvatarSchema } from '../validators/auth.validator.js';
+import { httpCache } from '../middlewares/http-cache.middleware.js';
 
 const router = Router();
 
 // Public artisan discovery
 router.get('/artisans/nearby', validate(nearbyArtisansQuerySchema), ProfileController.getNearbyArtisans);
-router.get('/artisans', ProfileController.listArtisans);
-router.get('/artisans/:id', ProfileController.getArtisanDetails);
+router.get('/artisans', httpCache({ maxAge: 60, staleWhileRevalidate: 120 }), ProfileController.listArtisans);
+router.get('/artisans/:id', httpCache({ maxAge: 120, staleWhileRevalidate: 300 }), ProfileController.getArtisanDetails);
 
 // Saved Artisans (Bookmarks)
 router.get('/saved-artisans', authenticate, requireRoles('CLIENT'), ProfileController.getSavedArtisans);
