@@ -38,23 +38,23 @@ export const ClientSidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { logout } = useAuthStore();
 
   const menuItems: NavItem[] = [
-    { label: 'Dashboard', to: '/client/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { label: 'Post a Job', to: '/client/jobs/post', icon: <PlusCircle className="w-5 h-5" /> },
-    { label: 'My Jobs', to: '/client/jobs', icon: <Briefcase className="w-5 h-5" /> },
-    { label: 'Find Artisans', to: '/client/artisans', icon: <Search className="w-5 h-5" /> },
-    { label: 'Saved Artisans', to: '/client/saved-artisans', icon: <Bookmark className="w-5 h-5" /> },
-    { label: 'Contracts', to: '/client/contracts', icon: <FileText className="w-5 h-5" /> },
-    { label: 'Wallet', to: '/client/wallet', icon: <Wallet className="w-5 h-5" /> },
-    { label: 'Messages', to: '/client/messages', icon: <MessageSquare className="w-5 h-5" /> },
-    { label: 'Disputes', to: '/client/disputes', icon: <AlertOctagon className="w-5 h-5" /> },
-    { label: 'Reviews', to: '/client/reviews', icon: <Star className="w-5 h-5" /> },
-    { label: 'Profile', to: '/client/profile', icon: <User className="w-5 h-5" /> },
+    { label: 'Dashboard', to: '/client/dashboard', icon: <LayoutDashboard className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Post a Job', to: '/client/jobs/post', icon: <PlusCircle className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'My Jobs', to: '/client/jobs', icon: <Briefcase className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Find Artisans', to: '/client/artisans', icon: <Search className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Saved Artisans', to: '/client/saved-artisans', icon: <Bookmark className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Contracts', to: '/client/contracts', icon: <FileText className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Wallet', to: '/client/wallet', icon: <Wallet className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Messages', to: '/client/messages', icon: <MessageSquare className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Disputes', to: '/client/disputes', icon: <AlertOctagon className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Reviews', to: '/client/reviews', icon: <Star className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Profile', to: '/client/profile', icon: <User className="w-5 h-5" strokeWidth={1.85} /> },
   ];
 
   const generalItems: NavItem[] = [
-    { label: 'Notifications', to: '/client/notifications', icon: <Bell className="w-5 h-5" /> },
-    { label: 'Settings', to: '/client/settings', icon: <Settings className="w-5 h-5" /> },
-    { label: 'Help', to: '/client/help', icon: <HelpCircle className="w-5 h-5" /> },
+    { label: 'Notifications', to: '/client/notifications', icon: <Bell className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Settings', to: '/client/settings', icon: <Settings className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Help', to: '/client/help', icon: <HelpCircle className="w-5 h-5" strokeWidth={1.85} /> },
   ];
 
   return (

@@ -21,13 +21,13 @@ export const uploadDiagnosticMedia = multer({
     fileSize: 15 * 1024 * 1024,
   },
   fileFilter: (req, file, cb) => {
-    if (file.fieldname === 'photos') {
+    if (file.fieldname === 'photos' || file.fieldname === 'media') {
       if (file.mimetype.startsWith('image/')) {
         cb(null, true);
       } else {
         cb(new ApiError(400, 'Only image files (JPEG, PNG, WebP) are permitted for diagnostic photos'));
       }
-    } else if (file.fieldname === 'voice') {
+    } else if (file.fieldname === 'voice' || file.fieldname === 'audio') {
       if (
         file.mimetype.startsWith('audio/') ||
         file.mimetype.startsWith('video/') ||
@@ -43,7 +43,9 @@ export const uploadDiagnosticMedia = multer({
   },
 }).fields([
   { name: 'photos', maxCount: 4 },
+  { name: 'media', maxCount: 4 },
   { name: 'voice', maxCount: 1 },
+  { name: 'audio', maxCount: 1 },
 ]);
 
 export const uploadDiagnosticPhotos = uploadDiagnosticMedia;
@@ -55,7 +57,8 @@ export class AiController {
    */
   static async diagnose(req, res, next) {
     try {
-      const { textPrompt, latitude, longitude, address, state, lga, clientSessionToken, clientRequestedArtisan } = req.body;
+      const textPrompt = req.body.textPrompt || req.body.prompt || '';
+      const { latitude, longitude, address, state, lga, clientSessionToken, clientRequestedArtisan } = req.body;
       
       let photoFiles = [];
       let voiceFile = null;
@@ -63,8 +66,8 @@ export class AiController {
       if (Array.isArray(req.files)) {
         photoFiles = req.files;
       } else if (req.files) {
-        photoFiles = req.files.photos || [];
-        voiceFile = req.files.voice?.[0] || null;
+        photoFiles = req.files.photos || req.files.media || [];
+        voiceFile = req.files.voice?.[0] || req.files.audio?.[0] || null;
       }
 
       if (!textPrompt && photoFiles.length === 0 && !voiceFile) {
@@ -172,7 +175,14 @@ export class AiController {
   static async getSession(req, res, next) {
     try {
       const { id } = req.params;
-      const session = await AiDiagnosticService.getSessionById(id);
+      let userId = req.user?.id || null;
+      if (!userId && req.headers.authorization?.startsWith('Bearer ')) {
+        try { userId = verifyAccessToken(req.headers.authorization.split(' ')[1])?.userId || null; } catch { /* guest request */ }
+      }
+      const session = await AiDiagnosticService.getSessionById(id, {
+        userId,
+        guestToken: req.get('x-diagnostic-session-token'),
+      });
       return res.json(new ApiResponse(200, session, 'Diagnostic session retrieved successfully.'));
     } catch (error) {
       next(error);
@@ -504,15 +514,10 @@ export class AiController {
   static async sendChatMessage(req, res, next) {
     try {
       const { id } = req.params;
-      const { message, history = [], latitude, longitude } = req.body;
-
-      let parsedHistory = history;
-      if (typeof history === 'string') {
-        try {
-          parsedHistory = JSON.parse(history);
-        } catch {
-          parsedHistory = [];
-        }
+      const { message, latitude, longitude } = req.body;
+      let userId = req.user?.id || null;
+      if (!userId && req.headers.authorization?.startsWith('Bearer ')) {
+        try { userId = verifyAccessToken(req.headers.authorization.split(' ')[1])?.userId || null; } catch { /* guest request */ }
       }
 
       let photoFiles = [];
@@ -570,11 +575,12 @@ export class AiController {
       const chatResult = await AiDiagnosticService.processChatMessage({
         sessionId: id,
         userMessage: message || '',
-        conversationHistory: parsedHistory,
         clientCoords,
         newImageUrls: newVisionImageUrls,
         voiceAudioBuffer,
         voiceMimeType,
+        userId,
+        guestToken: req.get('x-diagnostic-session-token') || req.body.guestAccessToken || null,
       });
 
       return res.json(new ApiResponse(200, chatResult, 'Message processed successfully.'));
@@ -745,4 +751,3 @@ export class AiController {
     }
   }
 }
-

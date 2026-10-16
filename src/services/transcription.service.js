@@ -138,62 +138,11 @@ Return strictly valid JSON conforming to the schema.
   }
 
   /**
-   * Generate targeted follow-up clarifying questions when fault details are ambiguous
-   * @param {Object} params
-   * @param {string} params.textPrompt
-   * @param {string} [params.categorySlug]
+   * Ambiguity clarification questions are generated dynamically by the AI Diagnostic Engine
+   * based on the specific fault and visual/acoustic evidence. This method returns null to prevent
+   * any static pre-programmed questions from polluting the dynamic LLM output.
    */
-  static generateClarificationQuestions({ textPrompt = '', categorySlug = '' }) {
-    const lower = (textPrompt || '').toLowerCase();
-
-    // Check for AC ambiguity
-    if (lower.includes('ac') || categorySlug.includes('hvac')) {
-      if (lower.includes('noise') || lower.includes('sound')) {
-        return {
-          question: 'Where is the strange noise coming from?',
-          options: [
-            'Inside the room (fan blower unit)',
-            'Outside on the balcony/wall (compressor unit)',
-            'Inside the wall piping',
-          ],
-        };
-      }
-      if (!lower.includes('water') && !lower.includes('cool') && !lower.includes('ice')) {
-        return {
-          question: 'What is the primary symptom of the air conditioner?',
-          options: [
-            'Blower is running but output air is warm',
-            'Water is actively leaking inside the room',
-            'Ice/frost is forming on the copper pipes',
-          ],
-        };
-      }
-    }
-
-    // Check for Electrical ambiguity
-    if (lower.includes('trip') || lower.includes('breaker') || categorySlug.includes('electrical')) {
-      return {
-        question: 'When exactly does the breaker trip?',
-        options: [
-          'Immediately when power returns from the grid/generator',
-          'Only when a heavy appliance (AC, water heater) is turned on',
-          'Randomly throughout the day without heavy load',
-        ],
-      };
-    }
-
-    // Check for Plumbing ambiguity
-    if (lower.includes('leak') || lower.includes('water') || categorySlug.includes('plumbing')) {
-      return {
-        question: 'Is the water leakage continuous or only when using a fixture?',
-        options: [
-          'Continuous active leak (flooding or dripping non-stop)',
-          'Only leaks when the tap/shower is turned on',
-          'Only leaks after water is drained from the sink/toilet',
-        ],
-      };
-    }
-
+  static generateClarificationQuestions() {
     return null;
   }
 

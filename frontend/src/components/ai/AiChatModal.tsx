@@ -183,6 +183,7 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
   const [inputVal, setInputVal] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [guestAccessToken, setGuestAccessToken] = useState<string | null>(null);
   const [preferredRail, setPreferredRail] = useState<'FIAT_NGN' | 'CRYPTO_MONAD_USDC'>('FIAT_NGN');
   const [bookingArtisanId, setBookingArtisanId] = useState<string | null>(null);
   const [creatingContractArtisanId, setCreatingContractArtisanId] = useState<string | null>(null);
@@ -433,6 +434,7 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
       const diagnosticData = res.data.data;
       const sid = diagnosticData.session.id;
       setSessionId(sid);
+      setGuestAccessToken((diagnosticData as DiagnosticResponse & { guestAccessToken?: string }).guestAccessToken || null);
 
       // Fetch escrow milestone breakdown
       let fetchedEscrowPlan: EscrowPlan | undefined = undefined;
@@ -531,19 +533,13 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
 
     try {
       if (sessionId) {
-        // Conversational follow-up with multi-turn history (supporting text, photos, and voice notes)
-        const conversationHistory = messages
-          .filter((m) => !m.isThinking && m.text)
-          .map((m) => ({
-            role: m.sender === 'user' ? 'user' : 'assistant',
-            content: m.text,
-          }));
+        // The server persists and reconstructs diagnostic history for this session.
+        const sessionHeaders = guestAccessToken ? { 'x-diagnostic-session-token': guestAccessToken } : undefined;
 
         let res;
         if (currentPhotos.length > 0 || currentVoice) {
           const chatFormData = new FormData();
           if (query) chatFormData.append('message', query);
-          chatFormData.append('history', JSON.stringify(conversationHistory));
           if (coords?.latitude && coords?.longitude) {
             chatFormData.append('latitude', coords.latitude.toString());
             chatFormData.append('longitude', coords.longitude.toString());
@@ -560,7 +556,7 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
               matchedArtisans?: MatchItem[];
               diyRecommended?: boolean;
             };
-          }>(`/ai/session/${sessionId}/message`, chatFormData);
+          }>(`/ai/session/${sessionId}/message`, chatFormData, { headers: sessionHeaders });
         } else {
           res = await apiClient.post<{
             data: {
@@ -571,10 +567,9 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
             };
           }>(`/ai/session/${sessionId}/message`, {
             message: query,
-            history: conversationHistory,
             latitude: coords?.latitude,
             longitude: coords?.longitude,
-          });
+          }, { headers: sessionHeaders });
         }
 
         const result = res.data.data;

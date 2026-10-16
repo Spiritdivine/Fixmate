@@ -35,19 +35,19 @@ export const ArtisanSidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { logout } = useAuthStore();
 
   const menuItems: NavItem[] = [
-    { label: 'Dashboard', to: '/artisan/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { label: 'Jobs', to: '/artisan/jobs', icon: <Briefcase className="w-5 h-5" /> },
-    { label: 'Proposals', to: '/artisan/proposals', icon: <Send className="w-5 h-5" /> },
-    { label: 'Contracts', to: '/artisan/contracts', icon: <FileText className="w-5 h-5" /> },
-    { label: 'Wallet', to: '/artisan/wallet', icon: <Wallet className="w-5 h-5" /> },
-    { label: 'Messages', to: '/artisan/messages', icon: <MessageSquare className="w-5 h-5" /> },
-    { label: 'Disputes', to: '/artisan/disputes', icon: <AlertOctagon className="w-5 h-5" /> },
-    { label: 'Profile', to: '/artisan/profile', icon: <User className="w-5 h-5" /> },
+    { label: 'Dashboard', to: '/artisan/dashboard', icon: <LayoutDashboard className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Jobs', to: '/artisan/jobs', icon: <Briefcase className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Proposals', to: '/artisan/proposals', icon: <Send className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Contracts', to: '/artisan/contracts', icon: <FileText className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Wallet', to: '/artisan/wallet', icon: <Wallet className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Messages', to: '/artisan/messages', icon: <MessageSquare className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Disputes', to: '/artisan/disputes', icon: <AlertOctagon className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Profile', to: '/artisan/profile', icon: <User className="w-5 h-5" strokeWidth={1.85} /> },
   ];
 
   const generalItems: NavItem[] = [
-    { label: 'Settings', to: '/artisan/settings', icon: <Settings className="w-5 h-5" /> },
-    { label: 'Help', to: '/artisan/help', icon: <HelpCircle className="w-5 h-5" /> },
+    { label: 'Settings', to: '/artisan/settings', icon: <Settings className="w-5 h-5" strokeWidth={1.85} /> },
+    { label: 'Help', to: '/artisan/help', icon: <HelpCircle className="w-5 h-5" strokeWidth={1.85} /> },
   ];
 
   return (

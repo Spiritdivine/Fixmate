@@ -39,7 +39,7 @@ export class MatchingEngineService {
     isEmergency = false,
     limit = 3,
   }) {
-    const maxRadiusKm = isEmergency ? 10.0 : 25.0;
+    const maxRadiusKm = 25.0;
 
     // 1. Fetch diagnostic session if ID provided
     let session = null;
@@ -58,6 +58,14 @@ export class MatchingEngineService {
         if (!clientLng && session.clientLongitude) {
           clientLng = Number(session.clientLongitude);
         }
+        if (clientLat && clientLng) {
+          if (clientLat >= 8.5 && clientLat <= 9.5 && clientLng >= 6.8 && clientLng <= 7.8) {
+            clientState = 'FCT';
+          } else if (clientLat >= 6.2 && clientLat <= 6.8 && clientLng >= 3.0 && clientLng <= 4.0) {
+            clientState = 'Lagos';
+          }
+        }
+
         if (session.clientAddress) {
           const addr = session.clientAddress.toLowerCase();
           if (addr.includes('abuja') || addr.includes('fct')) {
@@ -91,14 +99,14 @@ export class MatchingEngineService {
       : { equals: clientState, mode: 'insensitive' };
 
     // 2. Fetch candidate artisans matching the strict trade category in the same State
-    const candidates = await prisma.artisanProfile.findMany({
+    let candidates = await prisma.artisanProfile.findMany({
       where: {
         isAvailable: true,
         user: { status: 'ACTIVE' },
-        state: stateCondition, // Hard gate: must be in same state
+        state: stateCondition, // Preferred gate: same state
         skills: {
           some: {
-            skill: { categoryId: Number(categoryId) }, // Hard gate: must match required trade
+            skill: { categoryId: Number(categoryId) }, // Strict trade match
           },
         },
       },
@@ -128,11 +136,49 @@ export class MatchingEngineService {
       },
     });
 
-    // Invariant: Do NOT cross-contaminate with unrelated trades if candidate pool is empty
+    // Fallback: If no candidate in specified state, query verified artisans in this trade nationwide
+    if (!candidates || candidates.length === 0) {
+      candidates = await prisma.artisanProfile.findMany({
+        where: {
+          isAvailable: true,
+          user: { status: 'ACTIVE' },
+          skills: {
+            some: {
+              skill: { categoryId: Number(categoryId) },
+            },
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              phoneNumber: true,
+              avatarUrl: true,
+              isKycVerified: true,
+              contractsAsArtisan: {
+                where: {
+                  status: { in: ['ACTIVE', 'PENDING_FUNDING'] },
+                },
+                select: { id: true },
+              },
+            },
+          },
+          skills: {
+            include: { skill: true },
+          },
+          portfolios: {
+            take: 3,
+          },
+          services: true,
+        },
+      });
+    }
+
     if (!candidates || candidates.length === 0) {
       return {
         candidates: [],
-        message: `No active verified specialists in this trade currently available within ${clientState}. Dispatching alert to platform support.`,
+        message: `No active verified specialists in this trade currently available. Dispatching alert to platform support.`,
         searchRadiusKm: maxRadiusKm,
       };
     }
@@ -159,7 +205,7 @@ export class MatchingEngineService {
           Number(artisan.longitude)
         );
 
-        // Distance Hard Gate: Exclude candidate if beyond commute threshold
+        // Strict 25km Distance Gate: Exclude candidate if beyond 25km radius
         if (distanceKm > maxRadiusKm) {
           continue;
         }
@@ -276,6 +322,28 @@ export class MatchingEngineService {
       candidates: topMatches,
       totalEligible: scoredList.length,
       searchRadiusKm: maxRadiusKm,
+    };
+  }
+
+  /**
+   * Normalize database candidate to client-facing MatchedArtisanDossier contract
+   * @param {Object} candidate
+   * @param {string} [tradeName='Specialist']
+   */
+  static formatCandidateDossier(candidate, tradeName = 'Specialist') {
+    if (!candidate) return null;
+    return {
+      artisanId: String(candidate.artisanProfileId || candidate.artisan?.id || candidate.id),
+      name: candidate.artisan?.name || candidate.name || candidate.businessName || candidate.user?.name || 'Verified Specialist',
+      avatarUrl: candidate.artisan?.avatarUrl || candidate.avatarUrl || candidate.user?.avatarUrl || null,
+      trade: tradeName,
+      kycTier: candidate.artisan?.kycVerified || candidate.kycVerified ? 2 : 1,
+      rating: Number(candidate.artisan?.rating ?? candidate.rating ?? 4.8),
+      reviewCount: Number(candidate.artisan?.reviewCount ?? candidate.reviewCount ?? 0),
+      completedJobsCount: Number(candidate.artisan?.completedJobs ?? candidate.completedJobsCount ?? 0),
+      distanceKm: candidate.distanceKm !== null && candidate.distanceKm !== undefined ? Number(candidate.distanceKm) : null,
+      matchScore: Number(candidate.matchScore ?? 85),
+      aiFitReason: candidate.rationale || candidate.aiFitReason || 'Top-rated verified specialist in your immediate area.',
     };
   }
 }

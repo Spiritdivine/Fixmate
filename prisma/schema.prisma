@@ -988,11 +988,24 @@ enum DiagnosticUrgency {
   EMERGENCY
 }
 
+enum DiagnosticStatus {
+  INFORMATION_GATHERING
+  ASSESSMENT_READY
+  DIY_GUIDANCE
+  PROFESSIONAL_REQUIRED
+  EMERGENCY
+  RESOLVED
+}
+
 model AiDiagnosticSession {
   id                 String               @id @default(uuid()) @db.Uuid
   userId             String?              @map("user_id") @db.Uuid
   clientSessionToken String?              @map("client_session_token") @db.VarChar(128)
   inputType          DiagnosticInputType  @default(TEXT) @map("input_type")
+  diagnosticStatus   DiagnosticStatus     @default(INFORMATION_GATHERING) @map("diagnostic_status")
+  diagnosticState    Json                 @default("{}") @map("diagnostic_state")
+  conversationSummary String?              @map("conversation_summary") @db.Text
+  promptVersion      String?               @map("prompt_version") @db.VarChar(100)
   rawTextPrompt      String?              @map("raw_text_prompt") @db.Text
   transcribedAudio   String?              @map("transcribed_audio") @db.Text
   voiceAudioUrl      String?              @map("voice_audio_url") @db.Text
@@ -1043,12 +1056,27 @@ model AiDiagnosticSession {
   recommendations       DiagnosticMatch[]
   repairVerifications   AiRepairVerification[]
   evidences             DiagnosticEvidence[]
+  turns                 AiDiagnosticTurn[]
   matchSnapshots        MatchSnapshot[]
 
   @@index([userId])
   @@index([matchedCategoryId])
   @@index([createdAt])
   @@map("ai_diagnostic_sessions")
+}
+
+model AiDiagnosticTurn {
+  id                  String              @id @default(uuid()) @db.Uuid
+  diagnosticSessionId String              @map("diagnostic_session_id") @db.Uuid
+  role                String              @db.VarChar(20)
+  content             String              @db.Text
+  structuredDecision  Json?               @map("structured_decision")
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  session             AiDiagnosticSession @relation(fields: [diagnosticSessionId], references: [id], onDelete: Cascade)
+
+  @@index([diagnosticSessionId, createdAt])
+  @@map("ai_diagnostic_turns")
 }
 
 model DiagnosticMedia {
@@ -1198,5 +1226,4 @@ model MatchSnapshot {
   @@index([diagnosticSessionId])
   @@map("match_snapshots")
 }
-
 

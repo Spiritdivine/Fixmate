@@ -12,6 +12,7 @@ const router = Router();
 
 // Conversations
 router.get('/conversations', authenticate, ChatController.getConversations);
+router.post('/conversations/artisan/:artisanId', authenticate, ChatController.getOrCreateArtisanConversation);
 router.patch('/conversations/:id/mute', authenticate, validate(conversationParamSchema), ChatController.toggleMute);
 router.delete('/conversations/:id', authenticate, validate(conversationParamSchema), ChatController.leaveConversation);
 

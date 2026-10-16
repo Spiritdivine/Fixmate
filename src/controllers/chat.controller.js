@@ -185,6 +185,101 @@ export class ChatController {
       next(error);
     }
   }
+
+  static async getOrCreateArtisanConversation(req, res, next) {
+    try {
+      const { artisanId } = req.params;
+      const currentUserId = req.user.id;
+
+      let artisanUserId = null;
+      const profile = await prisma.artisanProfile.findFirst({
+        where: {
+          OR: [
+            { id: artisanId },
+            { userId: artisanId },
+          ],
+        },
+        select: { userId: true },
+      });
+
+      if (profile) {
+        artisanUserId = profile.userId;
+      } else {
+        const user = await prisma.user.findUnique({
+          where: { id: artisanId },
+          select: { id: true, role: true },
+        });
+        if (user) artisanUserId = user.id;
+      }
+
+      if (!artisanUserId) {
+        throw ApiError.notFound('Artisan account not found');
+      }
+
+      let conversation = await prisma.conversation.findFirst({
+        where: {
+          AND: [
+            { participants: { some: { userId: currentUserId } } },
+            { participants: { some: { userId: artisanUserId } } },
+          ],
+        },
+        include: {
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  avatarUrl: true,
+                  artisanProfile: { select: { businessName: true } },
+                  clientProfile: { select: { firstName: true, lastName: true } },
+                },
+              },
+            },
+          },
+          messages: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+      });
+
+      if (!conversation) {
+        conversation = await prisma.conversation.create({
+          data: {
+            participants: {
+              create: [
+                { userId: currentUserId },
+                { userId: artisanUserId },
+              ],
+            },
+          },
+          include: {
+            participants: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    avatarUrl: true,
+                    artisanProfile: { select: { businessName: true } },
+                    clientProfile: { select: { firstName: true, lastName: true } },
+                  },
+                },
+              },
+            },
+            messages: {
+              take: 1,
+            },
+          },
+        });
+      }
+
+      res.status(200).json(new ApiResponse(200, conversation, 'Artisan conversation retrieved successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default ChatController;

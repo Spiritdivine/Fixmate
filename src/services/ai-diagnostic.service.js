@@ -11,6 +11,9 @@ import { PromptGuardrailService } from './prompt-guardrail.service.js';
 import { UrgencyResolver } from './urgency-resolver.service.js';
 import { BomPricingService } from './bom-pricing.service.js';
 import { DiagnosticResponseSchema, normalizeSafetyInstructions } from '../schemas/ai-diagnostic.schema.js';
+import { DiagnosticTurnResponseSchema } from '../schemas/ai-chat-turn.schema.js';
+import { DiagnosticStateService } from './diagnostic-state.service.js';
+import { OGA_JOHN_PROMPT_VERSION, buildOgaJohnTurnPrompt } from '../prompts/oga-john.prompt.js';
 
 let openaiClient = null;
 if (env.OPENAI_API_KEY) {
@@ -51,6 +54,8 @@ export class AiDiagnosticService {
   }) {
     // 1. Guardrail against prompt injections or illegal utility tampering
     PromptGuardrailService.validateUserQuery(textPrompt);
+    const guestAccessToken = userId ? null : (clientSessionToken || DiagnosticStateService.createGuestToken());
+    const persistedGuestToken = userId ? null : DiagnosticStateService.hashGuestToken(guestAccessToken);
 
     const activeVisionImages = visionImageUrls.length > 0 ? visionImageUrls : imageUrls;
 
@@ -62,19 +67,26 @@ export class AiDiagnosticService {
     let effectiveTextPrompt = textPrompt;
 
     // 2. Transcribe voice note if buffer provided
-    if (voiceAudioBuffer) {
-      audioTranscriptionResult = await TranscriptionService.transcribeAudioBuffer({
-        audioBuffer: voiceAudioBuffer,
-        mimeType: voiceMimeType,
-      });
+    if (voiceAudioBuffer && voiceAudioBuffer.length > 0) {
+      try {
+        audioTranscriptionResult = await TranscriptionService.transcribeAudioBuffer({
+          audioBuffer: voiceAudioBuffer,
+          mimeType: voiceMimeType,
+        });
 
-      if (audioTranscriptionResult?.technicalSummary) {
-        effectiveTextPrompt = [
-          textPrompt ? `User Typed: ${textPrompt}` : '',
-          `Voice Description: ${audioTranscriptionResult.technicalSummary}`,
-        ]
-          .filter(Boolean)
-          .join('\n');
+        if (audioTranscriptionResult?.technicalSummary) {
+          effectiveTextPrompt = [
+            textPrompt ? `User Typed: ${textPrompt}` : '',
+            `Voice Description: ${audioTranscriptionResult.technicalSummary}`,
+          ]
+            .filter(Boolean)
+            .join('\n');
+        }
+      } catch (err) {
+        console.warn('⚠️ Voice transcription failed in diagnostic, continuing with available input:', err.message);
+        if (!effectiveTextPrompt) {
+          effectiveTextPrompt = 'Voice note attached: please inspect and diagnose the fault.';
+        }
       }
     }
 
@@ -93,7 +105,10 @@ export class AiDiagnosticService {
       const session = await prisma.aiDiagnosticSession.create({
         data: {
           userId,
-          clientSessionToken: clientSessionToken || `guest_${Date.now()}`,
+          clientSessionToken: persistedGuestToken,
+          diagnosticStatus: 'INFORMATION_GATHERING',
+          diagnosticState: DiagnosticStateService.initialState(),
+          promptVersion: OGA_JOHN_PROMPT_VERSION,
           inputType: 'TEXT',
           rawTextPrompt: textPrompt || null,
           transcribedAudio: audioTranscriptionResult?.literalTranscript || null,
@@ -126,6 +141,12 @@ export class AiDiagnosticService {
       });
 
       const conversationalReply = await this._generateDynamicGreeting(textPrompt);
+      await prisma.aiDiagnosticTurn.createMany({
+        data: [
+          { diagnosticSessionId: session.id, role: 'user', content: textPrompt || 'Hello' },
+          { diagnosticSessionId: session.id, role: 'assistant', content: conversationalReply },
+        ],
+      });
 
       return {
         session,
@@ -150,6 +171,7 @@ export class AiDiagnosticService {
         matchingNotice: null,
         clarification: null,
         artisanScript: null,
+        guestAccessToken,
       };
     }
 
@@ -212,7 +234,19 @@ export class AiDiagnosticService {
     });
 
     // 8. Domain 2 Economic Pricing: Adjust BOM items using regional inflation price oracle
-    if (parsedResult.estimatedBOM && parsedResult.estimatedBOM.length > 0) {
+    const isInfoGathering = Boolean(
+      parsedResult.clarificationNeeded ||
+      parsedResult.status === 'INFORMATION_GATHERING' ||
+      Boolean(parsedResult.clarificationQuestion) ||
+      (!parsedResult.probableCause || parsedResult.probableCause.toLowerCase().includes('triage') || parsedResult.probableCause.toLowerCase().includes('inspection'))
+    );
+    const bomAsked = this._isBomRequested(effectiveTextPrompt);
+
+    if (isInfoGathering && !bomAsked) {
+      parsedResult.estimatedBOM = [];
+      parsedResult.estimatedLaborMin = null;
+      parsedResult.estimatedLaborMax = null;
+    } else if (parsedResult.estimatedBOM && parsedResult.estimatedBOM.length > 0) {
       parsedResult.estimatedBOM = await BomPricingService.adjustBomToMarket({
         bomItems: parsedResult.estimatedBOM,
         state: clientState || 'Lagos',
@@ -245,11 +279,11 @@ export class AiDiagnosticService {
       inputType = textPrompt ? 'MULTIMODAL' : 'PHOTO';
     }
 
-    // Clarification questions check
-    const clarification = TranscriptionService.generateClarificationQuestions({
-      textPrompt: effectiveTextPrompt,
-      categorySlug: parsedResult.categorySlug || '',
-    });
+    // Dynamic clarification questions directly from AI Diagnostic Engine
+    const dynamicClarificationQuestion = parsedResult.clarificationQuestion || null;
+    const dynamicClarificationOptions = Array.isArray(parsedResult.clarificationOptions)
+      ? parsedResult.clarificationOptions
+      : [];
 
     // Synthesize artisan audio briefing script
     const artisanScript = TranscriptionService.generateArtisanAudioScript({
@@ -265,10 +299,18 @@ export class AiDiagnosticService {
     const safeMediaUrls = imageUrls.filter((url) => typeof url === 'string' && url.startsWith('http'));
 
     // 10. Persist Session into PostgreSQL
+    const resolvedStatus = isInfoGathering ? 'INFORMATION_GATHERING' : 'ASSESSMENT_READY';
     const session = await prisma.aiDiagnosticSession.create({
       data: {
         userId,
-        clientSessionToken: clientSessionToken || `guest_${Date.now()}`,
+        clientSessionToken: persistedGuestToken,
+        diagnosticStatus: resolvedStatus,
+        diagnosticState: {
+          ...DiagnosticStateService.initialState(),
+          status: resolvedStatus,
+          missingInformation: dynamicClarificationQuestion ? [dynamicClarificationQuestion] : [],
+        },
+        promptVersion: OGA_JOHN_PROMPT_VERSION,
         inputType,
         rawTextPrompt: textPrompt || null,
         transcribedAudio: audioTranscriptionResult?.literalTranscript || null,
@@ -281,8 +323,8 @@ export class AiDiagnosticService {
         safetyInstructions: parsedResult.safetyInstructions || [],
         diyAllowed: parsedResult.diyAllowed,
         diyGuide: parsedResult.diyGuide || null,
-        clarificationQuestion: clarification?.question || null,
-        clarificationOptions: clarification?.options || [],
+        clarificationQuestion: dynamicClarificationQuestion,
+        clarificationOptions: dynamicClarificationOptions,
         artisanAudioScript: artisanScript,
         estimatedBOM: parsedResult.estimatedBOM || [],
         estimatedLaborMin: parsedResult.estimatedLaborMin ? Number(parsedResult.estimatedLaborMin) : null,
@@ -308,6 +350,13 @@ export class AiDiagnosticService {
       },
     });
 
+    await prisma.aiDiagnosticTurn.createMany({
+      data: [
+        { diagnosticSessionId: session.id, role: 'user', content: effectiveTextPrompt || 'Inspection media attached' },
+        { diagnosticSessionId: session.id, role: 'assistant', content: parsedResult.conversationalReply, structuredDecision: parsedResult },
+      ],
+    });
+
     // Record audit log if safety hazard or emergency was flagged
     if (parsedResult.isHazardous || parsedResult.urgency === 'EMERGENCY') {
       try {
@@ -330,6 +379,15 @@ export class AiDiagnosticService {
 
     // 11. Domain 3 Artisan Matching: Execute 5-Pillar Matching Engine
     let resolvedState = clientState || 'Lagos';
+    const latToCheck = clientCoords?.latitude || null;
+    const lngToCheck = clientCoords?.longitude || null;
+    if (latToCheck && lngToCheck) {
+      if (latToCheck >= 8.5 && latToCheck <= 9.5 && lngToCheck >= 6.8 && lngToCheck <= 7.8) {
+        resolvedState = 'FCT';
+      } else if (latToCheck >= 6.2 && latToCheck <= 6.8 && lngToCheck >= 3.0 && lngToCheck <= 4.0) {
+        resolvedState = 'Lagos';
+      }
+    }
     const lowerPrompt = (effectiveTextPrompt || '').toLowerCase();
     if (lowerPrompt.includes('abuja') || lowerPrompt.includes('fct')) {
       resolvedState = 'FCT';
@@ -359,18 +417,30 @@ export class AiDiagnosticService {
         limit: 3,
       });
 
-      matchedArtisans = matchResult.candidates || [];
+      const tradeTitle = category?.name || 'Specialist';
+      matchedArtisans = (matchResult.candidates || []).map((c) =>
+        MatchingEngineService.formatCandidateDossier(c, tradeTitle)
+      );
       if (matchedArtisans.length === 0) {
         matchingNotice = matchResult.message || `No active verified specialists in this trade currently available within ${resolvedState}.`;
       }
     }
 
     let conversationalReply =
-      parsedResult.conversationalReply || parsedResult.probableCause || 'Here is what I found regarding this fault.';
+      parsedResult.conversationalReply || parsedResult.probableCause || 'Diagnostic analysis completed.';
 
-    if (shouldMatchArtisans && matchedArtisans.length === 0) {
-      const tradeName = category?.name || 'this trade';
-      conversationalReply += `\n\n> ℹ️ **Availability & Quality Guarantee:** There are currently no verified ${tradeName} specialists available closeby in ${resolvedState}. To preserve certified workmanship and safety, Fixmate strictly prohibits cross-trade substitution (we will never recommend an electrician, carpenter, or unverified trade for a plumbing job).`;
+    // Gated professional check: if not safe for DIY and LLM hasn't already guided on professional care, add concise advice
+    const requiresProfessionalCare = !parsedResult.diyAllowed || parsedResult.isHazardous;
+    const alreadyOffersReferral =
+      conversationalReply.toLowerCase().includes('specialist') ||
+      conversationalReply.toLowerCase().includes('verified') ||
+      conversationalReply.toLowerCase().includes('professional') ||
+      conversationalReply.toLowerCase().includes('technician') ||
+      conversationalReply.toLowerCase().includes('connect you');
+
+    if (requiresProfessionalCare && !alreadyOffersReferral && !clientRequestedArtisan && !shouldMatchArtisans) {
+      const tradeLabel = category?.name || 'specialist';
+      conversationalReply += `\n\nThis fault requires specialized tools and trade precautions. Would you like me to connect you with a verified ${tradeLabel} nearby?`;
     }
 
     return {
@@ -381,6 +451,7 @@ export class AiDiagnosticService {
       diyRecommended: parsedResult.diyAllowed && !clientRequestedArtisan,
       matchedArtisans,
       preliminaryArtisans: matchedArtisans,
+      guestAccessToken,
       matchingNotice,
     };
   }
@@ -388,40 +459,71 @@ export class AiDiagnosticService {
   /**
    * Master Artisan Conversational Diagnostic via OpenAI GPT-4o with FULL structured output
    */
+  /**
+   * Master Artisan Conversational Diagnostic via OpenAI GPT-4o with FULL structured output
+   */
   static async _callOpenAI({ textPrompt, imageUrls = [] }) {
     if (!openaiClient) throw new Error('OpenAI client not initialized');
 
-    const systemPrompt = `You are a master trade engineering consultant on Fixmate (Artifix) with 15+ years of practical experience across electrical, plumbing, HVAC, generator, carpentry, and masonry trades in West Africa.
+    const systemPrompt = `You are Oga John, the Chief AI Diagnostic Engineer and Senior Technical Consultant for Artifix (Fixmate), Nigeria.
+You apply the diagnostic reasoning, practical knowledge, and communication standards of an experienced multidisciplinary maintenance consultant across electrical, plumbing, HVAC, generator plants, carpentry/furniture, masonry, and roofing.
+You are an AI assistant, not a physically present tradesperson. Never falsely claim personal physical work history, manual inspections, or guaranteed physical outcomes.
 
-CRITICAL INSTRUCTIONS:
-1. Provide a natural, master-artisan conversational reply formatted in clean markdown.
-2. Output a complete, strictly valid JSON object conforming to the required schema with all fields.
-3. Include realistic Bill of Materials (estimatedBOM) in Nigerian Naira (NGN), estimatedLaborMin, estimatedLaborMax, safety containment instructions, and required trade skills.
+MISSION & DIAGNOSTIC REASONING PROTOCOL (Acknowledge -> Reassure -> Protect -> Diagnose -> Request Evidence -> Recommend Next Step):
+1. ACKNOWLEDGE EMOTION & ISSUE:
+   - Connect with the homeowner's emotion, frustration, or concern with natural empathy.
+   - If they speak Nigerian English or Pidgin ("my couch leg just dey, break o", "wetin i fit do about am?"), mirror their tone naturally without mockery or excessive slang.
+2. SCREEN SAFETY / PROTECT FIRST:
+   - If there is any physical hazard (sparks, smoke, burning odor, gas smell, flooding, ceiling sag, unstable/collapsing furniture), issue an immediate clear precaution FIRST (e.g. "Abeg, no sit on that couch for now so e no go collapse further" or "Isolate the main distribution board breaker immediately").
+3. ESTABLISH PLAUSIBLE CAUSES:
+   - Do NOT guess blindly or force an early conclusion. Formulate 2-3 plausible hypotheses.
+4. ASK THE SINGLE NEXT BEST QUESTION:
+   - Ask ONE targeted, high-value question that narrows down the failure mechanism (e.g. "Is the leg wooden or metal, and did it snap in two or did the screws pull out from the frame?").
+5. REQUEST VISUAL EVIDENCE:
+   - If a photo helps distinguish the damage, invite the user to upload one ("If you fit send a clear picture of where the leg connects to the frame..."). Tell them NOT to buy materials yet.
+6. PROFESSIONAL VS DIY GATING (CRITICAL):
+   - IF THIS PROBLEM REQUIRES PROFESSIONAL SERVICES (electrical wiring/breakers, gas leaks, water main bursts, HVAC refrigerant, generator engine faults, structural damage):
+     * DO NOT give the user a DIY step-by-step repair guide!
+     * Set "diyAllowed": false, and explain in "diyRiskReason" why specialized trade tools/skills are required.
+     * In "conversationalReply", give immediate containment precautions, explain why professional care is needed, and warmly ask: "Would you like me to connect you with a verified, vetted specialist nearby to handle this safely for you?"
+   - IF THIS PROBLEM IS GENUINELY SAFE FOR DIY (e.g. tightening a loose hinge, replacing a faucet tap washer, unblocking a surface sink P-trap, cleaning AC dust filter mesh):
+     * Set "diyAllowed": true.
+     * Make "diyGuide" practical and detailed with clear household tools, steps, and explicit stop conditions.
+7. NO SELF-REINTRODUCTION:
+   - NEVER introduce yourself as "Hello, I am Oga John" in this response. The chat UI already displays your identity. Get straight to the problem.
+8. RESTRICTED BILL OF MATERIALS & PRICING:
+   - Restrict giving Bill of Materials (BOM) or parts cost breakdowns to when EXPLICITLY asked by the user ("what materials do I need?", "cost of parts", "BOM") or when reaching a confirmed ASSESSMENT_READY status where repair materials were specifically requested.
+   - If the diagnosis is in early triage / INFORMATION_GATHERING, "estimatedBOM" MUST be [] (empty array), and "estimatedLaborMin" and "estimatedLaborMax" MUST be null.
+   - NEVER invent or hallucinate fake parts or pricing when the diagnostic facts are incomplete.
+9. CONCISE & NATURAL TONE:
+   - Keep responses crisp, direct, and conversational. NEVER be verbose, rambling, or overly wordy.
+   - Plain text without unsolicited tables.
 
-Schema Specification:
+You MUST respond strictly with a valid JSON object matching this schema:
 {
-  "conversationalReply": "Conversational markdown explanation and direct advice",
+  "conversationalReply": "Crisp, concise, empathetic conversational reply in clean markdown. Plain text without verbosity or self-reintroduction.",
   "diagnosticTitle": "Short 3-5 word technical title",
   "probableCause": "Precise 1-sentence technical root cause summary",
-  "categorySlug": "One of: electrical-and-wiring, plumbing-and-pipefitting, hvac-and-ac-repair, generator-and-power-plants, carpentry-and-woodwork, masonry-and-tiling, painting-and-pop, appliance-repair",
+  "categorySlug": "One of: electrical-and-wiring, plumbing-and-pipefitting, hvac-and-ac-repair, generator-and-power-plants, carpentry-and-woodwork, masonry-and-tiling, painting-and-pop, appliance-repair, or null",
   "severity": "LOW, MODERATE, HIGH, or CRITICAL",
   "urgency": "ROUTINE, SCHEDULED, URGENT, or EMERGENCY",
   "isHazardous": true or false,
   "hazardTypes": ["NONE", "ELECTRICAL_SHOCK", "FIRE_ARC", "GAS_EXPLOSION", "ACTIVE_FLOODING"],
   "safetyInstructions": [
-    { "stepNumber": 1, "action": "Clear containment instruction", "urgency": "IMMEDIATE_ACTION", "targetComponent": "Breaker/Valve" }
+    { "stepNumber": 1, "action": "Clear containment instruction", "urgency": "IMMEDIATE_ACTION", "targetComponent": "Breaker/Valve/Frame" }
   ],
   "diyAllowed": true or false,
   "diyRiskReason": "Reason why DIY is unsafe, or null",
-  "diyGuide": "Safe step-by-step DIY check if allowed, or null",
+  "diyGuide": "Detailed DIY steps if safe, or null if professional required",
   "requiresArtisan": true or false,
-  "estimatedBOM": [
-    { "item": "Part Name", "specification": "Specs", "quantity": 1, "unit": "PCS", "estimatedCostMin": 5000, "estimatedCostMax": 9000, "marketCategory": "ELECTRICAL" }
-  ],
-  "estimatedLaborMin": 6000,
-  "estimatedLaborMax": 15000,
+  "clarificationNeeded": true or false,
+  "clarificationQuestion": "Targeted question if symptoms unclear, or null",
+  "clarificationOptions": ["Specific realistic answer A tailored to the question", "Specific realistic answer B"],
+  "estimatedBOM": [],
+  "estimatedLaborMin": null,
+  "estimatedLaborMax": null,
   "currency": "NGN",
-  "recommendedSkills": ["skill-slug-1", "skill-slug-2"],
+  "recommendedSkills": ["skill-slug-1"],
   "visualObservations": "Visual notes from attached photo or null"
 }`;
 
@@ -452,31 +554,63 @@ Schema Specification:
   static async _callGemini({ textPrompt, imageUrls = [] }) {
     if (!geminiClient) throw new Error('Gemini client not initialized');
 
-    const systemPrompt = `You are the Chief Diagnostic Engineering AI for Fixmate (Artifix), Nigeria.
-Diagnose the physical/mechanical/electrical fault based on the text description and photos.
+    const systemPrompt = `You are Oga John, the Chief AI Diagnostic Engineer and Senior Technical Consultant for Fixmate (Artifix), Nigeria.
+You apply the diagnostic reasoning, practical knowledge, and communication standards of an experienced multidisciplinary maintenance consultant across electrical, plumbing, HVAC, generator plants, carpentry/furniture, masonry, and roofing.
+You are an AI assistant, not a physically present tradesperson. Never falsely claim personal physical work history, manual inspections, or guaranteed physical outcomes.
+
+MISSION & DIAGNOSTIC REASONING PROTOCOL (Acknowledge -> Reassure -> Protect -> Diagnose -> Request Evidence -> Recommend Next Step):
+1. ACKNOWLEDGE EMOTION & ISSUE:
+   - Connect with the homeowner's emotion, frustration, or concern with natural empathy.
+   - If they speak Nigerian English or Pidgin ("my couch leg just dey, break o", "wetin i fit do about am?"), mirror their tone naturally without mockery or excessive slang.
+2. SCREEN SAFETY / PROTECT FIRST:
+   - If there is any physical hazard (sparks, smoke, burning odor, gas smell, flooding, ceiling sag, unstable/collapsing furniture), issue an immediate clear precaution FIRST (e.g. "Abeg, no sit on that couch for now so e no go collapse further" or "Isolate the main distribution board breaker immediately").
+3. ESTABLISH PLAUSIBLE CAUSES:
+   - Do NOT guess blindly or force an early conclusion. Formulate 2-3 plausible hypotheses.
+4. ASK THE SINGLE NEXT BEST QUESTION:
+   - Ask ONE targeted, high-value question that narrows down the failure mechanism.
+5. REQUEST VISUAL EVIDENCE:
+   - If a photo helps distinguish the damage, invite the user to upload one ("If you fit send a clear picture of where the leg connects to the frame..."). Tell them NOT to buy materials yet.
+6. PROFESSIONAL VS DIY GATING (CRITICAL):
+   - IF THIS PROBLEM REQUIRES PROFESSIONAL SERVICES (electrical wiring/breakers, gas leaks, water main bursts, HVAC refrigerant, generator engine faults, structural damage):
+     * DO NOT give the user a DIY step-by-step repair guide!
+     * Set "diyAllowed": false, and explain in "diyRiskReason" why specialized trade tools/skills are required.
+     * In "conversationalReply", give immediate containment precautions, explain why professional care is needed, and warmly ask: "Would you like me to connect you with a verified, vetted specialist nearby to handle this safely for you?"
+   - IF THIS PROBLEM IS GENUINELY SAFE FOR DIY (e.g. tightening a loose hinge, replacing a faucet tap washer, unblocking a surface sink P-trap, cleaning AC dust filter mesh):
+     * Set "diyAllowed": true.
+     * Make "diyGuide" practical and detailed with clear household tools, steps, and explicit stop conditions.
+7. NO SELF-REINTRODUCTION:
+   - NEVER introduce yourself as "Hello, I am Oga John" in this response. The chat UI already displays your identity. Get straight to the problem.
+8. RESTRICTED BILL OF MATERIALS & PRICING:
+   - Restrict giving Bill of Materials (BOM) or parts cost breakdowns to when EXPLICITLY asked by the user ("what materials do I need?", "cost of parts", "BOM") or when reaching a confirmed ASSESSMENT_READY status where repair materials were specifically requested.
+   - If the diagnosis is in early triage / INFORMATION_GATHERING, "estimatedBOM" MUST be [] (empty array), and "estimatedLaborMin" and "estimatedLaborMax" MUST be null.
+   - NEVER invent or hallucinate fake parts or pricing when the diagnostic facts are incomplete.
+9. CONCISE & NATURAL TONE:
+   - Keep responses crisp, direct, and conversational. NEVER be verbose, rambling, or overly wordy.
+   - Plain text without unsolicited tables.
 
 Return strictly a valid JSON object matching this specification:
 {
-  "conversationalReply": "Warm, practical master-artisan advice in markdown",
+  "conversationalReply": "Warm, practical master-artisan advice in markdown. Plain text without verbosity or self-reintroduction.",
   "diagnosticTitle": "Short 3-5 word technical title",
   "probableCause": "Precise root cause",
-  "categorySlug": "One of: electrical-and-wiring, plumbing-and-pipefitting, hvac-and-ac-repair, generator-and-power-plants, carpentry-and-woodwork, masonry-and-tiling, painting-and-pop, appliance-repair",
+  "categorySlug": "One of: electrical-and-wiring, plumbing-and-pipefitting, hvac-and-ac-repair, generator-and-power-plants, carpentry-and-woodwork, masonry-and-tiling, painting-and-pop, appliance-repair, or null",
   "severity": "LOW, MODERATE, HIGH, or CRITICAL",
   "urgency": "ROUTINE, SCHEDULED, URGENT, or EMERGENCY",
   "isHazardous": true or false,
   "hazardTypes": ["NONE", "ELECTRICAL_SHOCK", "FIRE_ARC", "GAS_EXPLOSION", "ACTIVE_FLOODING"],
   "safetyInstructions": [
-    { "stepNumber": 1, "action": "Actionable step", "urgency": "IMMEDIATE_ACTION", "targetComponent": "Breaker/Valve" }
+    { "stepNumber": 1, "action": "Actionable step", "urgency": "IMMEDIATE_ACTION", "targetComponent": "Breaker/Valve/Frame" }
   ],
   "diyAllowed": true or false,
   "diyRiskReason": "Why DIY is unsafe, or null",
   "diyGuide": "Safe steps if allowed, or null",
   "requiresArtisan": true or false,
-  "estimatedBOM": [
-    { "item": "Part Name", "specification": "Specs", "quantity": 1, "unit": "PCS", "estimatedCostMin": 5000, "estimatedCostMax": 9000, "marketCategory": "ELECTRICAL" }
-  ],
-  "estimatedLaborMin": 6000,
-  "estimatedLaborMax": 15000,
+  "clarificationNeeded": true or false,
+  "clarificationQuestion": "Question or null",
+  "clarificationOptions": ["Specific realistic answer A tailored to the question", "Specific realistic answer B"],
+  "estimatedBOM": [],
+  "estimatedLaborMin": null,
+  "estimatedLaborMax": null,
   "currency": "NGN",
   "recommendedSkills": ["skill-slug-1"],
   "visualObservations": "Observations or null"
@@ -487,6 +621,18 @@ Return strictly a valid JSON object matching this specification:
       contents.push({ text: `User Description: ${textPrompt}` });
     }
     for (const url of imageUrls) {
+      if (typeof url === 'string' && url.startsWith('data:image/')) {
+        const match = url.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
+        if (match) {
+          contents.push({
+            inlineData: {
+              mimeType: match[1],
+              data: match[2],
+            },
+          });
+          continue;
+        }
+      }
       contents.push({ text: `ATTACHED MEDIA REFERENCE: ${url}` });
     }
 
@@ -637,50 +783,246 @@ Return strictly a valid JSON object matching this specification:
       };
     }
 
-    // Default general repair
+    // Carpentry & Furniture fault
+    if (
+      lower.includes('couch') ||
+      lower.includes('sofa') ||
+      lower.includes('chair') ||
+      lower.includes('table') ||
+      lower.includes('desk') ||
+      lower.includes('wood') ||
+      lower.includes('leg') ||
+      lower.includes('door') ||
+      lower.includes('hinge') ||
+      lower.includes('cupboard') ||
+      lower.includes('cabinet') ||
+      lower.includes('wardrobe') ||
+      lower.includes('drawer') ||
+      lower.includes('bed')
+    ) {
+      return {
+        conversationalReply: 'Sorry about that! Make we first see whether na the leg or fitting itself break or the joint wey hold am don give way. For now, abeg no sit or put heavy load on am so e no go collapse further. Is the piece wooden or metal, and did it snap or detach from the frame?',
+        diagnosticTitle: 'Furniture Structural Support Defect',
+        probableCause: 'Loose fastener, fractured mounting joint, or split timber support requiring physical inspection.',
+        severity: 'LOW',
+        urgency: 'SCHEDULED',
+        isHazardous: false,
+        hazardTypes: ['NONE'],
+        safetyInstructions: [
+          { stepNumber: 1, action: 'Do not sit on or place load on the affected furniture until stabilized.', urgency: 'PRECAUTIONARY', targetComponent: 'Furniture Frame' },
+        ],
+        diyAllowed: true,
+        diyRiskReason: null,
+        diyGuide: 'Inspect the underside to confirm if screws are loose or if the wood has split.',
+        requiresArtisan: false,
+        clarificationQuestion: 'Did the leg or joint snap in two, or did it completely detach from the frame?',
+        clarificationOptions: ['Snapped in two', 'Detached from frame', 'Just loose and wobbling'],
+        estimatedBOM: [],
+        estimatedLaborMin: null,
+        estimatedLaborMax: null,
+        currency: 'NGN',
+        categorySlug: 'carpentry-and-woodwork',
+        recommendedSkills: ['furniture-repair', 'carpentry', 'woodwork-joinery'],
+        visualObservations: imageUrls.length > 0 ? 'Furniture mounting reference logged.' : null,
+        symptoms: ['Furniture support instability or fractured joint reported'],
+        possibleCauses: [
+          {
+            label: 'Loose fastener or stripped screw hole',
+            supportingEvidence: ['User symptom report'],
+            missingEvidence: ['Visual inspection of joint attachment'],
+            likelihoodBand: 'moderate',
+          },
+          {
+            label: 'Split or snapped timber support',
+            supportingEvidence: ['User symptom report'],
+            missingEvidence: ['Clear photograph of break point'],
+            likelihoodBand: 'moderate',
+          },
+        ],
+        guidanceSteps: [
+          {
+            stepNumber: 1,
+            instruction: 'Carefully tip the furniture to inspect whether the bracket is loose or the wood is broken.',
+            risk: 'low',
+            stopConditions: ['Do not apply heavy force if timber is actively splintering.'],
+          },
+        ],
+        nextAction: 'answer_clarification',
+      };
+    }
+
+    // Masonry, Tiling, Walls, and POP Ceilings
+    if (
+      lower.includes('wall') ||
+      lower.includes('crack') ||
+      lower.includes('tile') ||
+      lower.includes('damp') ||
+      lower.includes('pop') ||
+      lower.includes('ceiling') ||
+      lower.includes('plaster') ||
+      lower.includes('cement') ||
+      lower.includes('masonry')
+    ) {
+      const isSevereStructural = lower.includes('collapse') || lower.includes('sag') || (lower.includes('crack') && (lower.includes('deep') || lower.includes('wide') || lower.includes('through')));
+      return {
+        conversationalReply: isSevereStructural
+          ? 'Deep wall cracks or sagging ceilings can pose a structural risk. Abeg stay clear of the area below and avoid placing weight above it. Is the crack vertical, horizontal, or diagonal across the blockwork?'
+          : 'I see. Wall cracks, dampness, and loose tiles usually point to rising moisture, building settlement, or bonding mortar fatigue. Make we first confirm where the issue is coming from.',
+        diagnosticTitle: isSevereStructural ? 'Structural Masonry / Substrate Cracking' : 'Masonry & Tiling Surface Defect',
+        probableCause: isSevereStructural
+          ? 'Differential foundation settlement, lintel beam deflection, or structural blockwork fatigue.'
+          : 'Capillary damp ingress, plaster bonding failure, or thermal expansion in wall tiles.',
+        severity: isSevereStructural ? 'CRITICAL' : 'MODERATE',
+        urgency: isSevereStructural ? 'URGENT' : 'ROUTINE',
+        isHazardous: isSevereStructural,
+        hazardTypes: isSevereStructural ? ['STRUCTURAL_COLLAPSE'] : ['NONE'],
+        safetyInstructions: [
+          { stepNumber: 1, action: isSevereStructural ? 'Keep persons away from the immediate area under sagging plaster or unstable walls.' : 'Do not force loose tiles or peel damp plaster until inspected.', urgency: isSevereStructural ? 'IMMEDIATE_ACTION' : 'PRECAUTIONARY', targetComponent: 'Wall / Ceiling' },
+        ],
+        diyAllowed: !isSevereStructural,
+        diyRiskReason: isSevereStructural ? 'High risk of blockwork collapse or structural failure. Requires certified structural mason.' : null,
+        diyGuide: !isSevereStructural ? 'Light surface hair cracks can be scraped, sealed with acrylic filler, and repainted once dry.' : null,
+        requiresArtisan: isSevereStructural,
+        clarificationNeeded: true,
+        clarificationQuestion: 'What does the wall or ceiling defect look like?',
+        clarificationOptions: ['Hairline surface crack', 'Wide/deep crack through blocks', 'Damp/peeling paint with mold', 'Hollow or lifting floor tiles'],
+        estimatedBOM: [],
+        estimatedLaborMin: null,
+        estimatedLaborMax: null,
+        currency: 'NGN',
+        categorySlug: 'masonry-and-tiling',
+        recommendedSkills: ['masonry', 'tiling-and-paving', 'pop-ceiling-repair'],
+        visualObservations: imageUrls.length > 0 ? 'Surface plaster and masonry profile logged.' : null,
+        symptoms: ['Wall cracking, tile debonding, or damp patch reported'],
+        possibleCauses: [
+          {
+            label: 'Moisture ingress or foundation settlement',
+            supportingEvidence: ['Symptom report'],
+            missingEvidence: ['Visual inspection of crack width and moisture reading'],
+            likelihoodBand: 'moderate',
+          },
+        ],
+        guidanceSteps: [
+          {
+            stepNumber: 1,
+            instruction: 'Inspect whether the crack extends through the wall or is only in the paint/plaster layer.',
+            risk: 'low',
+            stopConditions: ['Stop immediately if brickwork shifts or ceiling begins sagging.'],
+          },
+        ],
+        nextAction: 'answer_clarification',
+      };
+    }
+
+    // Roofing, Leaks, and Gutters
+    if (
+      lower.includes('roof') ||
+      lower.includes('gutter') ||
+      lower.includes('ceiling leak') ||
+      lower.includes('zinc') ||
+      lower.includes('asbestos') ||
+      lower.includes('flashing')
+    ) {
+      return {
+        conversationalReply: 'Roof leaks can cause serious damage to ceilings and electrical fittings if rain penetrates. For your safety, abeg no climb onto wet roof sheets. Does the leak happen only during heavy rain, or does water drip long after the rain stops?',
+        diagnosticTitle: 'Roof Sheet & Drainage Penetration Defect',
+        probableCause: 'Dislodged roofing nail/washer, cracked valley flashing, or blocked gutter overflow.',
+        severity: 'MODERATE',
+        urgency: 'URGENT',
+        isHazardous: false,
+        hazardTypes: ['NONE'],
+        safetyInstructions: [
+          { stepNumber: 1, action: 'Do not climb onto the roof during or immediately after rain.', urgency: 'IMMEDIATE_ACTION', targetComponent: 'Roofing Structure' },
+          { stepNumber: 2, action: 'Place a bucket or container under the ceiling drip and keep electrical outlets dry.', urgency: 'IMMEDIATE_ACTION', targetComponent: 'Ceiling / Floor' },
+        ],
+        diyAllowed: false,
+        diyRiskReason: 'Roof climbing and working at heights poses severe fall and injury risks. Requires vetted professional roofer.',
+        diyGuide: null,
+        requiresArtisan: true,
+        clarificationNeeded: true,
+        clarificationQuestion: 'When does the water penetration occur?',
+        clarificationOptions: ['Only during heavy rain/wind', 'Drips continuously even after rain', 'Water stains on ceiling without visible active drip'],
+        estimatedBOM: [],
+        estimatedLaborMin: null,
+        estimatedLaborMax: null,
+        currency: 'NGN',
+        categorySlug: 'roofing-and-gutters',
+        recommendedSkills: ['roofing-repair', 'leak-detection', 'gutter-maintenance'],
+        visualObservations: imageUrls.length > 0 ? 'Roofing drainage reference logged.' : null,
+        symptoms: ['Ceiling water staining or active roof leak reported'],
+        possibleCauses: [
+          {
+            label: 'Perforated roofing sheet or failed rubber washer',
+            supportingEvidence: ['User symptom report'],
+            missingEvidence: ['Physical roof truss and valley inspection'],
+            likelihoodBand: 'moderate',
+          },
+        ],
+        guidanceSteps: [
+          {
+            stepNumber: 1,
+            instruction: 'Place a catchment bucket beneath active drips and move furniture away from the ceiling stain.',
+            risk: 'low',
+            stopConditions: ['Do not touch wet light fixtures or switches beneath the ceiling leak.'],
+          },
+        ],
+        nextAction: 'answer_clarification',
+      };
+    }
+
+    // Default general repair - genuinely generic without fabricated BOM or wrong trade
     return {
-      conversationalReply: 'I have logged this maintenance symptom. A verified artisan can inspect and service the equipment on-site.',
-      diagnosticTitle: 'General Property Maintenance & Repair',
-      probableCause: 'Mechanical wear or component fatigue requiring on-site artisan physical inspection.',
+      conversationalReply: 'I have logged this symptom. Make we first check the affected component to understand what is failing before taking any action.',
+      diagnosticTitle: 'General Property Maintenance Assessment',
+      probableCause: 'Physical wear, loose fitting, or component fatigue under triage.',
       severity: 'LOW',
       urgency: 'ROUTINE',
       isHazardous: false,
       hazardTypes: ['NONE'],
       safetyInstructions: [
-        { stepNumber: 1, action: 'Keep the affected area clean and dry.', urgency: 'PRECAUTIONARY', targetComponent: 'Equipment Area' },
+        { stepNumber: 1, action: 'Keep the affected area clear and safe from interference.', urgency: 'PRECAUTIONARY', targetComponent: 'Affected Area' },
       ],
       diyAllowed: true,
       diyRiskReason: null,
-      diyGuide: 'Verify if simple cleaning or tightening resolves the issue safely.',
+      diyGuide: 'Perform a careful visual check without forcing or opening sealed assemblies.',
       requiresArtisan: false,
-      estimatedBOM: [
-        { item: 'General hardware fasteners & consumables', specification: 'Standard grade', quantity: 1, unit: 'SETS', estimatedCostMin: 2500, estimatedCostMax: 6000, marketCategory: 'HARDWARE' },
-      ],
-      estimatedLaborMin: 5000,
-      estimatedLaborMax: 12000,
+      clarificationQuestion: 'What specific part appears damaged, loose, or behaving unusually?',
+      clarificationOptions: ['Loose fitting', 'Broken or cracked component', 'Unusual noise or leak'],
+      estimatedBOM: [],
+      estimatedLaborMin: null,
+      estimatedLaborMax: null,
       currency: 'NGN',
-      categorySlug: 'appliance-repair',
-      recommendedSkills: ['general-maintenance', 'fault-inspection'],
+      categorySlug: null,
+      recommendedSkills: ['general-maintenance'],
       visualObservations: imageUrls.length > 0 ? 'Equipment visual reference logged.' : null,
       symptoms: [textPrompt ? `Observed symptom: ${textPrompt.slice(0, 120)}` : 'Routine wear and tear'],
       possibleCauses: [
         {
-          label: 'Mechanical wear or component fatigue',
+          label: 'Component wear or loose joint',
           supportingEvidence: ['User symptom report'],
-          missingEvidence: ['Physical inspection and tool testing'],
+          missingEvidence: ['Physical inspection and symptom clarification'],
           likelihoodBand: 'moderate',
         },
       ],
       guidanceSteps: [
         {
           stepNumber: 1,
-          instruction: 'Visually check external screws and housing without touching internal mechanisms.',
+          instruction: 'Visually check external connections without touching energized or pressurized components.',
           risk: 'low',
-          stopConditions: ['Stop immediately if resistance or burning odor is felt.'],
+          stopConditions: ['Stop immediately if burning odor, electrical buzzing, or water spray occurs.'],
         },
       ],
-      nextAction: 'continue_chat',
+      nextAction: 'answer_clarification',
     };
+  }
+
+  /**
+   * Helper to detect if user explicitly asked for BOM/materials/parts
+   */
+  static _isBomRequested(text = '') {
+    if (!text) return false;
+    const pattern = /(bill\s*of\s*materials?|\bbom\b|\bparts?\b|\bmaterials?\b|cost\s*(of\s*)?(parts|materials)|price\s*(of\s*)?(parts|materials)|what\s*(do\s*i\s*)?(need\s*to\s*)?buy|pricing\s*breakdown|cost\s*breakdown|list\s*(of\s*)?(parts|materials))/i;
+    return pattern.test(text);
   }
 
   /**
@@ -802,30 +1144,15 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
   /**
    * Fetch a single diagnostic session by ID
    */
-  static async getSessionById(sessionId) {
-    const session = await prisma.aiDiagnosticSession.findUnique({
+  static async getSessionById(sessionId, access = {}) {
+    await DiagnosticStateService.assertAccess({ sessionId, ...access });
+    return prisma.aiDiagnosticSession.findUnique({
       where: { id: sessionId },
       include: {
-        category: true,
-        mediaFiles: true,
-        recommendations: {
-          include: { artisan: { include: { user: true } } },
-        },
-        user: {
-          select: {
-            id: true,
-            email: true,
-            phoneNumber: true,
-          },
-        },
+        category: true, mediaFiles: true, turns: { orderBy: { createdAt: 'asc' } },
+        recommendations: { include: { artisan: { include: { user: true } } } },
       },
     });
-
-    if (!session) {
-      throw ApiError.notFound('Diagnostic session not found');
-    }
-
-    return session;
   }
 
   /**
@@ -895,11 +1222,12 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
   static async processChatMessage({
     sessionId,
     userMessage = '',
-    conversationHistory = [],
     clientCoords = null,
     newImageUrls = [],
     voiceAudioBuffer = null,
     voiceMimeType = 'audio/webm',
+    userId = null,
+    guestToken = null,
   }) {
     PromptGuardrailService.validateUserQuery(userMessage);
 
@@ -907,14 +1235,7 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
       throw ApiError.badRequest('Session ID is required for chat messaging.');
     }
 
-    const session = await prisma.aiDiagnosticSession.findUnique({
-      where: { id: sessionId },
-      include: { category: true, mediaFiles: true },
-    });
-
-    if (!session) {
-      throw ApiError.notFound('Diagnostic session not found.');
-    }
+    let session = await DiagnosticStateService.assertAccess({ sessionId, userId, guestToken });
 
     // 1. Process Voice Note Transcription if present
     let transcribedVoiceText = null;
@@ -939,6 +1260,14 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
       throw ApiError.badRequest('Please provide a message, photo, or voice note.');
     }
 
+    await prisma.aiDiagnosticTurn.create({
+      data: { diagnosticSessionId: sessionId, role: 'user', content: effectiveUserMessage || 'Additional inspection media attached' },
+    });
+    const persistedTurns = await prisma.aiDiagnosticTurn.findMany({
+      where: { diagnosticSessionId: sessionId }, orderBy: { createdAt: 'asc' }, take: 16,
+    });
+    const conversationHistory = persistedTurns.slice(0, -1).map((turn) => ({ role: turn.role, content: turn.content }));
+
     // 2. Real-time Hazard Check on incoming turn (Continuous Safety Shield)
     const currentHazardPayload = {
       diagnosticTitle: session.diagnosticTitle,
@@ -954,47 +1283,11 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
     const isHazardEscalated = hazardCheck.isHazardous && (!session.isHazardous || hazardCheck.severity === 'CRITICAL');
     const effectiveUrgency = isHazardEscalated ? 'EMERGENCY' : (hazardCheck.urgency || session.urgency);
 
-    // 3. Multi-Turn LLM Reasoning Engine (OpenAI GPT-4o -> Gemini 2.0 Flash -> Smart Heuristic)
-    const systemPrompt = `You are Oga John, the Chief Master Diagnostic Engineer and Senior Technical Consultant on Artifix (Fixmate), Nigeria.
-You possess 20+ years of physical engineering expertise across electrical, plumbing, HVAC, generator plants, carpentry, and masonry systems in Lagos and Abuja.
-
-ACTIVE SESSION TELEMETRY:
-- Diagnostic Title: "${session.diagnosticTitle || 'Active Inspection'}"
-- Known Probable Cause: "${session.probableCause || 'Under Triage'}"
-- Active Trade Category: "${session.category?.name || 'General Maintenance'}"
-- Current Urgency: "${effectiveUrgency}"
-- Severity: "${isHazardEscalated ? hazardCheck.severity : session.severity}"
-- Safe for DIY: ${(session.isHazardous || hazardCheck.isHazardous) ? 'NO (Active Hazard Detected - All DIY strictly suspended)' : (session.diyAllowed ? 'YES (Basic containment / low-risk maintenance only)' : 'NO (Hazardous / Specialized Tools Required)')}
-- Client Location: "${session.clientAddress || (session.clientLatitude && session.clientLongitude ? `Coordinates [${session.clientLatitude}, ${session.clientLongitude}] in ${session.state || 'Lagos'}` : (clientCoords ? `Coordinates [${clientCoords.latitude}, ${clientCoords.longitude}]` : session.state || 'Lagos, Nigeria'))}"
-
-OPERATIONAL PRINCIPLES:
-1. VOICE & TONE: Professional, practical, reassuring, and highly technical. Speak with local Nigerian trade authority (using precise terms like PPR pipes, stopcock valves, MCBs, distribution boards, R410a gas, AVR, NEPA surges, and genuine vs substandard Alaba/Oko-Awo market fittings).
-2. DIRECT PROBLEM SOLVING: If the user asks a technical or DIY question (e.g. "Can I use superglue or tape as a temporary fix?"), ALWAYS answer the technical question directly with engineering rationale (e.g. why cyanoacrylate glue crystallizes and bursts under 2-3 bar mains water pressure, or how silicone tape is strictly temporary containment). Provide a step-by-step DIY guide or fitting approach and precautions where applicable.
-3. ARTISAN RECOMMENDATION & LOCATION RULES (CRITICAL):
-   - Do NOT recommend or match an artisan when not asked to do so.
-   - For technical or DIY follow-ups, set "intent" to "CONVERSATIONAL" and "shouldMatchArtisans" to false. Do NOT return "ANSWER_WITH_MATCH" unless the user explicitly asked for an artisan in this turn.
-   - LOCATION AWARENESS: If Client Location or coordinates are populated in telemetry above, you ALREADY know their location. Do NOT ask the user where they are located. Use their detected location automatically.
-   - EXCEPTION 1 (Emergency): If an active hazard/emergency is detected, set "intent" to "EMERGENCY_ESCALATION" and "shouldMatchArtisans" to true.
-   - EXCEPTION 2 (Explicit Request): If the user clearly asks to hire, send, book, or match an artisan, set "intent" to "MATCH_ONLY" and "shouldMatchArtisans" to true.
-   - Otherwise, set shouldMatchArtisans to false and do not push artisan recommendations.
-4. HAZARD CONTINUITY & DIY SUSPENSION: If an active or reported physical/electrical hazard is present on this session (sparks, hot socket, smoke, burning smell, ceiling pooling water, gas smell), prioritize physical safety containment above all else. Under NO circumstances should you encourage or permit the user to resume DIY maintenance (such as cleaning AC filters, opening panels, or handling cords) while an unresolved electrical or structural hazard is linked to that equipment. If the user asks to go back to cleaning or DIY, explicitly instruct them to halt all DIY until a certified specialist completes an on-site inspection.
-5. STRICT OUTPUT CONFORMANCE: You MUST respond strictly in a valid JSON object matching the schema specification below.
-
-OUTPUT JSON SPECIFICATION:
-{
-  "conversationalReply": "Direct, empathetic, highly technical advice formatted in clean markdown. Break steps into bullets where helpful.",
-  "intent": "CONVERSATIONAL" | "ANSWER_WITH_MATCH" | "MATCH_ONLY" | "EMERGENCY_ESCALATION",
-  "shouldMatchArtisans": true or false,
-  "updatedProbableCause": "Updated 1-sentence technical root cause if user provided new symptoms, else null",
-  "updatedSeverity": "LOW" | "MODERATE" | "HIGH" | "CRITICAL" | null,
-  "safetyWarning": "Immediate safety instructions if physical hazard detected, else null",
-  "diyAdvice": {
-    "isFeasible": true or false,
-    "instructions": ["Step 1", "Step 2"],
-    "requiredTools": ["Teflon tape", "Adjustable wrench"],
-    "risks": "What could go wrong"
-  }
-}`;
+    const systemPrompt = buildOgaJohnTurnPrompt({
+      session,
+      diagnosticState: session.diagnosticState || DiagnosticStateService.initialState(),
+      urgency: effectiveUrgency,
+    });
 
     let parsedResponse = null;
 
@@ -1058,14 +1351,47 @@ OUTPUT JSON SPECIFICATION:
     // Heuristic intelligent fallback if LLMs unreachable
     if (!parsedResponse) {
       const lower = effectiveUserMessage.toLowerCase();
-      const explicitHire = lower.includes('hire') || lower.includes('send') || lower.includes('book') || lower.includes('match') || lower.includes('artisan');
+      const explicitHire =
+        lower.includes('hire') ||
+        lower.includes('send') ||
+        lower.includes('book') ||
+        lower.includes('match') ||
+        lower.includes('artisan') ||
+        lower.includes('yes') ||
+        lower.includes('sure') ||
+        lower.includes('connect me');
       
+      const isProfessionalTask = !session.diyAllowed || session.isHazardous;
+
+      let fallbackReply = '';
+      if (explicitHire) {
+        fallbackReply = `Understood! I am matching you with verified, vetted specialists nearby who can inspect and resolve this properly for you.`;
+      } else if (isProfessionalTask) {
+        fallbackReply = `This kind of fault requires specialized trade instruments to test and resolve safely. For your safety, please keep the area isolated (shut off the main breaker or stopcock valve). Would you like me to connect you with a verified, vetted professional nearby to handle this for you?`;
+      } else {
+        fallbackReply = `For this issue, a careful check of the fitting and applying proper sealant tape or tightening the loose fastener should resolve it safely. Make sure to isolate the local shut-off valve before starting. If at any point you notice water pressure persisting or threads stripping, stop and let a specialist take over.`;
+      }
+
       parsedResponse = {
-        conversationalReply: `Regarding your repair inquiry: makeshift materials like standard packing tape or superglue will rapidly fail under mains pressure or high electrical loads. It is best to isolate the main shut-off valve/breaker and inspect the joint directly. If you need a verified specialist on-site, I can dispatch one directly under Artifix escrow protection.`,
+        conversationalReply: fallbackReply,
         intent: explicitHire ? 'MATCH_ONLY' : 'CONVERSATIONAL',
         shouldMatchArtisans: explicitHire || isHazardEscalated,
         updatedProbableCause: null,
         safetyWarning: isHazardEscalated ? 'Active Hazard Escalation Flagged. Switch off main isolator switch.' : null,
+      };
+    }
+
+    const validatedTurn = DiagnosticTurnResponseSchema.safeParse(parsedResponse);
+    if (validatedTurn.success) {
+      parsedResponse = validatedTurn.data;
+    } else {
+      parsedResponse = {
+        conversationalReply: 'I need one more detail before I can give safe advice. What exactly is loose, broken, leaking, or making the unusual sound?',
+        status: 'INFORMATION_GATHERING', confirmedFacts: [], hypotheses: [],
+        missingInformation: ['A clearer description of the affected part'],
+        nextQuestion: 'What exactly is damaged or behaving unusually?', imageRequest: { needed: false, guidance: null },
+        intent: 'CONVERSATIONAL', shouldMatchArtisans: false, updatedProbableCause: null, updatedSeverity: null,
+        safetyWarning: null, diyAdvice: { isFeasible: false, instructions: [], requiredTools: [], risks: null },
       };
     }
 
@@ -1087,60 +1413,96 @@ OUTPUT JSON SPECIFICATION:
       parsedResponse.conversationalReply = outputSafety.sanitizedText;
     }
 
-    // If session did not have a category assigned (e.g. started from a greeting), resolve it now if user mentions fault
+    // 3.5 Topic Override & Dynamic Trade Pivot: Allow user to switch focus at any time
     const promptTextLower = effectiveUserMessage.toLowerCase();
-    if (!session.matchedCategoryId) {
-      let detectedSlug = null;
-      if (promptTextLower.includes('plumb') || promptTextLower.includes('pipe') || promptTextLower.includes('leak') || promptTextLower.includes('tap') || promptTextLower.includes('sink') || promptTextLower.includes('toilet') || promptTextLower.includes('drain')) {
-        detectedSlug = 'plumbing';
-      } else if (promptTextLower.includes('electr') || promptTextLower.includes('wire') || promptTextLower.includes('spark') || promptTextLower.includes('breaker') || promptTextLower.includes('socket') || promptTextLower.includes('light') || promptTextLower.includes('power')) {
-        detectedSlug = 'electrical';
-      } else if (promptTextLower.includes('ac') || promptTextLower.includes('air cond') || promptTextLower.includes('fridge') || promptTextLower.includes('cool')) {
-        detectedSlug = 'hvac';
-      } else if (promptTextLower.includes('carpent') || promptTextLower.includes('wood') || promptTextLower.includes('door') || promptTextLower.includes('lock') || promptTextLower.includes('hinge')) {
-        detectedSlug = 'carpentry';
-      } else if (promptTextLower.includes('gen') || promptTextLower.includes('generator')) {
-        detectedSlug = 'generator-repair';
-      }
+    let detectedSlug = null;
+    if (promptTextLower.includes('carpent') || promptTextLower.includes('wood') || promptTextLower.includes('couch') || promptTextLower.includes('furniture') || promptTextLower.includes('table') || promptTextLower.includes('chair') || promptTextLower.includes('cabinet') || promptTextLower.includes('hinge') || promptTextLower.includes('door')) {
+      detectedSlug = 'carpentry';
+    } else if (promptTextLower.includes('plumb') || promptTextLower.includes('pipe') || promptTextLower.includes('leak') || promptTextLower.includes('tap') || promptTextLower.includes('sink') || promptTextLower.includes('toilet') || promptTextLower.includes('drain')) {
+      detectedSlug = 'plumbing';
+    } else if (promptTextLower.includes('electr') || promptTextLower.includes('wire') || promptTextLower.includes('spark') || promptTextLower.includes('breaker') || promptTextLower.includes('socket') || promptTextLower.includes('light') || promptTextLower.includes('power')) {
+      detectedSlug = 'electrical';
+    } else if (promptTextLower.includes('ac') || promptTextLower.includes('air cond') || promptTextLower.includes('hvac') || promptTextLower.includes('chiller') || promptTextLower.includes('cooling') || promptTextLower.includes('fridge')) {
+      detectedSlug = 'hvac';
+    } else if (promptTextLower.includes('gen') || promptTextLower.includes('generator')) {
+      detectedSlug = 'generator-repair';
+    } else if (promptTextLower.includes('paint') || promptTextLower.includes('pop ceiling')) {
+      detectedSlug = 'painting';
+    } else if (promptTextLower.includes('mason') || promptTextLower.includes('tile') || promptTextLower.includes('tiling') || promptTextLower.includes('brick') || promptTextLower.includes('crack')) {
+      detectedSlug = 'masonry';
+    } else if (parsedResponse.categorySlug) {
+      detectedSlug = parsedResponse.categorySlug;
+    }
 
-      if (detectedSlug) {
-        const foundCategory = await prisma.jobCategory.findFirst({
-          where: {
-            OR: [
-              { slug: { contains: detectedSlug, mode: 'insensitive' } },
-              { name: { contains: detectedSlug.replace(/-/g, ' '), mode: 'insensitive' } },
-            ],
+    if (detectedSlug) {
+      const foundCategory = await prisma.jobCategory.findFirst({
+        where: {
+          OR: [
+            { slug: { contains: detectedSlug, mode: 'insensitive' } },
+            { name: { contains: detectedSlug.replace(/-/g, ' '), mode: 'insensitive' } },
+          ],
+        },
+      });
+      if (foundCategory && (!session.matchedCategoryId || session.matchedCategoryId !== foundCategory.id)) {
+        session.matchedCategoryId = foundCategory.id;
+        session.category = foundCategory;
+        await prisma.aiDiagnosticSession.update({
+          where: { id: sessionId },
+          data: {
+            matchedCategoryId: foundCategory.id,
+            diagnosticTitle: parsedResponse.updatedProbableCause || `${foundCategory.name} Issue`,
           },
         });
-        if (foundCategory) {
-          session.matchedCategoryId = foundCategory.id;
-          session.category = foundCategory;
-          await prisma.aiDiagnosticSession.update({
-            where: { id: sessionId },
-            data: { matchedCategoryId: foundCategory.id },
-          });
-        }
       }
     }
 
-    // 4. Resolve Artisan Matches (Strict Intent Gating)
+    // 4. Resolve Artisan Matches (Strict Intent Gating + Affirmative Response Detection)
     let matchedArtisans = [];
     let matchingNotice = null;
 
+    // Check if the previous assistant message offered a professional referral
+    const lastAssistantMsg = (conversationHistory || [])
+      .filter((m) => m.role === 'assistant')
+      .slice(-1)[0]?.content?.toLowerCase() || '';
+
+    const assistantOfferedProfessional =
+      lastAssistantMsg.includes('connect you with a') ||
+      lastAssistantMsg.includes('verified') ||
+      lastAssistantMsg.includes('specialist') ||
+      lastAssistantMsg.includes('professional') ||
+      lastAssistantMsg.includes('artisan') ||
+      !session.diyAllowed;
+
+    const affirmativePattern = /\b(yes|yes please|sure|okay|ok|go ahead|connect me|please do|find one|match me|get me someone|i need one|send one|book one|yes i do)\b/i;
+    const isAffirmativeResponse = assistantOfferedProfessional && affirmativePattern.test(promptTextLower);
+
+    const professionalKeywords = /\b(hire|match|artisan|professional|specialist|handyman|plumber|electrician|carpenter|mechanic|technician|someone to fix|connect me|send someone|who is around|who dey around|find someone|find one|book one|bring out|waiting|recommend someone|find me a|closest professional|closest carpenter|closest plumber|closest electrician|find me a carpenter|get me a carpenter)\b/i;
     const explicitHire =
-      promptTextLower.includes('hire') ||
-      promptTextLower.includes('send') ||
-      promptTextLower.includes('book') ||
-      promptTextLower.includes('match') ||
-      promptTextLower.includes('artisan') ||
-      promptTextLower.includes('recommend an artisan') ||
-      promptTextLower.includes('recommend artisan') ||
-      promptTextLower.includes('need an artisan') ||
-      promptTextLower.includes('need a plumber') ||
-      promptTextLower.includes('need an electrician') ||
-      promptTextLower.includes('someone to fix') ||
-      promptTextLower.includes('get me a') ||
-      parsedResponse.intent === 'MATCH_ONLY';
+      professionalKeywords.test(promptTextLower) ||
+      isAffirmativeResponse ||
+      parsedResponse.intent === 'MATCH_ONLY' ||
+      parsedResponse.intent === 'MATCH_REQUESTED' ||
+      parsedResponse.shouldMatchArtisans === true;
+
+    // Fast-path: When user explicitly requests an artisan, bypass diagnostic badgering!
+    if (explicitHire) {
+      parsedResponse.intent = 'MATCH_REQUESTED';
+      parsedResponse.shouldMatchArtisans = true;
+      parsedResponse.clarificationOptions = [];
+      parsedResponse.nextQuestion = null;
+
+      // Clean out diagnostic badgering phrases from conversationalReply
+      const replyLower = (parsedResponse.conversationalReply || '').toLowerCase();
+      if (
+        replyLower.includes('i need one more detail before i can give safe advice') ||
+        replyLower.includes('would you like me to connect you with a verified') ||
+        replyLower.includes('can you confirm if') ||
+        replyLower.includes("let's first confirm")
+      ) {
+        const tradeTitle = session.category?.name || 'Specialist';
+        parsedResponse.conversationalReply = `Understood! Connecting you with verified ${tradeTitle} specialists nearby who can inspect and fix this for you.`;
+      }
+    }
 
     const isEmergency =
       effectiveUrgency === 'EMERGENCY' ||
@@ -1148,11 +1510,22 @@ OUTPUT JSON SPECIFICATION:
       hazardCheck.isHazardous ||
       parsedResponse.intent === 'EMERGENCY_ESCALATION';
 
-    // Strictly enforce: ONLY match artisans if explicit hire request OR active emergency hazard!
+    // Match verified artisans if requested by user or active emergency hazard
     const requiresMatching = (explicitHire || isEmergency) && Boolean(session.matchedCategoryId);
 
     if (requiresMatching) {
-      let resolvedState = session.clientAddress?.toLowerCase().includes('abuja') ? 'FCT' : 'Lagos';
+      const turnLat = clientCoords?.latitude || (session.clientLatitude ? Number(session.clientLatitude) : null);
+      const turnLng = clientCoords?.longitude || (session.clientLongitude ? Number(session.clientLongitude) : null);
+      let resolvedState = 'Lagos';
+      if (turnLat && turnLng) {
+        if (turnLat >= 8.5 && turnLat <= 9.5 && turnLng >= 6.8 && turnLng <= 7.8) {
+          resolvedState = 'FCT';
+        } else if (turnLat >= 6.2 && turnLat <= 6.8 && turnLng >= 3.0 && turnLng <= 4.0) {
+          resolvedState = 'Lagos';
+        }
+      } else if (session.clientAddress?.toLowerCase().includes('abuja')) {
+        resolvedState = 'FCT';
+      }
       const promptLower = effectiveUserMessage.toLowerCase();
       if (promptLower.includes('abuja') || promptLower.includes('fct') || promptLower.includes('maitama') || promptLower.includes('wuse')) {
         resolvedState = 'FCT';
@@ -1171,37 +1544,70 @@ OUTPUT JSON SPECIFICATION:
         limit: 3,
       });
 
-      matchedArtisans = matchResult.candidates || [];
+      const tradeTitle = session.category?.name || 'Specialist';
+      matchedArtisans = (matchResult.candidates || []).map((c) =>
+        MatchingEngineService.formatCandidateDossier(c, tradeTitle)
+      );
       if (matchedArtisans.length === 0) {
         matchingNotice = matchResult.message;
       }
     }
 
-    // 5. Dynamic Session Mutation & Diagnostic Evolution
-    if (parsedResponse.updatedProbableCause || isHazardEscalated || parsedResponse.updatedSeverity) {
-      await prisma.aiDiagnosticSession.update({
-        where: { id: sessionId },
-        data: {
-          probableCause: parsedResponse.updatedProbableCause || session.probableCause,
-          isHazardous: hazardCheck.isHazardous,
-          urgency: effectiveUrgency,
-          severity: parsedResponse.updatedSeverity || hazardCheck.severity,
-          safetyInstructions: hazardCheck.safetyInstructions,
-          diyAllowed: hazardCheck.isHazardous ? false : session.diyAllowed,
-        },
+    // 5. Handle On-Demand BOM if requested or confirmed
+    let activeBOM = session.estimatedBOM || [];
+    const isBomAsked = this._isBomRequested(effectiveUserMessage) || this._isBomRequested(userMessage);
+
+    if (parsedResponse.estimatedBOM && parsedResponse.estimatedBOM.length > 0) {
+      activeBOM = await BomPricingService.adjustBomToMarket({
+        bomItems: parsedResponse.estimatedBOM,
+        state: session.clientAddress?.toLowerCase().includes('abuja') ? 'FCT' : 'Lagos',
+        tradeCategory: session.category?.slug || 'general',
       });
     }
 
+    // 6. Persist an authoritative state update; the client never owns diagnostic history.
+    const diagnosticState = DiagnosticStateService.mergeState(session.diagnosticState, parsedResponse);
+    const updatedSession = await prisma.aiDiagnosticSession.update({
+      where: { id: sessionId },
+      data: {
+        probableCause: parsedResponse.updatedProbableCause || session.probableCause,
+        isHazardous: hazardCheck.isHazardous,
+        urgency: effectiveUrgency,
+        severity: parsedResponse.updatedSeverity || hazardCheck.severity,
+        safetyInstructions: hazardCheck.safetyInstructions,
+        diyAllowed: hazardCheck.isHazardous ? false : session.diyAllowed,
+        diagnosticStatus: isEmergency ? 'EMERGENCY' : parsedResponse.status,
+        diagnosticState,
+        conversationSummary: DiagnosticStateService.buildSummary(diagnosticState),
+        promptVersion: OGA_JOHN_PROMPT_VERSION,
+        ...(activeBOM.length > 0 && isBomAsked ? { estimatedBOM: activeBOM } : {}),
+      },
+    });
+
+    const finalReply = parsedResponse.conversationalReply || 'Understood. Let me know if you would like me to connect you with a verified artisan.';
+    await prisma.aiDiagnosticTurn.create({
+      data: { diagnosticSessionId: sessionId, role: 'assistant', content: finalReply, structuredDecision: parsedResponse },
+    });
+
     return {
-      reply: parsedResponse.conversationalReply,
+      reply: finalReply,
       intent: parsedResponse.intent,
       matchedArtisans,
       matchingNotice,
-      diyRecommended: session.diyAllowed && matchedArtisans.length === 0,
+      diyRecommended: updatedSession.diyAllowed && matchedArtisans.length === 0,
       safetyWarning: parsedResponse.safetyWarning || (isHazardEscalated ? 'Immediate safety hazard detected. Containment required.' : null),
       isEmergency: effectiveUrgency === 'EMERGENCY',
       diyAdvice: parsedResponse.diyAdvice || null,
       updatedProbableCause: parsedResponse.updatedProbableCause || null,
+      billOfMaterials: isBomAsked ? activeBOM : [],
+      diagnosticStatus: updatedSession.diagnosticStatus,
+      diagnosticState,
+      nextQuestion: parsedResponse.nextQuestion,
+      clarificationOptions: (matchedArtisans.length > 0 || parsedResponse.intent === 'MATCH_REQUESTED' || parsedResponse.intent === 'MATCH_ONLY')
+        ? []
+        : (parsedResponse.clarificationOptions || []).filter((opt) => !/^Option\s*\d+$/i.test(String(opt).trim())),
+      isResolved: Boolean(parsedResponse.isResolved || updatedSession.diagnosticStatus === 'RESOLVED'),
+      imageRequest: parsedResponse.imageRequest,
     };
   }
 }

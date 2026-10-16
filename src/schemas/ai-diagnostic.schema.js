@@ -42,7 +42,9 @@ export const DiagnosticResponseSchema = z.object({
     .string()
     .min(2)
     .max(100)
-    .default('appliance-repair'),
+    .nullable()
+    .optional()
+    .default(null),
   severity: z.enum(['LOW', 'MODERATE', 'HIGH', 'CRITICAL']).default('MODERATE'),
   urgency: z.enum(['ROUTINE', 'SCHEDULED', 'URGENT', 'EMERGENCY']).default('ROUTINE'),
   isHazardous: z.coerce.boolean().default(false),
