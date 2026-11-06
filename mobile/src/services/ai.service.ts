@@ -217,6 +217,14 @@ export class AiService {
     diagnosticStatus?: string;
     billOfMaterials?: DiagnosticBOMItem[];
     safetyWarning?: string;
+    costRange?: { min: number; max: number };
+    intent?: string;
+    guestQuota?: {
+      limit: number;
+      used: number;
+      remaining: number;
+      isGuest: boolean;
+    };
     matchedArtisans?: MatchedArtisanDossier[];
     updatedProbableCause?: string;
     diagnosticTitle?: string;
@@ -302,7 +310,10 @@ export class AiService {
       reply: raw?.reply || raw?.conversationalReply || 'Understood. Let me know if you would like me to dispatch a verified artisan.',
       detectedTrade: raw?.detectedTrade,
       severity: raw?.isEmergency ? 'EMERGENCY' : raw?.severity,
-      estimatedCostRange: raw?.estimatedCostRange,
+      estimatedCostRange: raw?.estimatedCostRange || raw?.costRange,
+      costRange: raw?.costRange || raw?.estimatedCostRange,
+      intent: raw?.intent,
+      guestQuota: raw?.guestQuota,
       suggestedActions: raw?.safetyWarning ? [raw.safetyWarning] : undefined,
       clarificationQuestions: raw?.clarificationQuestions,
       clarificationOptions: raw?.clarificationOptions || [],
@@ -318,11 +329,6 @@ export class AiService {
 
   static async getUserHistory(): Promise<DiagnosticSessionRecord[]> {
     const response = await apiClient.get<ApiResponse<DiagnosticSessionRecord[]>>('/ai/history');
-    return response.data.data;
-  }
-
-  static async getSession(sessionId: string): Promise<any> {
-    const response = await apiClient.get<ApiResponse<any>>(`/ai/session/${sessionId}`);
     return response.data.data;
   }
 

@@ -11,10 +11,15 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { ChevronLeft, Bookmark, Heart, Star, MessageSquare } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { ProfileService } from '../../services/profile.service';
 import { ArtisanProfileData } from '../../types/api-contracts';
+import { SkeletonArtisanCard } from '../shared';
+import { useToast } from '../shared/ToastContext';
+import { useToggleSaveArtisan } from '../../hooks';
 
 interface SavedArtisansScreenProps {
   onBack?: () => void;
@@ -31,6 +36,8 @@ export const SavedArtisansScreen: React.FC<SavedArtisansScreenProps> = ({
   onRehire,
   onExplore,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
+  const { showSuccess, showError } = useToast();
   const [search, setSearch] = useState('');
   const [artisans, setArtisans] = useState<ArtisanProfileData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,25 +64,22 @@ export const SavedArtisansScreen: React.FC<SavedArtisansScreenProps> = ({
     fetchSavedArtisans();
   };
 
-  const handleRemove = async (id: string) => {
-    Alert.alert('Remove Bookmark', 'Are you sure you want to remove this artisan from your saved list?', [
-      { text: 'Cancel', style: 'cancel' },
+  const toggleSaveMutation = useToggleSaveArtisan();
+
+  const handleRemove = (id: string) => {
+    const previous = [...artisans];
+    setArtisans((prev) => prev.filter((a) => a.id !== id));
+    showSuccess('Bookmark Removed', 'Artisan removed from your saved list.');
+
+    toggleSaveMutation.mutate(
+      { artisanId: id, isSaved: false },
       {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          const previous = [...artisans];
-          setArtisans((prev) => prev.filter((a) => a.id !== id));
-          try {
-            await ProfileService.unsaveArtisan(id);
-          } catch (err) {
-            console.error('[SavedArtisansScreen] Unsave failed:', err);
-            setArtisans(previous);
-            Alert.alert('Error', 'Failed to remove artisan from bookmarks.');
-          }
+        onError: () => {
+          setArtisans(previous);
+          showError('Error', 'Failed to remove artisan from bookmarks.');
         },
-      },
-    ]);
+      }
+    );
   };
 
   const filtered = artisans.filter((a) => {
@@ -86,27 +90,31 @@ export const SavedArtisansScreen: React.FC<SavedArtisansScreenProps> = ({
   });
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColors.headerBg, borderBottomColor: themeColors.headerBorder }]}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.backBtnText}>←</Text>
+          <ChevronLeft size={22} color={themeColors.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Favorite Artisans</Text>
-          <Text style={styles.headerSubtitle}>Trusted pros for quick re-hiring</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>Favorite Artisans</Text>
+          <Text style={[styles.headerSubtitle, { color: themeColors.textMuted }]}>Trusted pros for quick re-hiring</Text>
         </View>
-        <View style={styles.countBadge}>
-          <Text style={styles.countBadgeText}>{artisans.length}</Text>
+        <View style={[styles.countBadge, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+          <Text style={[styles.countBadgeText, isDark && { color: '#34D399' }]}>{artisans.length}</Text>
         </View>
       </View>
 
       {/* Search Bar */}
-      <View style={styles.searchBarWrap}>
+      <View style={[styles.searchBarWrap, { backgroundColor: themeColors.surface, borderBottomColor: themeColors.border }]}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, {
+            backgroundColor: themeColors.inputBg,
+            borderColor: themeColors.inputBorder,
+            color: themeColors.text,
+          }]}
           placeholder="Search saved artisans by name or skill..."
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={themeColors.textMuted}
           value={search}
           onChangeText={setSearch}
         />
@@ -114,9 +122,10 @@ export const SavedArtisansScreen: React.FC<SavedArtisansScreenProps> = ({
 
       {/* List */}
       {loading ? (
-        <View style={styles.centerWrap}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading saved artisans...</Text>
+        <View style={styles.listContent}>
+          <SkeletonArtisanCard />
+          <SkeletonArtisanCard />
+          <SkeletonArtisanCard />
         </View>
       ) : (
         <FlatList
@@ -128,11 +137,11 @@ export const SavedArtisansScreen: React.FC<SavedArtisansScreenProps> = ({
           }
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyIcon}>🔖</Text>
-              <Text style={styles.emptyTitle}>
+              <Bookmark size={40} color={themeColors.textMuted} style={{ marginBottom: spacing.md }} />
+              <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
                 {search ? 'No matching artisans' : 'No Saved Artisans Yet'}
               </Text>
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptySub, { color: themeColors.textMuted }]}>
                 {search
                   ? `No bookmarked artisans matching "${search}".`
                   : 'Bookmark reliable artisans when exploring the marketplace to quickly rehire or chat with them later.'}
@@ -154,34 +163,37 @@ export const SavedArtisansScreen: React.FC<SavedArtisansScreenProps> = ({
 
             return (
               <TouchableOpacity
-                style={styles.card}
+                style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
                 onPress={() => onSelectArtisan?.(item.id)}
                 activeOpacity={0.8}
               >
                 <View style={styles.cardHeader}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{initials}</Text>
+                  <View style={[styles.avatar, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                    <Text style={[styles.avatarText, isDark && { color: '#34D399' }]}>{initials}</Text>
                     {isOnline && <View style={styles.onlineDot} />}
                   </View>
                   <View style={styles.meta}>
                     <View style={styles.nameRow}>
-                      <Text style={styles.name}>{displayName}</Text>
+                      <Text style={[styles.name, { color: themeColors.text }]}>{displayName}</Text>
                       <TouchableOpacity
                         onPress={() => handleRemove(item.id)}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        <Text style={styles.favIcon}>❤️</Text>
+                        <Heart size={18} color="#EF4444" fill="#EF4444" />
                       </TouchableOpacity>
                     </View>
-                    <Text style={styles.trade}>{item.trade || 'Professional Artisan'}</Text>
+                    <Text style={[styles.trade, { color: themeColors.textMuted }]}>{item.trade || 'Professional Artisan'}</Text>
                     <View style={styles.statsRow}>
-                      <Text style={styles.ratingText}>⭐ {ratingVal.toFixed(1)}</Text>
-                      <Text style={styles.subDot}>•</Text>
-                      <Text style={styles.reviewsText}>({reviewsCount} reviews)</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                        <Star size={12} color="#F59E0B" fill="#F59E0B" />
+                        <Text style={styles.ratingText}>{ratingVal.toFixed(1)}</Text>
+                      </View>
+                      <Text style={[styles.subDot, { color: themeColors.textMuted }]}>•</Text>
+                      <Text style={[styles.reviewsText, { color: themeColors.textMuted }]}>({reviewsCount} reviews)</Text>
                       {rate > 0 && (
                         <>
-                          <Text style={styles.subDot}>•</Text>
-                          <Text style={styles.rateText}>{formatCurrency(rate)}/hr</Text>
+                          <Text style={[styles.subDot, { color: themeColors.textMuted }]}>•</Text>
+                          <Text style={[styles.rateText, isDark && { color: '#34D399' }]}>{formatCurrency(rate)}/hr</Text>
                         </>
                       )}
                     </View>
@@ -189,13 +201,14 @@ export const SavedArtisansScreen: React.FC<SavedArtisansScreenProps> = ({
                 </View>
 
                 {/* Actions */}
-                <View style={styles.actionsRow}>
+                <View style={[styles.actionsRow, { borderTopColor: themeColors.border }]}>
                   <TouchableOpacity
-                    style={styles.chatBtn}
+                    style={[styles.chatBtn, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}
                     onPress={() => onChat?.(item.id)}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.chatBtnText}>💬 Chat</Text>
+                    <MessageSquare size={14} color={themeColors.text} />
+                    <Text style={[styles.chatBtnText, { color: themeColors.text }]}>Chat</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.rehireBtn}
@@ -384,11 +397,14 @@ const styles = StyleSheet.create({
   },
   chatBtn: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
     paddingVertical: 8,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: 'center',
   },
   chatBtnText: {
     ...typography.caption,
@@ -399,8 +415,9 @@ const styles = StyleSheet.create({
     flex: 2,
     backgroundColor: colors.primary,
     paddingVertical: 8,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   rehireBtnText: {
     ...typography.caption,

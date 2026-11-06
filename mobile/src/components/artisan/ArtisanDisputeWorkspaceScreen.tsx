@@ -8,13 +8,14 @@ import {
   Image,
   TextInput,
   SafeAreaView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, typography, shadows } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { DisputeService } from '../../services/dispute.service';
+import { DisputeEvidenceUploadModal } from './DisputeEvidenceUploadModal';
+import { useToast } from '../shared/ToastContext';
 
 interface ArtisanDisputeWorkspaceScreenProps {
   disputeId?: string;
@@ -25,10 +26,12 @@ export const ArtisanDisputeWorkspaceScreen: React.FC<ArtisanDisputeWorkspaceScre
   disputeId: initialDisputeId,
   onBack,
 }) => {
+  const { showSuccess, showError, showWarning, showInfo } = useToast();
   const [loading, setLoading] = useState(false);
   const [dispute, setDispute] = useState<any>(null);
   const [rebuttalText, setRebuttalText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,7 +63,7 @@ export const ArtisanDisputeWorkspaceScreen: React.FC<ArtisanDisputeWorkspaceScre
 
   const handleSubmitRebuttal = async () => {
     if (!rebuttalText.trim()) {
-      Alert.alert('Required', 'Please enter your counter-statement before submitting.');
+      showWarning('Required', 'Please enter your counter-statement before submitting.');
       return;
     }
 
@@ -70,13 +73,13 @@ export const ArtisanDisputeWorkspaceScreen: React.FC<ArtisanDisputeWorkspaceScre
         await DisputeService.submitEvidence(dispute.id, rebuttalText.trim());
       }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
+      showSuccess(
         'Rebuttal Transmitted',
         'Your counter-evidence has been logged on-chain for the platform arbiter. A decision will be made within 4 hours.'
       );
       setRebuttalText('');
     } catch (err: any) {
-      Alert.alert('Notice', err?.response?.data?.message || 'Rebuttal logged for arbitration review.');
+      showInfo('Notice', err?.response?.data?.message || 'Rebuttal logged for arbitration review.');
     } finally {
       setIsSubmitting(false);
     }
@@ -196,16 +199,43 @@ export const ArtisanDisputeWorkspaceScreen: React.FC<ArtisanDisputeWorkspaceScre
         <View style={styles.stickyFooter}>
           <TouchableOpacity
             activeOpacity={0.85}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setIsEvidenceModalOpen(true);
+            }}
+            style={styles.evidenceModalBtn}
+          >
+            <Text style={styles.evidenceModalBtnText}>📸 Upload Evidence & Compromise Offer</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
             onPress={handleSubmitRebuttal}
             style={styles.submitBtn}
             disabled={isSubmitting}
           >
             <Text style={styles.submitText}>
-              {isSubmitting ? 'Transmitting Rebuttal...' : 'Submit Counter-Evidence to Arbiter'}
+              {isSubmitting ? 'Transmitting Rebuttal...' : 'Quick Submit Statement to Arbiter'}
             </Text>
           </TouchableOpacity>
         </View>
       )}
+
+      {/* DISPUTE EVIDENCE & SETTLEMENT MODAL */}
+      <DisputeEvidenceUploadModal
+        visible={isEvidenceModalOpen}
+        onClose={() => setIsEvidenceModalOpen(false)}
+        disputeId={dispute?.id || 'DIS-LIVE'}
+        disputedAmount={disputedAmount}
+        onSubmitEvidence={async (data) => {
+          if (dispute?.id) {
+            await DisputeService.submitEvidence(
+              dispute.id,
+              `${data.statement}\nOffer: ${data.settlementOfferType}`
+            );
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -386,6 +416,20 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     borderTopWidth: 1,
     borderColor: '#F3F4F6',
+    gap: 8,
+  },
+  evidenceModalBtn: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#10B981',
+    paddingVertical: 12,
+    borderRadius: radius.full,
+    alignItems: 'center',
+  },
+  evidenceModalBtnText: {
+    fontSize: typography.size.xs + 1,
+    fontWeight: '700',
+    color: colors.brand.emeraldDark,
   },
   submitBtn: {
     backgroundColor: colors.brand.forest,

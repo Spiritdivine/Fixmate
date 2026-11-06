@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { ChatService } from '../../services/chat.service';
 import { socketManager } from '../../lib/socket-manager';
 import { queryClient } from '../../lib/query-client';
@@ -42,6 +42,7 @@ export const ArtisanChatScreen: React.FC<ArtisanChatScreenProps> = ({
   onBack,
   onCallClient,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
   const { user } = useAuthStore();
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -152,13 +153,13 @@ export const ArtisanChatScreen: React.FC<ArtisanChatScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColors.headerBg, borderColor: themeColors.headerBorder }]}>
         <View style={styles.headerLeft}>
           {onBack && (
             <TouchableOpacity onPress={onBack} activeOpacity={0.7} style={styles.backButton}>
-              <Text style={styles.backChevron}>←</Text>
+              <Text style={[styles.backChevron, { color: themeColors.text }]}>←</Text>
             </TouchableOpacity>
           )}
           <Image
@@ -169,7 +170,7 @@ export const ArtisanChatScreen: React.FC<ArtisanChatScreenProps> = ({
           />
           <View>
             <View style={styles.nameRow}>
-              <Text style={styles.clientName}>{resolvedClientName}</Text>
+              <Text style={[styles.clientName, { color: themeColors.text }]}>{resolvedClientName}</Text>
               <Text style={styles.verifiedCheck}>✓</Text>
             </View>
             <Text style={styles.onlineStatus}>🟢 Active now</Text>
@@ -178,16 +179,24 @@ export const ArtisanChatScreen: React.FC<ArtisanChatScreenProps> = ({
 
         <TouchableOpacity
           onPress={onCallClient || (() => Alert.alert('Calling Client', `Dialing ${resolvedClientName}...`))}
-          style={styles.callButton}
+          style={[styles.callButton, { backgroundColor: themeColors.surfaceSubtle }]}
         >
           <Text style={styles.callEmoji}>📞</Text>
         </TouchableOpacity>
       </View>
 
       {/* Pinned Milestone Context Sub-Bar */}
-      <View style={styles.milestoneContextBar}>
+      <View
+        style={[
+          styles.milestoneContextBar,
+          isDark && {
+            backgroundColor: 'rgba(52, 211, 153, 0.12)',
+            borderColor: 'rgba(52, 211, 153, 0.25)',
+          },
+        ]}
+      >
         <Text style={styles.contextIcon}>⚡</Text>
-        <Text style={styles.contextText}>
+        <Text style={[styles.contextText, isDark && { color: '#34D399' }]}>
           {(activeConversation as any)?.title || 'Direct Client Work Order • Smart Escrow Protected'}
         </Text>
       </View>
@@ -201,8 +210,8 @@ export const ArtisanChatScreen: React.FC<ArtisanChatScreenProps> = ({
         ListEmptyComponent={
           <View style={styles.emptyFeed}>
             <Text style={styles.emptyFeedIcon}>💬</Text>
-            <Text style={styles.emptyFeedTitle}>No Messages Yet</Text>
-            <Text style={styles.emptyFeedSub}>
+            <Text style={[styles.emptyFeedTitle, { color: themeColors.text }]}>No Messages Yet</Text>
+            <Text style={[styles.emptyFeedSub, { color: themeColors.textMuted }]}>
               Send a message to your client to coordinate arrival times, discuss materials, or confirm job requirements.
             </Text>
           </View>
@@ -210,8 +219,17 @@ export const ArtisanChatScreen: React.FC<ArtisanChatScreenProps> = ({
         renderItem={({ item }) => {
           if (item.sender === 'SYSTEM') {
             return (
-              <View style={styles.systemBox}>
-                <Text style={styles.systemText}>{item.text}</Text>
+              <View
+                style={[
+                  styles.systemBox,
+                  isDark && {
+                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(245, 158, 11, 0.3)',
+                  },
+                ]}
+              >
+                <Text style={[styles.systemText, isDark && { color: '#FCD34D' }]}>{item.text}</Text>
               </View>
             );
           }
@@ -219,9 +237,23 @@ export const ArtisanChatScreen: React.FC<ArtisanChatScreenProps> = ({
           const isMe = item.sender === 'ARTISAN';
           return (
             <View style={[styles.bubbleWrapper, isMe ? styles.wrapperMe : styles.wrapperClient]}>
-              <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleClient]}>
+              <View
+                style={[
+                  styles.bubble,
+                  isMe
+                    ? [styles.bubbleMe, isDark && { backgroundColor: '#065F46' }]
+                    : [
+                        styles.bubbleClient,
+                        {
+                          backgroundColor: themeColors.surface,
+                          borderColor: themeColors.border,
+                          borderWidth: 1,
+                        },
+                      ],
+                ]}
+              >
                 {item.text && (
-                  <Text style={[styles.bubbleText, isMe ? styles.textMe : styles.textClient]}>
+                  <Text style={[styles.bubbleText, isMe ? styles.textMe : [styles.textClient, { color: themeColors.text }]]}>
                     {item.text}
                   </Text>
                 )}
@@ -244,7 +276,7 @@ export const ArtisanChatScreen: React.FC<ArtisanChatScreenProps> = ({
                   </View>
                 )}
 
-                <Text style={[styles.timestampText, isMe ? styles.timeMe : styles.timeClient]}>
+                <Text style={[styles.timestampText, isMe ? styles.timeMe : [styles.timeClient, { color: themeColors.textMuted }]]}>
                   {item.timestamp}
                 </Text>
               </View>
@@ -254,7 +286,7 @@ export const ArtisanChatScreen: React.FC<ArtisanChatScreenProps> = ({
       />
 
       {/* Input Toolbar */}
-      <View style={styles.inputToolbar}>
+      <View style={[styles.inputToolbar, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
         <TouchableOpacity style={styles.cameraBtn}>
           <Text style={styles.cameraIcon}>📷</Text>
         </TouchableOpacity>
@@ -267,15 +299,22 @@ export const ArtisanChatScreen: React.FC<ArtisanChatScreenProps> = ({
         </TouchableOpacity>
 
         <TextInput
-          style={styles.textInput}
+          style={[
+            styles.textInput,
+            {
+              backgroundColor: themeColors.inputBg,
+              borderColor: themeColors.inputBorder,
+              color: themeColors.text,
+            },
+          ]}
           placeholder={isRecording ? 'Recording voice note...' : 'Type message...'}
-          placeholderTextColor={colors.neutral[400]}
+          placeholderTextColor={themeColors.textMuted}
           value={inputText}
           onChangeText={setInputText}
           editable={!isRecording}
         />
 
-        <TouchableOpacity onPress={handleSend} style={styles.sendBtn}>
+        <TouchableOpacity onPress={handleSend} style={[styles.sendBtn, { backgroundColor: themeColors.primary }]}>
           <Text style={styles.sendIcon}>➔</Text>
         </TouchableOpacity>
       </View>

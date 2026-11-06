@@ -3,6 +3,13 @@ import { env } from './env.js';
 
 const globalForPrisma = globalThis;
 
+// Enforce conservative connection pool limit per process to prevent connection exhaustion in PM2 clusters
+const defaultPoolLimit = process.env.DB_POOL_LIMIT || (env.NODE_ENV === 'production' ? 5 : 10);
+if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('connection_limit')) {
+  const separator = process.env.DATABASE_URL.includes('?') ? '&' : '?';
+  process.env.DATABASE_URL = `${process.env.DATABASE_URL}${separator}connection_limit=${defaultPoolLimit}`;
+}
+
 const client =
   globalForPrisma.prisma ||
   new PrismaClient({
@@ -10,8 +17,8 @@ const client =
   });
 
 export const PRISMA_TX_OPTIONS = {
-  maxWait: 10000, // Wait up to 10s to acquire a connection (handles serverless/cold-start latency)
-  timeout: 25000, // Allow up to 25s for multi-step transaction completion
+  maxWait: 15000, // Wait up to 15s to acquire a connection from pool
+  timeout: 30000, // 30s maximum transaction execution time for cloud database latency
 };
 
 // Automatically provide resilient timeouts across all interactive transactions

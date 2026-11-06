@@ -12,6 +12,7 @@ import { useAuthStore } from '../../stores/authStore';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Haptics from 'expo-haptics';
 import { Fingerprint } from 'lucide-react-native';
+import { SocialAuthButtons } from './SocialAuthButtons';
 
 interface LoginScreenProps {
   onBack?: () => void;
@@ -160,6 +161,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Text style={styles.submitButtonText}>Sign in</Text>
           )}
         </TouchableOpacity>
+
+        {/* Social Sign-In (Google & Apple) */}
+        <SocialAuthButtons onSuccess={onLoginSuccess} onError={setErrorMessage} />
 
         {/* Quick Biometrics Button */}
         <TouchableOpacity

@@ -82,8 +82,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
           {/* Header Title & Subtitle */}
           <View style={styles.headerSection}>
-            <h1 style={{ display: 'none' }}>{title}</h1>
-            <Text style={styles.titleText}>{title}</Text>
+            <Text style={styles.titleText} accessibilityRole="header">{title}</Text>
             {subtitle ? <View style={styles.subtitleWrap}>{subtitle}</View> : null}
           </View>
 

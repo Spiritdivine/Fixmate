@@ -13,8 +13,12 @@ import {
   Platform,
   Alert,
   Modal,
+  Share,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Speech from 'expo-speech';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import {
   Send,
   Paperclip,
@@ -39,8 +43,17 @@ import {
   History,
   Plus,
   Clock,
+  Copy,
+  Check,
+  Volume2,
+  VolumeX,
+  RotateCcw,
+  Share2,
+  ThumbsUp,
+  ThumbsDown,
+  Brain,
 } from 'lucide-react-native';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { Storage } from '../../lib/storage';
 import { AiService } from '../../services/ai.service';
@@ -108,6 +121,7 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
   onViewArtisanProfile,
   onBookArtisanChat,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     if (cachedMessages && cachedMessages.length > 0) {
       return cachedMessages;
@@ -125,6 +139,70 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
   const [guestAccessToken, setGuestAccessToken] = useState<string | null>(() => cachedGuestAccessToken);
   const [sessionBom, setSessionBom] = useState<DiagnosticBOMItem[]>(() => cachedSessionBom);
   const [bookingArtisanId, setBookingArtisanId] = useState<string | null>(null);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [messageRatings, setMessageRatings] = useState<Record<string, 'up' | 'down'>>({});
+  const [guestQueriesRemaining, setGuestQueriesRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
+
+  const handleCopyResponse = async (msgId: string, text: string) => {
+    const cleanText = text.replace(/[*_#`[\]]/g, '').trim();
+    await Clipboard.setStringAsync(cleanText);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setCopiedMsgId(msgId);
+    setTimeout(() => {
+      setCopiedMsgId((prev) => (prev === msgId ? null : prev));
+    }, 2000);
+  };
+
+  const handleReadAloud = async (msgId: string, text: string) => {
+    if (speakingMsgId === msgId) {
+      await Speech.stop();
+      setSpeakingMsgId(null);
+      return;
+    }
+    await Speech.stop();
+    const cleanText = text.replace(/[*_#`[\]()]/g, '').replace(/https?:\/\/\S+/g, '').trim();
+    setSpeakingMsgId(msgId);
+    Speech.speak(cleanText, {
+      rate: 0.95,
+      onDone: () => setSpeakingMsgId(null),
+      onError: () => setSpeakingMsgId(null),
+      onStopped: () => setSpeakingMsgId(null),
+    });
+  };
+
+  const handleShareResponse = async (text: string) => {
+    const cleanText = text.replace(/[*_#`]/g, '').trim();
+    try {
+      await Share.share({
+        title: 'Artifix Oga John Diagnosis',
+        message: `Artifix Oga John Diagnosis:\n\n${cleanText}\n\nVerified on https://artifixhq.xyz`,
+      });
+    } catch {
+      // share dismissed
+    }
+  };
+
+  const handleRateResponse = (msgId: string, rating: 'up' | 'down') => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setMessageRatings((prev) => ({
+      ...prev,
+      [msgId]: prev[msgId] === rating ? (null as any) : rating,
+    }));
+  };
+
+  const handleRegenerateLastTurn = () => {
+    const lastUserMsg = [...messages].reverse().find((m) => m.sender === 'user');
+    if (lastUserMsg?.text) {
+      handleSendMessage(lastUserMsg.text);
+    }
+  };
 
   // Conversation history & memory management
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
@@ -250,28 +328,28 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
 
       // Transform any persistent recommendations from the database as fallback/supplement
       const fallbackArtisans: MatchedArtisanDossier[] = (sessionData.recommendations || []).map((r: any) => ({
-        id: r.artisan?.id || r.artisanProfileId,
-        userId: r.artisan?.userId || r.artisan?.user?.id,
+        artisanId: r.artisan?.id || r.artisanProfileId || `artisan_${Date.now()}`,
         name: `${r.artisan?.firstName || ''} ${r.artisan?.lastName || ''}`.trim() || r.artisan?.businessName || 'Verified Specialist',
-        businessName: r.artisan?.businessName || undefined,
-        tradeCategory: sessionData.category?.name || undefined,
-        ratingAvg: Number(r.artisan?.ratingAvg || 5.0),
+        trade: sessionData.category?.name || 'Artisan',
+        rating: Number(r.artisan?.ratingAvg || 5.0),
         completedJobsCount: Number(r.artisan?.completedJobsCount || 0),
-        distanceKm: r.distanceKm ? Number(r.distanceKm) : undefined,
-        hourlyRate: r.artisan?.hourlyRate ? Number(r.artisan?.hourlyRate) : undefined,
+        distanceKm: r.distanceKm ? Number(r.distanceKm) : 0,
+        hourlyRate: r.artisan?.hourlyRate ? Number(r.artisan?.hourlyRate) : 0,
         avatarUrl: r.artisan?.user?.avatarUrl || undefined,
-        matchScore: r.matchScore ? Number(r.matchScore) : undefined,
+        matchScore: r.matchScore ? Number(r.matchScore) : 85,
+        aiFitReason: r.fitReason || 'Qualified matching artisan for diagnostic requirements',
       }));
 
       if (sessionData.turns && sessionData.turns.length > 0) {
-        const restored: ChatMessage[] = sessionData.turns.map((turn: any, index: number) => {
+        const turnsList = sessionData.turns;
+        const restored: ChatMessage[] = turnsList.map((turn: any, index: number) => {
           const isAssistant = turn.role === 'assistant';
           const sd = turn.structuredDecision || {};
           let matchedArtisans: MatchedArtisanDossier[] = sd.matchedArtisans || [];
 
           // If turn didn't save matchedArtisans in sd, fallback to sessionData.recommendations
           if (matchedArtisans.length === 0 && fallbackArtisans.length > 0 && isAssistant) {
-            const isLastAssistant = !sessionData.turns.slice(index + 1).some((t: any) => t.role === 'assistant');
+            const isLastAssistant = !turnsList.slice(index + 1).some((t: any) => t.role === 'assistant');
             if (isLastAssistant || sd.intent === 'MATCH_REQUESTED' || sd.intent === 'MATCH_ONLY' || sd.intent === 'PROCEED_DISPATCH') {
               matchedArtisans = fallbackArtisans;
             }
@@ -331,25 +409,7 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
     loadSessionById(sessionId, false);
   };
 
-  // Helper to detect if user explicitly asked for BOM/materials
-  const isBomRequested = (text?: string): boolean => {
-    if (!text) return false;
-    const pattern = /(bill\s*of\s*materials?|\bbom\b|\bparts?\b|\bmaterials?\b|cost\s*(of\s*)?(parts|materials)|price\s*(of\s*)?(parts|materials)|what\s*(do\s*i\s*)?(need\s*to\s*)?buy|pricing\s*breakdown|cost\s*breakdown|list\s*(of\s*)?(parts|materials))/i;
-    return pattern.test(text);
-  };
 
-  // Helper to detect if user explicitly asked for an artisan/professional
-  const isArtisanRequested = (text?: string): boolean => {
-    if (!text) return false;
-    const lower = text.toLowerCase();
-    const proWords = /(artisan|plumber|electrician|carpenter|specialist|mechanic|technician|professional|expert|handyman|worker)/;
-    const actionWords = /(recommend|find|send|hire|book|match|get|call|look\s*for|need|want|show|give|connect|assign|contact)/;
-    if (actionWords.test(lower) && proWords.test(lower)) return true;
-    if (/(professional|artisan|specialist|technician)s?\s*(nearby|available|around|close)/.test(lower)) return true;
-    if (/someone\s*to\s*(fix|repair|help|come)/.test(lower)) return true;
-    if (/(can\s*you\s*(match|find|recommend)|who\s*can\s*fix)/.test(lower)) return true;
-    return false;
-  };
 
   // Synthesize rich pre-filled job description from chat session facts
   const generatePrefilledDescription = (msg?: ChatMessage): string => {
@@ -440,6 +500,7 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
   // Voice Note Recording
   const handleStartRecording = async () => {
     try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       await audioRecorderRef.current.startRecording((status) => {
         if (status.isRecording) {
           const secs = Math.floor((status.durationMillis || 0) / 1000);
@@ -455,6 +516,7 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
 
   const handleStopRecording = async () => {
     try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       const res = await audioRecorderRef.current.stopRecording();
       setRecordedAudioUri(res.uri);
       setRecordedAudioSeconds(recordingSeconds);
@@ -466,6 +528,7 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
 
   const handleCancelRecording = async () => {
     try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       await audioRecorderRef.current.stopRecording();
     } catch {
       // ignore
@@ -476,6 +539,7 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
     setRecordingSeconds(0);
   };
 
+
   // Submit Message & Trigger Diagnostic Engine
   const handleSendMessage = async (customText?: string) => {
     const textToSend = (typeof customText === 'string' ? customText : inputText).trim();
@@ -484,6 +548,15 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
     const voiceDuration = recordedAudioSeconds;
 
     if (!textToSend && photosToSend.length === 0 && !voiceToSend) {
+      return;
+    }
+
+    if (guestQueriesRemaining === 0) {
+      Alert.alert(
+        'Guest Query Limit Reached (5/5)',
+        'You have used all 5 free diagnostic queries for this guest session. Please sign in or create an account to continue your technical consultation.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
@@ -507,8 +580,6 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
 
     try {
       const location = await LocationProvider.getCurrentLocation();
-      const bomAsked = isBomRequested(textToSend);
-      const artisanAsked = isArtisanRequested(textToSend);
 
       // If we already have an active diagnostic session, continue the conversation
       if (activeSessionId) {
@@ -533,17 +604,17 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
           ? chatRes.billOfMaterials
           : sessionBom;
 
+        if ((chatRes as any)?.guestQuota) {
+          setGuestQueriesRemaining((chatRes as any).guestQuota.remaining);
+        }
+
         if (chatRes.billOfMaterials && chatRes.billOfMaterials.length > 0) {
           setSessionBom(chatRes.billOfMaterials);
         }
 
-        const shouldShowBom = bomAsked && returnedBom.length > 0;
-        const proRequested =
-          artisanAsked ||
-          chatRes.intent === 'MATCH_REQUESTED' ||
-          chatRes.intent === 'EMERGENCY_DISPATCH' ||
-          (chatRes.severity as string) === 'LIFE_SAFETY_EMERGENCY';
+        const shouldShowBom = Boolean(chatRes.billOfMaterials && chatRes.billOfMaterials.length > 0);
         const hasMatchedArtisans = Boolean(chatRes.matchedArtisans && chatRes.matchedArtisans.length > 0);
+        const proRequested = chatRes.intent === 'MATCH_REQUESTED' || chatRes.intent === 'MATCH_ONLY' || hasMatchedArtisans;
 
         setMessages((prev) => [
           ...prev,
@@ -553,9 +624,9 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
             text: chatRes.reply,
             safetyWarning: chatRes.safetyWarning,
             billOfMaterials: shouldShowBom ? returnedBom : undefined,
-            isBomExpanded: shouldShowBom, // Strictly restricted to when user explicitly asked!
-            matchedArtisans: proRequested && hasMatchedArtisans ? chatRes.matchedArtisans : undefined,
-            showArtisanMatch: proRequested && hasMatchedArtisans,
+            isBomExpanded: shouldShowBom,
+            matchedArtisans: hasMatchedArtisans ? chatRes.matchedArtisans : undefined,
+            showArtisanMatch: hasMatchedArtisans,
             showZeroMatchPostJob: proRequested && !hasMatchedArtisans,
             clarificationOptions: chatRes.clarificationOptions || [],
             isResolved: chatRes.isResolved,
@@ -582,15 +653,16 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
           setGuestAccessToken(diagRes.guestAccessToken || null);
         }
 
+        if ((diagRes as any)?.guestQuota) {
+          setGuestQueriesRemaining((diagRes as any).guestQuota.remaining);
+        }
+
         const bomItems = diagRes.billOfMaterials || [];
         if (bomItems.length > 0) {
           setSessionBom(bomItems);
         }
 
-        const shouldShowBom = bomAsked && bomItems.length > 0;
-        const proRequested =
-          artisanAsked ||
-          (diagRes.severity as string) === 'LIFE_SAFETY_EMERGENCY';
+        const shouldShowBom = Boolean(diagRes.billOfMaterials && diagRes.billOfMaterials.length > 0);
         const hasMatchedArtisans = Boolean(diagRes.matchedArtisans && diagRes.matchedArtisans.length > 0);
 
         const assistantMsg: ChatMessage = {
@@ -599,10 +671,10 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
           text: diagRes.conversationalReply || diagRes.explanation || 'Diagnosis completed.',
           safetyWarning: diagRes.hazardWarning,
           billOfMaterials: shouldShowBom ? bomItems : undefined,
-          isBomExpanded: shouldShowBom, // Strictly restricted to when asked!
-          matchedArtisans: proRequested && hasMatchedArtisans ? diagRes.matchedArtisans : undefined,
-          showArtisanMatch: proRequested && hasMatchedArtisans,
-          showZeroMatchPostJob: proRequested && !hasMatchedArtisans,
+          isBomExpanded: shouldShowBom,
+          matchedArtisans: hasMatchedArtisans ? diagRes.matchedArtisans : undefined,
+          showArtisanMatch: hasMatchedArtisans,
+          showZeroMatchPostJob: false,
           clarificationOptions: diagRes.clarificationOptions || [],
           isResolved: diagRes.isResolved,
           detectedTrade: diagRes.detectedTrade,
@@ -616,6 +688,14 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
       }
     } catch (err: any) {
       console.error('[OgaJohn] Diagnostic error:', err);
+      if (err?.response?.data?.errorCode === 'GUEST_QUERY_LIMIT_REACHED' || err?.response?.status === 403) {
+        setGuestQueriesRemaining(0);
+        Alert.alert(
+          'Guest Query Limit Reached (5/5)',
+          'You have reached your 5-query free guest limit. Please sign in or create an account to continue your technical consultation.',
+          [{ text: 'OK' }]
+        );
+      }
       const apiMsg = err?.response?.data?.message || err?.message;
       setMessages((prev) => [
         ...prev,
@@ -634,33 +714,55 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColors.headerBg, borderBottomColor: themeColors.headerBorder }]}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <ArrowLeft size={20} color={colors.text} />
+          <ArrowLeft size={20} color={themeColors.text} />
         </TouchableOpacity>
         <View style={styles.headerTextWrap}>
           <View style={styles.titleRow}>
-            <Text style={styles.headerTitle}>Oga John AI</Text>
+            <Text style={[styles.headerTitle, { color: themeColors.text }]}>Oga John AI</Text>
             <View style={styles.onlineDot} />
           </View>
-          <Text style={styles.headerSubtitle}>Technical Diagnostic Advisor</Text>
+          <Text style={[styles.headerSubtitle, { color: themeColors.textMuted }]}>Technical Diagnostic Advisor</Text>
+          {guestQueriesRemaining !== null && (
+            <View
+              style={[
+                styles.guestQuotaBadge,
+                isDark && {
+                  backgroundColor: 'rgba(52, 211, 153, 0.15)',
+                  borderColor: 'rgba(52, 211, 153, 0.3)',
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.guestQuotaBadgeText,
+                  isDark && { color: '#34D399' },
+                ]}
+              >
+                {guestQueriesRemaining > 0
+                  ? `Guest: ${guestQueriesRemaining} query left`
+                  : 'Free Guest Limit Reached'}
+              </Text>
+            </View>
+          )}
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={styles.headerActionBtn}
+            style={[styles.headerActionBtn, { backgroundColor: themeColors.surfaceSubtle }]}
             onPress={handleOpenHistory}
             accessibilityLabel="Chat History"
           >
-            <History size={18} color={colors.text} />
+            <History size={18} color={themeColors.text} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.headerActionBtn}
+            style={[styles.headerActionBtn, { backgroundColor: themeColors.surfaceSubtle }]}
             onPress={handleStartNewChat}
             accessibilityLabel="New Consultation"
           >
-            <Plus size={18} color={colors.text} />
+            <Plus size={18} color={themeColors.text} />
           </TouchableOpacity>
         </View>
       </View>
@@ -688,7 +790,15 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
             <View
               style={[
                 styles.bubble,
-                item.sender === 'user' ? styles.userBubble : styles.assistantBubble,
+                item.sender === 'user'
+                  ? styles.userBubble
+                  : [
+                      styles.assistantBubble,
+                      {
+                        backgroundColor: themeColors.surface,
+                        borderColor: themeColors.border,
+                      },
+                    ],
               ]}
             >
               {/* Uploaded Images Preview */}
@@ -715,7 +825,9 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
                 <Text
                   style={[
                     styles.messageText,
-                    item.sender === 'user' ? styles.userText : styles.assistantText,
+                    item.sender === 'user'
+                      ? styles.userText
+                      : [styles.assistantText, { color: themeColors.text }],
                   ]}
                 >
                   {item.text}
@@ -738,7 +850,7 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
                 <View style={styles.resolvedBanner}>
                   <View style={styles.resolvedBannerHeader}>
                     <ShieldCheck size={16} color="#059669" />
-                    <Text style={styles.resolvedBannerTitle}>Issue Resolved 🎉</Text>
+                    <Text style={styles.resolvedBannerTitle}>Issue Resolved</Text>
                   </View>
                   <Text style={styles.resolvedBannerText}>
                     Glad the repair worked out! If anything else comes up later, Oga John is always on standby.
@@ -748,17 +860,30 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
 
               {/* Interactive Clarification Option Chips */}
               {item.clarificationOptions && item.clarificationOptions.length > 0 && (
-                <View style={styles.clarificationOptionsWrap}>
-                  <Text style={styles.optionsPromptLabel}>Select an option or tap to reply:</Text>
+                <View style={[styles.clarificationOptionsWrap, { borderTopColor: themeColors.border }]}>
+                  <Text style={[styles.optionsPromptLabel, { color: themeColors.textMuted }]}>Select an option or tap to reply:</Text>
                   <View style={styles.optionsChipsRow}>
                     {item.clarificationOptions.map((opt: string, optIdx: number) => (
                       <TouchableOpacity
                         key={optIdx}
-                        style={styles.clarificationChip}
+                        style={[
+                          styles.clarificationChip,
+                          isDark && {
+                            backgroundColor: 'rgba(52, 211, 153, 0.15)',
+                            borderColor: 'rgba(52, 211, 153, 0.4)',
+                          },
+                        ]}
                         onPress={() => handleSendMessage(opt)}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.clarificationChipText}>{opt}</Text>
+                        <Text
+                          style={[
+                            styles.clarificationChipText,
+                            isDark && { color: '#34D399' },
+                          ]}
+                        >
+                          {opt}
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -768,26 +893,34 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
               {/* Bill of Materials (Strictly restricted to when explicitly asked) */}
               {item.billOfMaterials && item.billOfMaterials.length > 0 && item.isBomExpanded && (
                 <View style={styles.bomSectionWrap}>
-                  <View style={styles.bomCard}>
+                  <View
+                    style={[
+                      styles.bomCard,
+                      {
+                        backgroundColor: isDark ? themeColors.surfaceSubtle : '#F9FAFB',
+                        borderColor: themeColors.border,
+                      },
+                    ]}
+                  >
                     <TouchableOpacity
-                      style={styles.bomCardHeader}
+                      style={[styles.bomCardHeader, { borderBottomColor: themeColors.border }]}
                       onPress={() => toggleBom(item.id)}
                       activeOpacity={0.7}
                     >
                       <View style={styles.bomHeaderLeft}>
-                        <Package size={14} color="#065F46" />
-                        <Text style={styles.bomCardTitle}>
+                        <Package size={14} color={isDark ? '#34D399' : '#065F46'} />
+                        <Text style={[styles.bomCardTitle, { color: isDark ? '#34D399' : '#065F46' }]}>
                           Bill of Materials ({item.billOfMaterials.length} items)
                         </Text>
                       </View>
-                      <ChevronUp size={16} color="#065F46" />
+                      <ChevronUp size={16} color={isDark ? '#34D399' : '#065F46'} />
                     </TouchableOpacity>
 
                     <View style={styles.bomTable}>
-                      <View style={styles.bomTableHeader}>
-                        <Text style={[styles.bomColHeader, { flex: 2 }]}>Item / Spec</Text>
-                        <Text style={[styles.bomColHeader, { flex: 1, textAlign: 'center' }]}>Qty</Text>
-                        <Text style={[styles.bomColHeader, { flex: 1.5, textAlign: 'right' }]}>Est. Price</Text>
+                      <View style={[styles.bomTableHeader, { borderBottomColor: themeColors.border }]}>
+                        <Text style={[styles.bomColHeader, { flex: 2, color: themeColors.textMuted }]}>Item / Spec</Text>
+                        <Text style={[styles.bomColHeader, { flex: 1, textAlign: 'center', color: themeColors.textMuted }]}>Qty</Text>
+                        <Text style={[styles.bomColHeader, { flex: 1.5, textAlign: 'right', color: themeColors.textMuted }]}>Est. Price</Text>
                       </View>
                       {item.billOfMaterials.map((bom: DiagnosticBOMItem, bIdx: number) => {
                         const costMin = bom.estimatedCostRange?.min || (bom as any).minCost || 0;
@@ -795,15 +928,15 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
                         return (
                           <View key={bIdx} style={styles.bomTableRow}>
                             <View style={{ flex: 2 }}>
-                              <Text style={styles.bomItemName}>{bom.name || (bom as any).item}</Text>
+                              <Text style={[styles.bomItemName, { color: themeColors.text }]}>{bom.name || (bom as any).item}</Text>
                               {bom.specification && (
-                                <Text style={styles.bomItemSpec}>{bom.specification}</Text>
+                                <Text style={[styles.bomItemSpec, { color: themeColors.textMuted }]}>{bom.specification}</Text>
                               )}
                             </View>
-                            <Text style={styles.bomItemQty}>
+                            <Text style={[styles.bomItemQty, { color: themeColors.textMuted }]}>
                               {bom.quantity ? `${bom.quantity}x` : '1x'}
                             </Text>
-                            <Text style={styles.bomItemPrice}>
+                            <Text style={[styles.bomItemPrice, { color: isDark ? '#34D399' : '#065F46' }]}>
                               {formatCurrency(costMin)}
                               {costMax > costMin ? ` – ${formatCurrency(costMax)}` : ''}
                             </Text>
@@ -812,9 +945,9 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
                       })}
                     </View>
 
-                    <View style={styles.bomDisclaimer}>
+                    <View style={[styles.bomDisclaimer, { borderTopColor: themeColors.border }]}>
                       <ShieldCheck size={12} color="#059669" />
-                      <Text style={styles.bomDisclaimerText}>
+                      <Text style={[styles.bomDisclaimerText, { color: themeColors.textMuted }]}>
                         Market prices calibrated with verified supplier indices.
                       </Text>
                     </View>
@@ -825,28 +958,45 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
               {/* Matched Verified Specialists (Rendered strictly when requested by user) */}
               {item.showArtisanMatch && item.matchedArtisans && item.matchedArtisans.length > 0 && (
                 <View style={styles.artisanSectionWrap}>
-                  <View style={styles.specialistsCard}>
-                    <View style={styles.specialistsCardHeader}>
+                  <View
+                    style={[
+                      styles.specialistsCard,
+                      {
+                        backgroundColor: isDark ? themeColors.surfaceSubtle : '#F9FAFB',
+                        borderColor: themeColors.border,
+                      },
+                    ]}
+                  >
+                    <View style={[styles.specialistsCardHeader, { borderBottomColor: themeColors.border }]}>
                       <View style={styles.specialistHeaderLeft}>
-                        <Wrench size={14} color="#1E40AF" />
-                        <Text style={styles.specialistsTitle}>
+                        <Wrench size={14} color={isDark ? '#60A5FA' : '#1E40AF'} />
+                        <Text style={[styles.specialistsTitle, isDark && { color: '#60A5FA' }]}>
                           Recommended Specialists ({item.matchedArtisans.length})
                         </Text>
                       </View>
                     </View>
 
                     {item.matchedArtisans.map((artisanMatch: MatchedArtisanDossier) => (
-                      <View key={artisanMatch.artisanId} style={styles.specialistRow}>
+                      <View
+                        key={artisanMatch.artisanId}
+                        style={[
+                          styles.specialistRow,
+                          {
+                            backgroundColor: themeColors.surface,
+                            borderColor: themeColors.border,
+                          },
+                        ]}
+                      >
                         <View style={styles.specialistInfo}>
-                          <Text style={styles.specialistName}>{artisanMatch.name}</Text>
+                          <Text style={[styles.specialistName, { color: themeColors.text }]}>{artisanMatch.name}</Text>
                           <View style={styles.specialistMeta}>
                             <Star size={11} color="#F59E0B" fill="#F59E0B" />
-                            <Text style={styles.specialistRating}>
+                            <Text style={[styles.specialistRating, { color: themeColors.textMuted }]}>
                               {artisanMatch.rating} ({artisanMatch.completedJobsCount} jobs)
                             </Text>
                             <Text style={styles.dot}>•</Text>
-                            <MapPin size={11} color="#6B7280" />
-                            <Text style={styles.specialistDist}>
+                            <MapPin size={11} color={themeColors.textMuted} />
+                            <Text style={[styles.specialistDist, { color: themeColors.textMuted }]}>
                               {artisanMatch.distanceKm} km away
                             </Text>
                           </View>
@@ -854,12 +1004,25 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
 
                         <View style={styles.specialistActions}>
                           <TouchableOpacity
-                            style={styles.profileButton}
+                            style={[
+                              styles.profileButton,
+                              {
+                                backgroundColor: themeColors.surfaceSubtle,
+                                borderColor: themeColors.border,
+                              },
+                            ]}
                             onPress={() => onViewArtisanProfile && onViewArtisanProfile(artisanMatch.artisanId)}
                             activeOpacity={0.7}
                           >
-                            <User size={12} color="#184530" />
-                            <Text style={styles.profileButtonText}>Profile</Text>
+                            <User size={12} color={isDark ? themeColors.primary : '#184530'} />
+                            <Text
+                              style={[
+                                styles.profileButtonText,
+                                isDark && { color: themeColors.primary },
+                              ]}
+                            >
+                              Profile
+                            </Text>
                           </TouchableOpacity>
 
                           <TouchableOpacity
@@ -886,12 +1049,22 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
 
               {/* Zero-Match Nearby (25km) Fallback -> Offer Pre-filled Job Post synthesized from chat */}
               {item.sender === 'assistant' && item.showZeroMatchPostJob && (
-                <View style={styles.noMatchCard}>
+                <View
+                  style={[
+                    styles.noMatchCard,
+                    isDark && {
+                      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                      borderColor: 'rgba(245, 158, 11, 0.3)',
+                    },
+                  ]}
+                >
                   <View style={styles.noMatchHeader}>
-                    <MapPinOff size={15} color="#B45309" />
-                    <Text style={styles.noMatchTitle}>No Specialists Nearby (Within 25km)</Text>
+                    <MapPinOff size={15} color={isDark ? '#FBBF24' : '#B45309'} />
+                    <Text style={[styles.noMatchTitle, isDark && { color: '#FBBF24' }]}>
+                      No Specialists Nearby (Within 25km)
+                    </Text>
                   </View>
-                  <Text style={styles.noMatchText}>
+                  <Text style={[styles.noMatchText, isDark && { color: '#FDE68A' }]}>
                     There are currently no verified {item.detectedTrade || 'specialist'} professionals within a 25km radius. You can post a job with these diagnostic findings so verified professionals in the area can bid on your repair.
                   </Text>
                   <TouchableOpacity
@@ -915,6 +1088,95 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
                   </TouchableOpacity>
                 </View>
               )}
+
+              {/* ChatGPT-style Response Action Bar for Assistant Messages (Rendered at the bottom of the response) */}
+              {item.sender === 'assistant' && item.text && (
+                <View style={[styles.assistantActionBar, { borderTopColor: themeColors.border }]}>
+                  {/* 1. Copy Response */}
+                  <TouchableOpacity
+                    style={styles.actionIconButton}
+                    onPress={() => handleCopyResponse(item.id, item.text || '')}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    {copiedMsgId === item.id ? (
+                      <Check size={14} color="#059669" />
+                    ) : (
+                      <Copy size={14} color={themeColors.textMuted} />
+                    )}
+                  </TouchableOpacity>
+
+                  {/* 2. Rate Response: Thumbs Up / Down */}
+                  <TouchableOpacity
+                    style={[
+                      styles.actionIconButton,
+                      messageRatings[item.id] === 'up' && styles.actionIconActive,
+                    ]}
+                    onPress={() => handleRateResponse(item.id, 'up')}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                  >
+                    <ThumbsUp
+                      size={14}
+                      color={messageRatings[item.id] === 'up' ? '#059669' : themeColors.textMuted}
+                      fill={messageRatings[item.id] === 'up' ? '#059669' : 'transparent'}
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.actionIconButton,
+                      messageRatings[item.id] === 'down' && styles.actionIconActiveAmber,
+                    ]}
+                    onPress={() => handleRateResponse(item.id, 'down')}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                  >
+                    <ThumbsDown
+                      size={14}
+                      color={messageRatings[item.id] === 'down' ? '#D97706' : themeColors.textMuted}
+                      fill={messageRatings[item.id] === 'down' ? '#D97706' : 'transparent'}
+                    />
+                  </TouchableOpacity>
+
+                  {/* 3. Share */}
+                  <TouchableOpacity
+                    style={styles.actionIconButton}
+                    onPress={() => handleShareResponse(item.text || '')}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Share2 size={14} color={themeColors.textMuted} />
+                  </TouchableOpacity>
+
+                  {/* 4. Read Aloud */}
+                  <TouchableOpacity
+                    style={[
+                      styles.actionIconButton,
+                      speakingMsgId === item.id && styles.actionIconActive,
+                    ]}
+                    onPress={() => handleReadAloud(item.id, item.text || '')}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    {speakingMsgId === item.id ? (
+                      <VolumeX size={14} color="#059669" />
+                    ) : (
+                      <Volume2 size={14} color={themeColors.textMuted} />
+                    )}
+                  </TouchableOpacity>
+
+                  {/* 5. Try Again / Regenerate */}
+                  <TouchableOpacity
+                    style={styles.actionIconButton}
+                    onPress={() => handleRegenerateLastTurn()}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <RotateCcw size={14} color={themeColors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -922,9 +1184,9 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
 
       {/* Sending Spinner */}
       {isSending && (
-        <View style={styles.sendingContainer}>
-          <ActivityIndicator size="small" color="#184530" />
-          <Text style={styles.sendingText}>Oga John is inspecting fault...</Text>
+        <View style={[styles.sendingContainer, { backgroundColor: isDark ? themeColors.surfaceSubtle : '#ECFDF5' }]}>
+          <ActivityIndicator size="small" color={isDark ? themeColors.primary : '#184530'} />
+          <Text style={[styles.sendingText, { color: isDark ? themeColors.primary : '#065F46' }]}>Oga John is inspecting fault...</Text>
         </View>
       )}
 
@@ -935,7 +1197,7 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
       >
         {/* Attached Photo Preview Chips */}
         {attachedPhotos.length > 0 && (
-          <View style={styles.photoPreviewRow}>
+          <View style={[styles.photoPreviewRow, { backgroundColor: themeColors.surface }]}>
             {attachedPhotos.map((uri, idx) => (
               <View key={idx} style={styles.photoThumbWrap}>
                 <Image source={{ uri }} style={styles.photoThumb} />
@@ -954,10 +1216,10 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
 
         {/* Attached Voice Note Preview Chip */}
         {recordedAudioUri && !isRecording && (
-          <View style={styles.audioPreviewRow}>
+          <View style={[styles.audioPreviewRow, isDark && { backgroundColor: 'rgba(52, 211, 153, 0.1)', borderTopColor: 'rgba(52, 211, 153, 0.2)' }]}>
             <View style={styles.audioPreviewChip}>
-              <Mic size={14} color="#047857" />
-              <Text style={styles.audioPreviewText}>
+              <Mic size={14} color={isDark ? '#34D399' : '#047857'} />
+              <Text style={[styles.audioPreviewText, isDark && { color: '#34D399' }]}>
                 Voice note attached (0:{recordedAudioSeconds < 10 ? `0${recordedAudioSeconds}` : recordedAudioSeconds})
               </Text>
             </View>
@@ -968,23 +1230,23 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
                 setRecordedAudioSeconds(0);
               }}
             >
-              <X size={13} color="#6B7280" />
+              <X size={13} color={themeColors.textMuted} />
             </TouchableOpacity>
           </View>
         )}
 
         {/* Audio Recording Dock OR Multimodal Input Bar */}
         {isRecording ? (
-          <View style={styles.recordingDock}>
+          <View style={[styles.recordingDock, isDark && { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderTopColor: 'rgba(239, 68, 68, 0.3)' }]}>
             <View style={styles.recordingTimerWrap}>
               <View style={styles.recordingDot} />
-              <Text style={styles.recordingTimerText}>
+              <Text style={[styles.recordingTimerText, isDark && { color: '#F87171' }]}>
                 Recording... 0:{recordingSeconds < 10 ? `0${recordingSeconds}` : recordingSeconds}
               </Text>
             </View>
             <View style={styles.recordingButtons}>
               <TouchableOpacity onPress={handleCancelRecording} style={styles.cancelRecButton}>
-                <X size={18} color="#6B7280" />
+                <X size={18} color={themeColors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleStopRecording} style={styles.stopRecButton}>
                 <Square size={12} color="#FFF" fill="#FFF" />
@@ -993,14 +1255,14 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
             </View>
           </View>
         ) : (
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, { backgroundColor: themeColors.surface, borderTopColor: themeColors.border }]}>
             {/* Paperclip / Photo Attachment */}
             <TouchableOpacity
               onPress={handleSelectPhotos}
               style={styles.iconButton}
               accessibilityLabel="Attach photo"
             >
-              <Paperclip size={20} color={colors.textMuted} />
+              <Paperclip size={20} color={themeColors.textMuted} />
             </TouchableOpacity>
 
             {/* Mic / Audio Attachment */}
@@ -1009,14 +1271,20 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
               style={styles.iconButton}
               accessibilityLabel="Record voice note"
             >
-              <Mic size={20} color={colors.textMuted} />
+              <Mic size={20} color={themeColors.textMuted} />
             </TouchableOpacity>
 
             {/* Text Input */}
             <TextInput
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: themeColors.inputBg,
+                  color: themeColors.text,
+                },
+              ]}
               placeholder="Describe the fault or ask Oga John..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={themeColors.textMuted}
               value={inputText}
               onChangeText={setInputText}
               multiline
@@ -1049,33 +1317,33 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
         onRequestClose={() => setShowHistoryModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.historyModalContent}>
-            <View style={styles.historyModalHeader}>
+          <View style={[styles.historyModalContent, { backgroundColor: themeColors.surface }]}>
+            <View style={[styles.historyModalHeader, { borderBottomColor: themeColors.border }]}>
               <View style={styles.historyModalHeaderLeft}>
-                <History size={20} color={colors.primary} />
-                <Text style={styles.historyModalTitle}>Consultation History</Text>
+                <History size={20} color={themeColors.primary} />
+                <Text style={[styles.historyModalTitle, { color: themeColors.text }]}>Consultation History</Text>
               </View>
               <TouchableOpacity
                 onPress={() => setShowHistoryModal(false)}
                 style={styles.historyCloseBtn}
                 accessibilityLabel="Close History"
               >
-                <X size={20} color={colors.text} />
+                <X size={20} color={themeColors.text} />
               </TouchableOpacity>
             </View>
 
             {isLoadingHistory || isLoadingSession ? (
               <View style={styles.historyLoadingWrap}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.historyLoadingText}>
+                <ActivityIndicator size="small" color={themeColors.primary} />
+                <Text style={[styles.historyLoadingText, { color: themeColors.textMuted }]}>
                   {isLoadingSession ? 'Loading consultation...' : 'Fetching your past consultations...'}
                 </Text>
               </View>
             ) : recentSessions.length === 0 ? (
               <View style={styles.historyEmptyWrap}>
-                <Clock size={36} color={colors.textMuted} />
-                <Text style={styles.historyEmptyTitle}>No Past Consultations</Text>
-                <Text style={styles.historyEmptySub}>
+                <Clock size={36} color={themeColors.textMuted} />
+                <Text style={[styles.historyEmptyTitle, { color: themeColors.text }]}>No Past Consultations</Text>
+                <Text style={[styles.historyEmptySub, { color: themeColors.textMuted }]}>
                   Consultations with Oga John are automatically remembered so you can resume anytime.
                 </Text>
               </View>
@@ -1097,12 +1365,19 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
                   const title = item.diagnosticTitle || item.category?.name || 'Home Technical Diagnosis';
                   return (
                     <TouchableOpacity
-                      style={[styles.historyItemRow, isActive && styles.historyItemActive]}
+                      style={[
+                        styles.historyItemRow,
+                        {
+                          backgroundColor: isDark ? themeColors.surfaceSubtle : '#F9FAFB',
+                          borderColor: themeColors.border,
+                        },
+                        isActive && styles.historyItemActive,
+                      ]}
                       onPress={() => handleSelectSession(item.id)}
                     >
                       <View style={{ flex: 1 }}>
                         <View style={styles.historyItemHeaderRow}>
-                          <Text style={styles.historyItemTitle} numberOfLines={1}>
+                          <Text style={[styles.historyItemTitle, { color: themeColors.text }]} numberOfLines={1}>
                             {title}
                           </Text>
                           {isActive && (
@@ -1112,7 +1387,7 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
                           )}
                         </View>
                         <View style={styles.historyItemMetaRow}>
-                          <Text style={styles.historyItemDate}>{dateStr}</Text>
+                          <Text style={[styles.historyItemDate, { color: themeColors.textMuted }]}>{dateStr}</Text>
                           {item.category?.name && (
                             <View style={styles.historyTradePill}>
                               <Text style={styles.historyTradePillText}>{item.category.name}</Text>
@@ -1120,7 +1395,7 @@ export const OgaJohnAiStudioScreen: React.FC<OgaJohnAiStudioScreenProps> = ({
                           )}
                         </View>
                       </View>
-                      <ArrowRight size={16} color={colors.textMuted} />
+                      <ArrowRight size={16} color={themeColors.textMuted} />
                     </TouchableOpacity>
                   );
                 }}
@@ -1639,44 +1914,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     backgroundColor: '#184530',
-    borderRadius: radius.sm,
-    paddingVertical: 8,
-    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.base,
+    minHeight: 48,
   },
   postJobWithDiagBtnText: {
     color: '#FFF',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: '#FFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    gap: 6,
+    gap: 8,
+    minHeight: 56,
   },
   iconButton: {
-    padding: 6,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textInput: {
     flex: 1,
     backgroundColor: '#F3F4F6',
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    fontSize: 13,
+    paddingVertical: 8,
+    fontSize: 14,
     color: colors.text,
     maxHeight: 90,
   },
   sendButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#184530',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1684,6 +1965,7 @@ const styles = StyleSheet.create({
   sendButtonDisabled: {
     backgroundColor: '#9CA3AF',
   },
+
   photoPreviewRow: {
     flexDirection: 'row',
     paddingHorizontal: spacing.md,
@@ -1932,5 +2214,39 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  assistantActionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingTop: 8,
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  actionIconButton: {
+    padding: 4,
+    borderRadius: 6,
+  },
+  actionIconActive: {
+    backgroundColor: '#DCFCE7',
+  },
+  actionIconActiveAmber: {
+    backgroundColor: '#FEF3C7',
+  },
+  guestQuotaBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginTop: 3,
+  },
+  guestQuotaBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#065F46',
   },
 });

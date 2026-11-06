@@ -2,10 +2,11 @@ import prisma from '../config/db.js';
 import { ApiError } from '../utils/api-error.js';
 import { getIO } from '../sockets/socket.server.js';
 import { PushNotificationService } from './pushNotificationService.js';
+import { ExpoPushService } from './expo-push.service.js';
 
 export class NotificationService {
   /**
-   * Create an in-app notification, emit to real-time socket room, and trigger PWA Web Push
+   * Create an in-app notification, emit to real-time socket room, and trigger PWA Web Push + Mobile Expo Push
    */
   static async createNotification(userId, title, body, actionUrl = null) {
     const notification = await prisma.notification.create({
@@ -31,6 +32,15 @@ export class NotificationService {
       actionUrl,
     }).catch((err) => {
       console.warn('[WebPush] Background push error:', err.message);
+    });
+
+    // Trigger Mobile Native Push via Expo Server SDK (non-blocking)
+    ExpoPushService.sendPushToUser(userId, {
+      title,
+      body,
+      data: { actionUrl, notificationId: notification.id },
+    }).catch((err) => {
+      console.warn('[ExpoPush] Background mobile push error:', err.message);
     });
 
     return notification;

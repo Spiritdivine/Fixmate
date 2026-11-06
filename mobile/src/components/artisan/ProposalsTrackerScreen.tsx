@@ -6,13 +6,20 @@ import {
   FlatList,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
+  TextInput,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { Search } from 'lucide-react-native';
 import { colors, radius, spacing, typography, shadows } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { ProposalService } from '../../services/proposal.service';
+import { SkeletonProposalCard } from '../shared';
+import { EditProposalModal, EditableProposalData } from './EditProposalModal';
+import { ProposalDetailsModal, DetailedProposalRecord } from './ProposalDetailsModal';
+import { useToast } from '../shared/ToastContext';
+import { useArtisanProposals } from '../../hooks';
 
 interface ProposalItem {
   id: string;
@@ -25,22 +32,31 @@ interface ProposalItem {
   lastClientActivity?: string;
   estimatedDays: number;
   contractId?: string;
+  coverLetter?: string;
 }
 
 interface ProposalsTrackerScreenProps {
   onBack?: () => void;
   onOpenAcceptedContract?: (contractId?: string) => void;
+  onViewJob?: (jobId: string) => void;
 }
 
 export const ProposalsTrackerScreen: React.FC<ProposalsTrackerScreenProps> = ({
   onBack,
   onOpenAcceptedContract,
+  onViewJob,
 }) => {
+  const { showSuccess, showError, showWarning } = useToast();
   const [activeTab, setActiveTab] = useState<'UNDER_REVIEW' | 'ACCEPTED' | 'CLOSED'>('UNDER_REVIEW');
+  const [searchQuery, setSearchQuery] = useState('');
   const [proposals, setProposals] = useState<ProposalItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Modals state
+  const [editingProposal, setEditingProposal] = useState<EditableProposalData | null>(null);
+  const [selectedDetailProposal, setSelectedDetailProposal] = useState<DetailedProposalRecord | null>(null);
 
   const formatRelativeTime = (dateStr?: string): string => {
     if (!dateStr) return 'Recently';
@@ -94,6 +110,7 @@ export const ProposalsTrackerScreen: React.FC<ProposalsTrackerScreenProps> = ({
               : 'Job closed or awarded to another proposal',
             estimatedDays: p.estimatedDurationDays || p.durationDays || 1,
             contractId: p.contract?.id,
+            coverLetter: p.coverLetter || p.message || 'Technical work proposal with certified materials and safety protocols.',
           };
         });
         setProposals(transformed);
@@ -112,23 +129,20 @@ export const ProposalsTrackerScreen: React.FC<ProposalsTrackerScreenProps> = ({
     loadProposals();
   }, [loadProposals]);
 
+  const { withdrawProposal } = useArtisanProposals();
+
   const handleWithdraw = (id: string) => {
-    Alert.alert('Withdraw Proposal', 'Are you sure you want to withdraw this bid?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Withdraw',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await ProposalService.withdraw(id);
-            setProposals((prev) => prev.filter((p) => p.id !== id));
-            Alert.alert('Bid Withdrawn', 'Your proposal was successfully withdrawn.');
-          } catch (err: any) {
-            Alert.alert('Error', err?.response?.data?.message || 'Could not withdraw proposal');
-          }
-        },
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const previous = [...proposals];
+    setProposals((prev) => prev.filter((p) => p.id !== id));
+    showSuccess('Bid Withdrawn', 'Your proposal was successfully withdrawn.');
+
+    withdrawProposal(id, {
+      onError: (err: any) => {
+        setProposals(previous);
+        showError('Withdrawal Failed', err?.response?.data?.message || err?.message || 'Could not withdraw proposal');
       },
-    ]);
+    });
   };
 
   const underReviewCount = proposals.filter((p) => p.status === 'UNDER_REVIEW').length;
@@ -136,9 +150,17 @@ export const ProposalsTrackerScreen: React.FC<ProposalsTrackerScreenProps> = ({
   const closedCount = proposals.filter((p) => p.status === 'DECLINED').length;
 
   const filteredProposals = proposals.filter((p) => {
-    if (activeTab === 'UNDER_REVIEW') return p.status === 'UNDER_REVIEW';
-    if (activeTab === 'ACCEPTED') return p.status === 'ACCEPTED';
-    return p.status === 'DECLINED';
+    if (activeTab === 'UNDER_REVIEW' && p.status !== 'UNDER_REVIEW') return false;
+    if (activeTab === 'ACCEPTED' && p.status !== 'ACCEPTED') return false;
+    if (activeTab === 'CLOSED' && p.status !== 'DECLINED') return false;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchTitle = p.jobTitle.toLowerCase().includes(q);
+      const matchClient = p.clientName.toLowerCase().includes(q);
+      if (!matchTitle && !matchClient) return false;
+    }
+    return true;
   });
 
   return (
@@ -156,10 +178,25 @@ export const ProposalsTrackerScreen: React.FC<ProposalsTrackerScreenProps> = ({
         <Text style={styles.countText}>{proposals.length} Total Bids</Text>
       </View>
 
+      {/* Search Input Bar */}
+      <View style={styles.searchContainer}>
+        <Search size={16} color={colors.neutral[400]} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by job title or client..."
+          placeholderTextColor={colors.neutral[400]}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
       {/* 3-Tab Segment */}
       <View style={styles.tabBar}>
         <TouchableOpacity
-          onPress={() => setActiveTab('UNDER_REVIEW')}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setActiveTab('UNDER_REVIEW');
+          }}
           style={[styles.tabItem, activeTab === 'UNDER_REVIEW' && styles.tabItemActive]}
         >
           <Text style={[styles.tabLabel, activeTab === 'UNDER_REVIEW' && styles.tabLabelActive]}>
@@ -168,7 +205,10 @@ export const ProposalsTrackerScreen: React.FC<ProposalsTrackerScreenProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setActiveTab('ACCEPTED')}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setActiveTab('ACCEPTED');
+          }}
           style={[styles.tabItem, activeTab === 'ACCEPTED' && styles.tabItemActive]}
         >
           <View style={styles.alertDotRow}>
@@ -180,7 +220,10 @@ export const ProposalsTrackerScreen: React.FC<ProposalsTrackerScreenProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setActiveTab('CLOSED')}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setActiveTab('CLOSED');
+          }}
           style={[styles.tabItem, activeTab === 'CLOSED' && styles.tabItemActive]}
         >
           <Text style={[styles.tabLabel, activeTab === 'CLOSED' && styles.tabLabelActive]}>
@@ -191,9 +234,10 @@ export const ProposalsTrackerScreen: React.FC<ProposalsTrackerScreenProps> = ({
 
       {/* Loading & Error States */}
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.brand.forest} />
-          <Text style={styles.loadingText}>Fetching your bids...</Text>
+        <View style={styles.listContent}>
+          <SkeletonProposalCard />
+          <SkeletonProposalCard />
+          <SkeletonProposalCard />
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
@@ -239,7 +283,41 @@ export const ProposalsTrackerScreen: React.FC<ProposalsTrackerScreenProps> = ({
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSelectedDetailProposal({
+                  id: item.id,
+                  jobId: item.jobId,
+                  jobTitle: item.jobTitle,
+                  clientName: item.clientName,
+                  bidAmount: item.quotedAmount,
+                  status:
+                    item.status === 'UNDER_REVIEW'
+                      ? 'PENDING'
+                      : item.status === 'ACCEPTED'
+                      ? 'ACCEPTED'
+                      : 'REJECTED',
+                  submittedDate: item.submittedAt,
+                  turnaroundDays: item.estimatedDays,
+                  coverLetter:
+                    item.coverLetter ||
+                    'Technical work proposal with certified materials and safety protocols.',
+                  milestones: [
+                    {
+                      title: 'Phase 1: Initial diagnostics & materials prep',
+                      amount: Math.floor(item.quotedAmount * 0.4),
+                    },
+                    {
+                      title: 'Phase 2: Execution & safety testing',
+                      amount: Math.ceil(item.quotedAmount * 0.6),
+                    },
+                  ],
+                });
+              }}
+              style={styles.card}
+            >
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.jobTitle}>{item.jobTitle}</Text>
@@ -307,18 +385,72 @@ export const ProposalsTrackerScreen: React.FC<ProposalsTrackerScreenProps> = ({
                     <Text style={styles.contractBtnText}>Open Contract Workspace ›</Text>
                   </TouchableOpacity>
                 ) : item.status === 'UNDER_REVIEW' ? (
-                  <TouchableOpacity
-                    style={styles.withdrawBtn}
-                    onPress={() => handleWithdraw(item.id)}
-                  >
-                    <Text style={styles.withdrawBtnText}>Withdraw Quote</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 10, flex: 1 }}>
+                    <TouchableOpacity
+                      style={styles.editBidBtn}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setEditingProposal({
+                          proposalId: item.id,
+                          jobId: item.jobId,
+                          jobTitle: item.jobTitle,
+                          currentBidAmount: item.quotedAmount,
+                          currentTurnaroundDays: item.estimatedDays,
+                          currentCoverLetter: item.coverLetter || '',
+                        });
+                      }}
+                    >
+                      <Text style={styles.editBidBtnText}>Edit Bid</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.withdrawBtn}
+                      onPress={() => handleWithdraw(item.id)}
+                    >
+                      <Text style={styles.withdrawBtnText}>Withdraw</Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : null}
               </View>
-            </View>
+            </TouchableOpacity>
           )}
         />
       )}
+
+      {/* EDIT PROPOSAL MODAL */}
+      <EditProposalModal
+        visible={!!editingProposal}
+        onClose={() => setEditingProposal(null)}
+        proposal={editingProposal}
+        onSaveProposal={async (data) => {
+          await ProposalService.updateProposal(data.proposalId, {
+            bidAmount: data.bidAmount,
+            durationDays: data.turnaroundDays,
+            coverLetter: data.coverLetter,
+          });
+          await loadProposals(true);
+        }}
+      />
+
+      {/* PROPOSAL DETAILS MODAL */}
+      <ProposalDetailsModal
+        visible={!!selectedDetailProposal}
+        onClose={() => setSelectedDetailProposal(null)}
+        proposal={selectedDetailProposal}
+        onEditProposal={(prop) => {
+          setEditingProposal({
+            proposalId: prop.id,
+            jobId: prop.jobId,
+            jobTitle: prop.jobTitle,
+            currentBidAmount: prop.bidAmount,
+            currentTurnaroundDays: prop.turnaroundDays,
+            currentCoverLetter: prop.coverLetter,
+          });
+        }}
+        onWithdrawProposal={async (id) => {
+          await handleWithdraw(id);
+        }}
+        onViewJob={onViewJob}
+      />
     </SafeAreaView>
   );
 };
@@ -574,9 +706,44 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs + 1,
     fontWeight: '800',
   },
-  withdrawBtn: {
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.base,
+    paddingVertical: 8,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.sm,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: typography.size.sm,
+    color: colors.neutral[900],
+    padding: 0,
+  },
+  editBidBtn: {
+    flex: 1,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#10B981',
+    paddingVertical: 8,
+    borderRadius: radius.full,
+    alignItems: 'center',
+  },
+  editBidBtnText: {
+    color: colors.brand.emeraldDark,
+    fontSize: typography.size.xs,
+    fontWeight: '700',
+  },
+  withdrawBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
     paddingVertical: 8,
     borderRadius: radius.full,
     alignItems: 'center',

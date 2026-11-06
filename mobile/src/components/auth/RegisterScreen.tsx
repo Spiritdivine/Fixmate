@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,11 @@ import {
 import { AuthLayout } from './AuthLayout';
 import { AuthInput } from './AuthInput';
 import { useAuthStore } from '../../stores/authStore';
+import { LoyaltyService } from '../../services/loyalty.service';
+import { ReferralCapture } from '../../lib/referral-capture';
 import * as Haptics from 'expo-haptics';
-import { Wallet } from 'lucide-react-native';
+import { Wallet, Gift, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { SocialAuthButtons } from './SocialAuthButtons';
 
 interface RegisterScreenProps {
   initialRole?: 'CLIENT' | 'ARTISAN';
@@ -22,6 +25,7 @@ interface RegisterScreenProps {
     role: 'CLIENT' | 'ARTISAN';
   }) => void;
   onNavigateToLogin: () => void;
+  onSocialLoginSuccess?: (role: 'CLIENT' | 'ARTISAN') => void;
 }
 
 export const RegisterScreen: React.FC<RegisterScreenProps> = ({
@@ -29,6 +33,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   onBack,
   onProceedToOtp,
   onNavigateToLogin,
+  onSocialLoginSuccess,
 }) => {
   const [role, setRole] = useState<'CLIENT' | 'ARTISAN'>(initialRole);
   const [formData, setFormData] = useState({
@@ -40,7 +45,74 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Referral Attribution State
+  const [referralCode, setReferralCode] = useState<string>('');
+  const [isReferralExpanded, setIsReferralExpanded] = useState<boolean>(false);
+  const [referralValidation, setReferralValidation] = useState<{
+    status: 'idle' | 'validating' | 'valid' | 'invalid';
+    referrerName?: string;
+    message?: string;
+  }>({ status: 'idle' });
+  const validationTimeoutRef = useRef<any>(null);
+
   const registerStore = useAuthStore((s) => s.register);
+
+  // Auto-detect cached referral code on mount
+  useEffect(() => {
+    let isMounted = true;
+    ReferralCapture.init().then((cached) => {
+      if (isMounted && cached) {
+        setReferralCode(cached);
+        setIsReferralExpanded(true);
+        triggerReferralValidation(cached);
+      }
+    });
+    return () => {
+      isMounted = false;
+      if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
+    };
+  }, []);
+
+  const triggerReferralValidation = (code: string) => {
+    const clean = code.trim().toUpperCase();
+    if (!clean || clean.length < 4) {
+      setReferralValidation({ status: 'idle' });
+      return;
+    }
+
+    setReferralValidation({ status: 'validating' });
+    if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
+
+    validationTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await LoyaltyService.validateReferralCode(clean);
+        if (result.isValid) {
+          setReferralValidation({
+            status: 'valid',
+            referrerName: result.referrerName || 'Verified Member',
+            message: `Referred by ${result.referrerName || 'Member'} — 150 Welcome Points will be unlocked upon your first job.`,
+          });
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          setReferralValidation({
+            status: 'invalid',
+            message: result.message || 'Invalid or inactive referral code',
+          });
+        }
+      } catch {
+        setReferralValidation({
+          status: 'invalid',
+          message: 'Unable to verify referral code. You can proceed without it.',
+        });
+      }
+    }, 450);
+  };
+
+  const handleReferralCodeChange = (text: string) => {
+    const uppercase = text.toUpperCase();
+    setReferralCode(uppercase);
+    triggerReferralValidation(uppercase);
+  };
 
   const handleRegister = async () => {
     if (!formData.email.trim()) {
@@ -76,6 +148,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         }
       }
 
+      const validatedCode =
+        referralValidation.status === 'valid' && referralCode.trim()
+          ? referralCode.trim().toUpperCase()
+          : undefined;
+
       await registerStore({
         email: formData.email.trim().toLowerCase(),
         phoneNumber: formattedPhone,
@@ -83,7 +160,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         role,
         firstName: role === 'CLIENT' ? 'Client' : 'Artisan',
         lastName: 'Member',
+        referralCode: validatedCode,
       });
+
+      // Clear consumed referral cache upon successful registration
+      await ReferralCapture.clear();
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onProceedToOtp({
@@ -218,6 +299,65 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           }
         />
 
+        {/* Referral / Invite Code Accordion */}
+        <View style={styles.referralContainer}>
+          <TouchableOpacity
+            style={styles.referralToggleRow}
+            onPress={() => setIsReferralExpanded(!isReferralExpanded)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.referralToggleLeft}>
+              <Gift size={16} color="#047857" />
+              <Text style={styles.referralToggleText}>
+                {referralValidation.status === 'valid'
+                  ? 'Referral Code Applied ✓'
+                  : 'Have an invite or referral code?'}
+              </Text>
+            </View>
+            {isReferralExpanded ? (
+              <ChevronUp size={16} color="#78716C" />
+            ) : (
+              <ChevronDown size={16} color="#78716C" />
+            )}
+          </TouchableOpacity>
+
+          {isReferralExpanded && (
+            <View style={styles.referralInputWrap}>
+              <AuthInput
+                label="Referral Code (Optional)"
+                placeholder="e.g. FIX-Q5AS"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                value={referralCode}
+                onChangeText={handleReferralCodeChange}
+                helperText="Enter your friend's code to unlock 150 loyalty points on your first completed job."
+              />
+
+              {referralValidation.status === 'validating' && (
+                <View style={styles.validatingRow}>
+                  <ActivityIndicator size="small" color="#047857" />
+                  <Text style={styles.validatingText}>Checking referral code...</Text>
+                </View>
+              )}
+
+              {referralValidation.status === 'valid' && (
+                <View style={styles.validBadge}>
+                  <CheckCircle2 size={16} color="#047857" style={{ marginRight: 6 }} />
+                  <Text style={styles.validBadgeText}>
+                    {referralValidation.message}
+                  </Text>
+                </View>
+              )}
+
+              {referralValidation.status === 'invalid' && (
+                <Text style={styles.invalidText}>
+                  {referralValidation.message}
+                </Text>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* Monad Embedded Smart Escrow Wallet Trust Callout */}
         <View style={styles.walletCallout}>
           <View style={styles.walletIconWrap}>
@@ -247,6 +387,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             <Text style={styles.submitButtonText}>Create account</Text>
           )}
         </TouchableOpacity>
+
+        {/* Social Sign-In (Google & Apple) */}
+        <SocialAuthButtons
+          role={role}
+          onSuccess={(loggedRole) => onSocialLoginSuccess?.(loggedRole)}
+          onError={setErrorMessage}
+        />
       </View>
     </AuthLayout>
   );
@@ -372,5 +519,70 @@ const styles = StyleSheet.create({
   disclaimerLink: {
     color: '#57534E',
     textDecorationLine: 'underline',
+  },
+  referralContainer: {
+    marginVertical: 10,
+    backgroundColor: '#FAFAF9',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E7E5E4',
+    overflow: 'hidden',
+  },
+  referralToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  referralToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  referralToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1C1917',
+  },
+  referralInputWrap: {
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#F5F5F4',
+  },
+  validatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+  },
+  validatingText: {
+    fontSize: 12,
+    color: '#78716C',
+  },
+  validBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 8,
+  },
+  validBadgeText: {
+    fontSize: 12,
+    color: '#065F46',
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 16,
+  },
+  invalidText: {
+    fontSize: 12,
+    color: '#DC2626',
+    marginTop: 6,
+    fontWeight: '500',
   },
 });

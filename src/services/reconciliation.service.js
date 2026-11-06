@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import { env } from '../config/env.js';
 import { MonadEscrowService } from './monad-escrow.service.js';
+import { AlertService } from './alert.service.js';
 import { ethers } from 'ethers';
 
 export class ReconciliationService {
@@ -103,8 +104,20 @@ export class ReconciliationService {
     let status = 'BALANCED';
     if (Math.abs(ngnVariance) > 1000 || Math.abs(cryptoVariance) > 5.0) {
       status = 'CRITICAL';
+      await AlertService.sendAlert({
+        level: 'CRITICAL',
+        title: 'Financial Reconciliation Discrepancy (CRITICAL)',
+        message: `Ledger reconciliation detected severe variance: NGN Variance: ₦${ngnVariance.toLocaleString()}, USDC Variance: $${cryptoVariance}`,
+        metadata: { ngnVariance, cryptoVariance, paystackBalanceNgn, totalFiatLiabilities, monadEscrowUsdc, dbActiveCryptoEscrow },
+      }).catch(() => {});
     } else if (Math.abs(ngnVariance) > 10 || Math.abs(cryptoVariance) > 0.05) {
       status = 'DISCREPANCY';
+      await AlertService.sendAlert({
+        level: 'WARNING',
+        title: 'Financial Reconciliation Discrepancy (Notice)',
+        message: `Minor ledger variance detected: NGN: ₦${ngnVariance.toLocaleString()}, USDC: $${cryptoVariance}`,
+        metadata: { ngnVariance, cryptoVariance },
+      }).catch(() => {});
     }
 
     // 6. Record or update DailyFinancialReport

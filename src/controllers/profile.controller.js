@@ -204,6 +204,33 @@ export class ProfileController {
       next(error);
     }
   }
+
+  static async getArtisanSkills(req, res, next) {
+    try {
+      const result = await ProfileService.getArtisanSkills(req.user.id);
+      res.status(200).json(new ApiResponse(200, result, 'Artisan skills fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async addArtisanSkill(req, res, next) {
+    try {
+      const result = await ProfileService.addArtisanSkill(req.user.id, req.body.skillId);
+      res.status(201).json(new ApiResponse(201, result, 'Skill added to profile successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async removeArtisanSkill(req, res, next) {
+    try {
+      const result = await ProfileService.removeArtisanSkill(req.user.id, parseInt(req.params.skillId, 10));
+      res.status(200).json(new ApiResponse(200, result, 'Skill removed from profile successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default ProfileController;

@@ -1,5 +1,7 @@
+import crypto from 'crypto';
 import { env } from '../config/env.js';
 import prisma, { PRISMA_TX_OPTIONS } from '../config/db.js';
+import { redisCache } from '../config/redis.js';
 import { hashPassword, comparePassword } from '../utils/hash.util.js';
 import {
   generateAccessToken,
@@ -13,6 +15,10 @@ import { ApiError } from '../utils/api-error.js';
 import { SmsService } from './sms.service.js';
 import { EmailService } from './email.service.js';
 import { PrivyService } from './privy.service.js';
+import { ReferralService } from './referral.service.js';
+import { SocialAuthService } from './social-auth.service.js';
+import { OtpService, normalizePhoneNumber } from './otp.service.js';
+import { generateReferralCode } from '../utils/code-generator.js';
 import { ethers } from 'ethers';
 
 export class AuthService {
@@ -105,11 +111,21 @@ export class AuthService {
             isEmailVerified: false,
             isPhoneVerified: false,
             walletAddress: resolvedWalletAddress,
+            referralCode: generateReferralCode('FIX'),
             wallet: {
               create: {
                 currency: 'NGN',
                 availableBalance: 0.0,
                 escrowLockedBalance: 0.0,
+              },
+            },
+            pointWallet: {
+              create: {
+                availablePoints: 0,
+                lockedPoints: 0,
+                lifetimeEarned: 0,
+                lifetimeBurned: 0,
+                tier: 'BRONZE',
               },
             },
             ...(data.role === 'ARTISAN'
@@ -137,34 +153,28 @@ export class AuthService {
           },
         });
 
-        // Store Phone Verification OTP
-        await tx.otpVerification.create({
-          data: {
-            identifier: user.phoneNumber,
-            otpHash: hashedPhoneOtp,
-            purpose: 'PHONE_VERIFICATION',
-            expiresAt: phoneExpiry,
-          },
-        });
-
-        // Store Email Verification OTP code
-        await tx.otpVerification.create({
-          data: {
-            identifier: user.email,
-            otpHash: hashedEmailOtp,
-            purpose: 'EMAIL_VERIFICATION',
-            expiresAt: emailExpiry,
-          },
-        });
-
-        // Store Email Verification Magic Link Token
-        await tx.otpVerification.create({
-          data: {
-            identifier: user.email,
-            otpHash: hashedEmailToken,
-            purpose: 'EMAIL_VERIFICATION',
-            expiresAt: emailExpiry,
-          },
+        // Store Phone & Email Verification OTPs in a single batch
+        await tx.otpVerification.createMany({
+          data: [
+            {
+              identifier: user.phoneNumber,
+              otpHash: hashedPhoneOtp,
+              purpose: 'PHONE_VERIFICATION',
+              expiresAt: phoneExpiry,
+            },
+            {
+              identifier: user.email,
+              otpHash: hashedEmailOtp,
+              purpose: 'EMAIL_VERIFICATION',
+              expiresAt: emailExpiry,
+            },
+            {
+              identifier: user.email,
+              otpHash: hashedEmailToken,
+              purpose: 'EMAIL_VERIFICATION',
+              expiresAt: emailExpiry,
+            },
+          ],
         });
 
         return { user, phoneOtpCode, emailOtpCode, emailToken };
@@ -180,7 +190,9 @@ export class AuthService {
     }
 
     try {
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      const clientUrl = (env.CLIENT_URL && !env.CLIENT_URL.includes('*'))
+        ? env.CLIENT_URL.split(',')[0].trim().replace(/\/$/, '')
+        : (process.env.CLIENT_URL || 'https://artifixhq.xyz');
       const verificationUrl = `${clientUrl}/verify-email?email=${encodeURIComponent(result.user.email)}&token=${result.emailToken}`;
       await EmailService.sendVerificationEmail(
         result.user.email,
@@ -190,6 +202,20 @@ export class AuthService {
       );
     } catch (err) {
       console.warn(`[AuthService] Email dispatch warning: ${err.message}`);
+    }
+
+    // Process referral attribution if code was supplied
+    if (data.referralCode) {
+      try {
+        await ReferralService.registerReferralAttribution({
+          refereeId: result.user.id,
+          referralCode: data.referralCode,
+          clientIp: data.clientIp || null,
+          deviceData: data.deviceData || null,
+        });
+      } catch (refErr) {
+        console.warn(`[AuthService] Referral attribution warning: ${refErr.message}`);
+      }
     }
 
     const tokens = await this.generateUserTokens(result.user);
@@ -213,9 +239,14 @@ export class AuthService {
   }
 
   static async login(identifier, password, deviceInfo = null, ipAddress = null) {
+    const isEmail = identifier.includes('@');
+    const cleanIdentifier = isEmail
+      ? identifier.toLowerCase().trim()
+      : normalizePhoneNumber(identifier);
+
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ email: identifier }, { phoneNumber: identifier }],
+        OR: [{ email: cleanIdentifier }, { phoneNumber: cleanIdentifier }],
       },
       include: {
         artisanProfile: true,
@@ -255,6 +286,7 @@ export class AuthService {
         isPhoneVerified: user.isPhoneVerified,
         isKycVerified: user.isKycVerified,
         walletAddress: user.walletAddress,
+        hasTransactionPin: Boolean(user.transactionPinHash),
         artisanProfile: user.artisanProfile,
         clientProfile: user.clientProfile,
         wallet: user.wallet,
@@ -263,7 +295,7 @@ export class AuthService {
     };
   }
 
-  static async refresh(rawRefreshToken) {
+  static async refresh(rawRefreshToken, deviceInfo = null, ipAddress = null) {
     let decoded;
     try {
       decoded = verifyRefreshToken(rawRefreshToken);
@@ -277,27 +309,70 @@ export class AuthService {
       include: { user: true },
     });
 
-    if (!storedToken || storedToken.isRevoked || storedToken.expiresAt < new Date()) {
-      throw ApiError.unauthorized('Refresh token is invalid or revoked');
+    if (!storedToken) {
+      throw ApiError.unauthorized('Refresh token was not recognized');
+    }
+
+    // Token Reuse Detection (RTR): If a rotated/revoked token is used, suspect theft
+    if (storedToken.isRevoked) {
+      console.warn(`🚨 [SECURITY ALERT] Refresh token reuse detected for user ${storedToken.userId}! Family: ${storedToken.familyId}`);
+
+      // Invalidate all tokens in the lineage family
+      if (storedToken.familyId) {
+        await prisma.refreshToken.updateMany({
+          where: { familyId: storedToken.familyId },
+          data: { isRevoked: true },
+        });
+      }
+
+      // Evict all active sessions in Redis
+      await redisCache.delByPattern(`session:${storedToken.userId}:*`);
+
+      throw ApiError.unauthorized(
+        'Token reuse detected. All active sessions in this family have been terminated for security.'
+      );
+    }
+
+    if (storedToken.expiresAt < new Date()) {
+      throw ApiError.unauthorized('Refresh token has expired');
     }
 
     // Invalidate old token (Rotation)
-    await prisma.refreshToken.delete({
+    await prisma.refreshToken.update({
       where: { id: storedToken.id },
+      data: { isRevoked: true },
     });
 
-    // Generate new pair
-    const tokens = await this.generateUserTokens(storedToken.user);
+    // Generate new pair within the same token family
+    const tokens = await this.generateUserTokens(
+      storedToken.user,
+      deviceInfo || storedToken.deviceInfo,
+      ipAddress || storedToken.ipAddress,
+      storedToken.familyId
+    );
 
     return tokens;
   }
 
   static async logout(rawRefreshToken) {
     if (!rawRefreshToken) return;
-    const hashedToken = hashToken(rawRefreshToken);
-    await prisma.refreshToken.deleteMany({
-      where: { tokenHash: hashedToken },
-    });
+    try {
+      const hashedToken = hashToken(rawRefreshToken);
+      const storedToken = await prisma.refreshToken.findUnique({
+        where: { tokenHash: hashedToken },
+      });
+
+      if (storedToken) {
+        await prisma.refreshToken.delete({
+          where: { id: storedToken.id },
+        });
+        if (storedToken.userId) {
+          await redisCache.delByPattern(`session:${storedToken.userId}:*`);
+        }
+      }
+    } catch (err) {
+      console.warn('[AuthService.logout] Session cleanup error:', err.message);
+    }
   }
 
   static async verifyOtp(identifier, otp, purpose) {
@@ -341,7 +416,43 @@ export class AuthService {
       PRISMA_TX_OPTIONS
     );
 
-    return { verified: true, purpose };
+    const updatedUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: cleanIdentifier }, { phoneNumber: cleanIdentifier }],
+      },
+      include: {
+        artisanProfile: true,
+        clientProfile: true,
+        wallet: true,
+      },
+    });
+
+    let tokens = null;
+    if (updatedUser) {
+      tokens = await this.generateUserTokens(updatedUser);
+    }
+
+    return {
+      verified: true,
+      purpose,
+      user: updatedUser
+        ? {
+            id: updatedUser.id,
+            email: updatedUser.email,
+            phoneNumber: updatedUser.phoneNumber,
+            role: updatedUser.role,
+            isEmailVerified: updatedUser.isEmailVerified,
+            isPhoneVerified: updatedUser.isPhoneVerified,
+            walletAddress: updatedUser.walletAddress,
+            referralCode: updatedUser.referralCode,
+            clientProfile: updatedUser.clientProfile,
+            artisanProfile: updatedUser.artisanProfile,
+          }
+        : null,
+      tokens,
+      accessToken: tokens?.accessToken,
+      refreshToken: tokens?.refreshToken,
+    };
   }
 
   /**
@@ -471,7 +582,9 @@ export class AuthService {
         },
       });
 
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      const clientUrl = (env.CLIENT_URL && !env.CLIENT_URL.includes('*'))
+        ? env.CLIENT_URL.split(',')[0].trim().replace(/\/$/, '')
+        : (process.env.CLIENT_URL || 'https://artifixhq.xyz');
       const verificationUrl = `${clientUrl}/verify-email?email=${encodeURIComponent(cleanIdentifier)}&token=${magicToken}`;
       await EmailService.sendVerificationEmail(cleanIdentifier, otpCode, verificationUrl, firstName);
     } else if (purpose === 'PHONE_VERIFICATION') {
@@ -565,13 +678,25 @@ export class AuthService {
     // Invalidate all existing refresh tokens
     await prisma.refreshToken.deleteMany({ where: { userId } });
 
+    // Evict all active Redis sessions
+    try {
+      await redisCache.delByPattern(`session:${userId}:*`);
+    } catch {
+      // Redis optional eviction
+    }
+
     return { message: 'Password updated successfully' };
   }
 
   static async forgotPassword(identifier) {
+    const isEmail = identifier.includes('@');
+    const cleanIdentifier = isEmail
+      ? identifier.toLowerCase().trim()
+      : normalizePhoneNumber(identifier);
+
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ email: identifier }, { phoneNumber: identifier }],
+        OR: [{ email: cleanIdentifier }, { phoneNumber: cleanIdentifier }],
       },
     });
 
@@ -586,7 +711,7 @@ export class AuthService {
 
     await prisma.otpVerification.create({
       data: {
-        identifier,
+        identifier: cleanIdentifier,
         otpHash: hashedOtp,
         purpose: 'PASSWORD_RESET',
         expiresAt,
@@ -594,10 +719,10 @@ export class AuthService {
     });
 
     // Dispatch OTP via appropriate channel
-    if (identifier.includes('@')) {
-      await EmailService.sendOtpEmail(identifier, otpCode, 'Password Reset');
+    if (isEmail) {
+      await EmailService.sendOtpEmail(cleanIdentifier, otpCode, 'Password Reset');
     } else {
-      await SmsService.sendOtp(identifier, otpCode, 'Password Reset');
+      await SmsService.sendOtp(cleanIdentifier, otpCode, 'Password Reset');
     }
 
     return {
@@ -607,10 +732,15 @@ export class AuthService {
   }
 
   static async resetPassword(identifier, otp, newPassword) {
+    const isEmail = identifier.includes('@');
+    const cleanIdentifier = isEmail
+      ? identifier.toLowerCase().trim()
+      : normalizePhoneNumber(identifier);
+
     const hashedOtp = hashToken(otp);
     const record = await prisma.otpVerification.findFirst({
       where: {
-        identifier,
+        identifier: cleanIdentifier,
         otpHash: hashedOtp,
         purpose: 'PASSWORD_RESET',
         isUsed: false,
@@ -624,7 +754,7 @@ export class AuthService {
 
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ email: identifier }, { phoneNumber: identifier }],
+        OR: [{ email: cleanIdentifier }, { phoneNumber: cleanIdentifier }],
       },
     });
 
@@ -650,6 +780,13 @@ export class AuthService {
       },
       PRISMA_TX_OPTIONS
     );
+
+    // Evict all active Redis sessions
+    try {
+      await redisCache.delByPattern(`session:${user.id}:*`);
+    } catch {
+      // Redis optional eviction
+    }
 
     return { message: 'Password has been reset successfully' };
   }
@@ -722,8 +859,17 @@ export class AuthService {
     });
   }
 
-  static async generateUserTokens(user, deviceInfo = null, ipAddress = null) {
-    const payload = { userId: user.id, role: user.role, email: user.email };
+  static async generateUserTokens(user, deviceInfo = null, ipAddress = null, familyId = null) {
+    const sessionId = crypto.randomUUID();
+    const tokenFamilyId = familyId || crypto.randomUUID();
+
+    const payload = {
+      userId: user.id,
+      role: user.role,
+      email: user.email,
+      sessionId,
+      familyId: tokenFamilyId,
+    };
     const accessToken = generateAccessToken(payload);
     const rawRefreshToken = generateRefreshToken(payload);
 
@@ -734,16 +880,390 @@ export class AuthService {
       data: {
         userId: user.id,
         tokenHash,
+        familyId: tokenFamilyId,
         deviceInfo,
         ipAddress,
         expiresAt,
       },
     });
 
+    // Cache active session in Redis for instant revocation & role sync
+    const sessionTtl = 7 * 24 * 60 * 60; // 7 days
+    await redisCache.set(
+      `session:${user.id}:${sessionId}`,
+      JSON.stringify({ userId: user.id, role: user.role, active: true }),
+      sessionTtl
+    );
+
     return {
       accessToken,
       refreshToken: rawRefreshToken,
       expiresIn: env.JWT_ACCESS_EXPIRES_IN,
+      sessionId,
+    };
+  }
+
+  /**
+   * Seamless multi-role switching (CLIENT <-> ARTISAN)
+   */
+  static async switchRole(userId, targetRole) {
+    if (!['CLIENT', 'ARTISAN'].includes(targetRole)) {
+      throw ApiError.badRequest('Role must be CLIENT or ARTISAN');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { clientProfile: true, artisanProfile: true, wallet: true },
+    });
+
+    if (!user) throw ApiError.notFound('User not found');
+
+    // If switching to ARTISAN, ensure artisan profile exists or provision default profile
+    if (targetRole === 'ARTISAN' && !user.artisanProfile) {
+      await prisma.artisanProfile.create({
+        data: {
+          userId: user.id,
+          state: 'Lagos',
+          lgaCity: 'Ikeja',
+          yearsOfExperience: 1,
+        },
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { role: targetRole },
+      include: { clientProfile: true, artisanProfile: true, wallet: true },
+    });
+
+    // Evict old session caches so next request instantly reflects new role
+    await redisCache.delByPattern(`session:${userId}:*`);
+
+    const tokens = await this.generateUserTokens(updatedUser);
+
+    return {
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber,
+        role: updatedUser.role,
+        isEmailVerified: updatedUser.isEmailVerified,
+        isPhoneVerified: updatedUser.isPhoneVerified,
+        isKycVerified: updatedUser.isKycVerified,
+        artisanProfile: updatedUser.artisanProfile,
+        clientProfile: updatedUser.clientProfile,
+        wallet: updatedUser.wallet,
+      },
+      tokens,
+    };
+  }
+
+  /**
+   * Set 4-digit transaction/escrow security PIN
+   */
+  static async setTransactionPin(userId, pin) {
+    if (!pin || !/^\d{4}$/.test(String(pin))) {
+      throw ApiError.badRequest('Security PIN must be exactly 4 digits');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw ApiError.notFound('User not found');
+
+    if (user.transactionPinHash) {
+      throw ApiError.badRequest('A security PIN is already configured on this account. Please use the change PIN workflow.');
+    }
+
+    const pinHash = await hashPassword(String(pin));
+    await prisma.user.update({
+      where: { id: userId },
+      data: { transactionPinHash: pinHash },
+    });
+
+    return { success: true, message: '4-digit transaction PIN set successfully' };
+  }
+
+  /**
+   * Change 4-digit transaction/escrow security PIN
+   */
+  static async changeTransactionPin(userId, currentPin, newPin) {
+    if (!newPin || !/^\d{4}$/.test(String(newPin))) {
+      throw ApiError.badRequest('New PIN must be exactly 4 digits');
+    }
+
+    const lockoutKey = `pin_lockout:${userId}`;
+    const isLocked = await redisCache.get(lockoutKey);
+    if (isLocked) {
+      throw ApiError.forbidden('Too many failed PIN attempts. Your transaction PIN is locked for 15 minutes.');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw ApiError.notFound('User not found');
+
+    if (user.transactionPinHash) {
+      if (!currentPin) {
+        throw ApiError.badRequest('Current PIN is required to set a new PIN');
+      }
+      const isMatch = await comparePassword(String(currentPin), user.transactionPinHash);
+      if (!isMatch) {
+        const attemptsKey = `pin_attempts:${userId}`;
+        const attemptsStr = await redisCache.get(attemptsKey);
+        const currentAttempts = (Number(attemptsStr) || 0) + 1;
+        if (currentAttempts >= 5) {
+          await redisCache.set(lockoutKey, 'LOCKED', 900);
+          await redisCache.del(attemptsKey);
+          throw ApiError.forbidden('Too many failed attempts. Transaction PIN locked for 15 minutes.');
+        } else {
+          await redisCache.set(attemptsKey, currentAttempts, 900);
+          const remaining = 5 - currentAttempts;
+          throw ApiError.badRequest(`Current PIN is incorrect. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`);
+        }
+      }
+    }
+
+    await redisCache.del(`pin_attempts:${userId}`);
+    const pinHash = await hashPassword(String(newPin));
+    await prisma.user.update({
+      where: { id: userId },
+      data: { transactionPinHash: pinHash },
+    });
+
+    return { success: true, message: 'Security PIN changed successfully' };
+  }
+
+  /**
+   * Verify 4-digit transaction PIN and issue single-use Step-Up authorization ticket
+   */
+  static async verifyTransactionPin(userId, pin) {
+    if (!pin) throw ApiError.badRequest('PIN is required');
+
+    // 1. Check if user is temporarily locked out
+    const lockoutKey = `pin_lockout:${userId}`;
+    const isLocked = await redisCache.get(lockoutKey);
+    if (isLocked) {
+      throw ApiError.forbidden('Too many failed PIN attempts. Your transaction PIN is locked for 15 minutes for your security.');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw ApiError.notFound('User not found');
+
+    if (!user.transactionPinHash) {
+      throw ApiError.badRequest('No transaction PIN configured. Please set a 4-digit PIN in settings.');
+    }
+
+    const isMatch = await comparePassword(String(pin), user.transactionPinHash);
+    const attemptsKey = `pin_attempts:${userId}`;
+
+    if (!isMatch) {
+      const attemptsStr = await redisCache.get(attemptsKey);
+      const currentAttempts = (Number(attemptsStr) || 0) + 1;
+
+      if (currentAttempts >= 5) {
+        await redisCache.set(lockoutKey, 'LOCKED', 900); // 15-minute lockout
+        await redisCache.del(attemptsKey);
+        throw ApiError.forbidden('Too many failed attempts. Transaction PIN locked for 15 minutes.');
+      } else {
+        await redisCache.set(attemptsKey, currentAttempts, 900);
+        const remaining = 5 - currentAttempts;
+        throw ApiError.badRequest(`Incorrect 4-digit security PIN. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before temporary lockout.`);
+      }
+    }
+
+    // PIN matched: clear failure counter
+    await redisCache.del(attemptsKey);
+
+    // Issue single-use 5-minute step-up ticket in Redis
+    const ticket = crypto.randomBytes(24).toString('hex');
+    await redisCache.set(`stepup:${userId}:TRANSACTION_PIN:${ticket}`, 'VALID', 300);
+
+    return { verified: true, stepUpTicket: ticket };
+  }
+
+  /**
+   * Native Social Login (Google / Apple) with automated embedded EVM wallet provisioning
+   */
+  static async socialLogin(provider, idToken, requestedRole = 'CLIENT', deviceInfo = null, ipAddress = null) {
+    let socialIdentity;
+    if (provider === 'GOOGLE') {
+      socialIdentity = await SocialAuthService.verifyGoogleToken(idToken);
+    } else if (provider === 'APPLE') {
+      socialIdentity = await SocialAuthService.verifyAppleToken(idToken);
+    } else {
+      throw ApiError.badRequest(`Unsupported social provider: ${provider}`);
+    }
+
+    const role = ['CLIENT', 'ARTISAN'].includes(requestedRole) ? requestedRole : 'CLIENT';
+
+    // 1. Check if user exists by social provider and social ID
+    let user = await prisma.user.findFirst({
+      where: {
+        socialProvider: provider,
+        socialId: socialIdentity.providerId,
+      },
+      include: {
+        artisanProfile: true,
+        clientProfile: true,
+        wallet: true,
+      },
+    });
+
+    // 2. Fallback to matching by verified email
+    if (!user && socialIdentity.email) {
+      user = await prisma.user.findUnique({
+        where: { email: socialIdentity.email },
+        include: {
+          artisanProfile: true,
+          clientProfile: true,
+          wallet: true,
+        },
+      });
+
+      if (user) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            socialProvider: provider,
+            socialId: socialIdentity.providerId,
+            isEmailVerified: true,
+            avatarUrl: user.avatarUrl || socialIdentity.avatarUrl,
+          },
+          include: {
+            artisanProfile: true,
+            clientProfile: true,
+            wallet: true,
+          },
+        });
+      }
+    }
+
+    let isNewUser = false;
+    // 3. Register user if not existing
+    if (!user) {
+      isNewUser = true;
+      const randomPassword = crypto.randomBytes(32).toString('hex');
+      const passwordHash = await hashPassword(randomPassword);
+
+      // Embedded wallet resolution via Privy
+      let walletAddress = null;
+      if (PrivyService.isConfigured()) {
+        try {
+          const serverWallet = await PrivyService.createServerWallet();
+          walletAddress = serverWallet?.address || null;
+        } catch {
+          // ignore
+        }
+      }
+      if (!walletAddress) {
+        try {
+          walletAddress = ethers.Wallet.createRandom().address;
+        } catch {}
+      }
+
+      const email = socialIdentity.email || `${socialIdentity.providerId}@${provider.toLowerCase()}.artifix`;
+
+      // Retry up to 3 times to guarantee phone collision resistance
+      let createdUser = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const dummyPhone = `+234${Math.floor(7000000000 + Math.random() * 2999999999)}`;
+        try {
+          createdUser = await prisma.$transaction(async (tx) => {
+            const newUser = await tx.user.create({
+              data: {
+                email,
+                phoneNumber: dummyPhone,
+                passwordHash,
+                role,
+                isEmailVerified: true,
+                isPhoneVerified: false,
+                socialProvider: provider,
+                socialId: socialIdentity.providerId,
+                avatarUrl: socialIdentity.avatarUrl,
+                walletAddress,
+                referralCode: generateReferralCode('FIX'),
+                wallet: {
+                  create: {
+                    currency: 'NGN',
+                    availableBalance: 0.0,
+                    escrowLockedBalance: 0.0,
+                  },
+                },
+                pointWallet: {
+                  create: {
+                    availablePoints: 0,
+                    lockedPoints: 0,
+                    lifetimeEarned: 0,
+                    lifetimeBurned: 0,
+                    tier: 'BRONZE',
+                  },
+                },
+                ...(role === 'ARTISAN'
+                  ? {
+                      artisanProfile: {
+                        create: {
+                          firstName: socialIdentity.firstName || null,
+                          lastName: socialIdentity.lastName || null,
+                          businessName: `${socialIdentity.firstName || 'Artisan'}'s Services`,
+                          state: 'Lagos',
+                          lgaCity: 'Ikeja',
+                        },
+                      },
+                    }
+                  : {
+                      clientProfile: {
+                        create: {
+                          firstName: socialIdentity.firstName || '',
+                          lastName: socialIdentity.lastName || '',
+                          state: 'Lagos',
+                          city: 'Ikeja',
+                        },
+                      },
+                    }),
+              },
+            });
+
+            return tx.user.findUnique({
+              where: { id: newUser.id },
+              include: { artisanProfile: true, clientProfile: true, wallet: true },
+            });
+          }, PRISMA_TX_OPTIONS);
+          break;
+        } catch (err) {
+          if (err.code === 'P2002' && err.meta?.target?.includes('phone') && attempt < 2) {
+            continue;
+          }
+          throw err;
+        }
+      }
+      user = createdUser;
+    }
+
+    if (user.status === 'SUSPENDED' || user.status === 'DEACTIVATED') {
+      throw ApiError.forbidden('Account is inactive or suspended');
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    const tokens = await this.generateUserTokens(user, deviceInfo, ipAddress);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        isPhoneVerified: user.isPhoneVerified,
+        isKycVerified: user.isKycVerified,
+        avatarUrl: user.avatarUrl,
+        walletAddress: user.walletAddress,
+        artisanProfile: user.artisanProfile,
+        clientProfile: user.clientProfile,
+        wallet: user.wallet,
+      },
+      tokens,
+      isNewUser,
     };
   }
 }

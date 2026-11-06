@@ -7,6 +7,7 @@ import { AiVerificationService } from '../services/ai-verification.service.js';
 import { AiCacheService } from '../services/ai-cache.service.js';
 import { UploadService } from '../services/upload.service.js';
 import { GuestSessionLinker } from '../services/guest-session-linker.service.js';
+import { DiagnosticStateService } from '../services/diagnostic-state.service.js';
 import { BomPricingService } from '../services/bom-pricing.service.js';
 import { ApiResponse } from '../utils/api-response.js';
 import { ApiError } from '../utils/api-error.js';
@@ -98,6 +99,29 @@ export class AiController {
         authenticatedProfile = await prisma.clientProfile.findUnique({ where: { userId } }).catch(() => null);
       }
 
+      // Enforce 5-query free guest ceiling
+      if (!userId && clientSessionToken) {
+        const hashedGuestToken = DiagnosticStateService.hashGuestToken(clientSessionToken);
+        const priorGuestTurns = await prisma.aiDiagnosticTurn.count({
+          where: {
+            role: 'user',
+            session: {
+              clientSessionToken: hashedGuestToken,
+              userId: null,
+            },
+          },
+        });
+        if (priorGuestTurns >= 5) {
+          const limitErr = new ApiError(
+            403,
+            'You have reached your 5-query free guest limit. Please sign in or create a free account to continue your consultation.'
+          );
+          limitErr.errorCode = 'GUEST_QUERY_LIMIT_REACHED';
+          limitErr.requiresAuth = true;
+          throw limitErr;
+        }
+      }
+
       // Prepare direct base64 data URIs for immediate, exact vision analysis
       const visionImageUrls = [];
       const imageUrls = [];
@@ -160,6 +184,26 @@ export class AiController {
         clientSessionToken,
         clientRequestedArtisan: wantsArtisan,
       });
+
+      if (!userId) {
+        const hashedGuestToken = clientSessionToken ? DiagnosticStateService.hashGuestToken(clientSessionToken) : null;
+        const totalUsed = await prisma.aiDiagnosticTurn.count({
+          where: {
+            role: 'user',
+            session: {
+              ...(hashedGuestToken ? { clientSessionToken: hashedGuestToken } : { id: result.id }),
+              userId: null,
+            },
+          },
+        }).catch(() => 1);
+
+        result.guestQuota = {
+          limit: 5,
+          used: totalUsed,
+          remaining: Math.max(0, 5 - totalUsed),
+          isGuest: true,
+        };
+      }
 
       return res.status(201).json(
         new ApiResponse(201, result, 'Fault diagnostic analysis completed successfully.')
@@ -520,6 +564,38 @@ export class AiController {
         try { userId = verifyAccessToken(req.headers.authorization.split(' ')[1])?.userId || null; } catch { /* guest request */ }
       }
 
+      // Enforce 5-query free guest ceiling
+      if (!userId) {
+        const guestSession = await prisma.aiDiagnosticSession.findUnique({
+          where: { id },
+          select: { userId: true, clientSessionToken: true },
+        });
+        if (guestSession && !guestSession.userId) {
+          const userTurnsCount = await prisma.aiDiagnosticTurn.count({
+            where: {
+              role: 'user',
+              session: {
+                OR: [
+                  { id },
+                  ...(guestSession.clientSessionToken
+                    ? [{ clientSessionToken: guestSession.clientSessionToken, userId: null }]
+                    : []),
+                ],
+              },
+            },
+          });
+          if (userTurnsCount >= 5) {
+            const limitErr = new ApiError(
+              403,
+              'You have reached your 5-query free guest limit. Please sign in or create a free account to continue your consultation.'
+            );
+            limitErr.errorCode = 'GUEST_QUERY_LIMIT_REACHED';
+            limitErr.requiresAuth = true;
+            throw limitErr;
+          }
+        }
+      }
+
       let photoFiles = [];
       let voiceFile = null;
 
@@ -582,6 +658,21 @@ export class AiController {
         userId,
         guestToken: req.get('x-diagnostic-session-token') || req.body.guestAccessToken || null,
       });
+
+      if (!userId) {
+        const userTurnsCount = await prisma.aiDiagnosticTurn.count({
+          where: {
+            diagnosticSessionId: id,
+            role: 'user',
+          },
+        });
+        chatResult.guestQuota = {
+          limit: 5,
+          used: userTurnsCount,
+          remaining: Math.max(0, 5 - userTurnsCount),
+          isGuest: true,
+        };
+      }
 
       return res.json(new ApiResponse(200, chatResult, 'Message processed successfully.'));
     } catch (error) {

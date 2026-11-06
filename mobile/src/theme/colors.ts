@@ -29,9 +29,11 @@ export const colors = {
   status: {
     online: '#10B981',       // "YOU ARE ONLINE" active green
     offline: '#6B7280',      // Muted inactive state
+    success: '#10B981',      // Success / verified status
     urgent: '#F59E0B',       // Urgent lead pill & countdown amber
     urgentBg: '#FEF3C7',     // Light amber card background
     urgentBorder: '#FDE68A', // Amber card border
+    warning: '#F59E0B',      // Warning state
     danger: '#EF4444',       // Decline button & dispute alerts
     dangerBg: '#FEE2E2',     // Red badge background
     info: '#3B82F6',         // Information icons and links
@@ -61,7 +63,14 @@ export const colors = {
     white: '#FFFFFF',        // Pure white cards
   },
 
+  // Doherty Threshold Shimmer Skeleton Tokens
+  skeleton: {
+    base: '#E5E7EB',
+    highlight: '#F3F4F6',
+  },
+
   // Fixmate Architectural Icon System Tokens
+
   icons: {
     primary: '#123F32',         // Forest green (precise, confident)
     secondary: '#606C38',       // Muted olive (subtle, structural)

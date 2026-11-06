@@ -8,6 +8,7 @@ import {
   Animated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Check, ArrowRight } from 'lucide-react-native';
 import { colors, radius, typography } from '../../theme';
 
 interface SlideToReleaseButtonProps {
@@ -86,7 +87,10 @@ export const SlideToReleaseButton: React.FC<SlideToReleaseButtonProps> = ({
         {loading ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : released ? (
-          <Text style={styles.releasedText}>✓ Funds Successfully Released</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Check size={16} color="#FFFFFF" strokeWidth={2.8} />
+            <Text style={styles.releasedText}>Funds Successfully Released</Text>
+          </View>
         ) : (
           <Text style={styles.label}>{label}</Text>
         )}
@@ -103,7 +107,7 @@ export const SlideToReleaseButton: React.FC<SlideToReleaseButtonProps> = ({
           ]}
           {...panResponder.panHandlers}
         >
-          <Text style={styles.arrowIcon}>➔</Text>
+          <ArrowRight size={18} color={colors.primary} strokeWidth={2.5} />
         </Animated.View>
       )}
     </View>

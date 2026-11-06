@@ -11,11 +11,13 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { ShieldAlert, Scale, Clock, Bot, X } from 'lucide-react-native';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { DisputeService } from '../../services/dispute.service';
 import { ContractService } from '../../services/contract.service';
 import { useQuery } from '@tanstack/react-query';
+import { SkeletonPlaceholder } from '../shared';
 
 interface ClientDisputeWorkspaceScreenProps {
   disputeId?: string;
@@ -28,6 +30,7 @@ export const ClientDisputeWorkspaceScreen: React.FC<ClientDisputeWorkspaceScreen
   contractId,
   onBack,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
   const [showFileModal, setShowFileModal] = useState(false);
   const [selectedReason, setSelectedReason] = useState('POOR_QUALITY');
   const [claimDescription, setClaimDescription] = useState('');
@@ -138,7 +141,7 @@ export const ClientDisputeWorkspaceScreen: React.FC<ClientDisputeWorkspaceScreen
       setActiveDispute(res);
       Alert.alert(
         'Dispute Claim Lodged',
-        'Your dispute has been assigned to an official Fixmate arbitrator. Escrow funds are frozen.'
+        'Your dispute has been assigned to an official Artifix arbitrator. Escrow funds are frozen.'
       );
       loadDispute();
     } catch (err: unknown) {
@@ -153,71 +156,101 @@ export const ClientDisputeWorkspaceScreen: React.FC<ClientDisputeWorkspaceScreen
   const disputedAmount = Number(activeDispute?.disputedAmount || activeDispute?.contract?.totalAmount || 0);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColors.headerBg, borderBottomColor: themeColors.headerBorder }]}>
         {onBack && (
           <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-            <Text style={styles.backBtnText}>←</Text>
+            <Text style={[styles.backBtnText, { color: themeColors.text }]}>←</Text>
           </TouchableOpacity>
         )}
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Dispute Workspace</Text>
-          <Text style={styles.headerSubtitle}>Case #{caseId} • Escrow Protected</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>Dispute Workspace</Text>
+          <Text style={[styles.headerSubtitle, { color: themeColors.textMuted }]}>Case #{caseId} • Escrow Protected</Text>
         </View>
         <TouchableOpacity
-          style={styles.fileNewBtn}
+          style={[styles.fileNewBtn, isDark && { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}
           onPress={() => setShowFileModal(true)}
           activeOpacity={0.8}
         >
-          <Text style={styles.fileNewBtnText}>+ File Claim</Text>
+          <Text style={[styles.fileNewBtnText, isDark && { color: '#EF4444' }]}>+ File Claim</Text>
         </TouchableOpacity>
       </View>
 
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading dispute arbitration manifest...</Text>
+        <View style={styles.scrollContent}>
+          {/* Dispute Status Card Shimmer */}
+          <View style={[styles.statusCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <SkeletonPlaceholder width={110} height={20} borderRadius={radius.full} />
+              <SkeletonPlaceholder width={80} height={18} borderRadius={radius.full} />
+            </View>
+            <View style={{ marginTop: 14 }}>
+              <SkeletonPlaceholder width="75%" height={18} borderRadius={radius.sm} />
+              <SkeletonPlaceholder width="95%" height={13} borderRadius={radius.sm} style={{ marginTop: 6 }} />
+              <SkeletonPlaceholder width="60%" height={13} borderRadius={radius.sm} style={{ marginTop: 6 }} />
+            </View>
+          </View>
+
+          {/* Evidence Card Shimmer */}
+          <View style={[styles.aiInsightBox, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <SkeletonPlaceholder width={140} height={16} borderRadius={radius.sm} />
+            <SkeletonPlaceholder width="100%" height={80} borderRadius={radius.md} style={{ marginTop: 12 }} />
+          </View>
+
+          {/* Action Box Shimmer */}
+          <View style={[styles.aiInsightBox, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <SkeletonPlaceholder width={120} height={16} borderRadius={radius.sm} />
+            <SkeletonPlaceholder width="100%" height={46} borderRadius={radius.md} style={{ marginTop: 12 }} />
+          </View>
         </View>
       ) : !activeDispute ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
-          <Text style={{ fontSize: 44, marginBottom: 12 }}>🛡️</Text>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8, textAlign: 'center' }}>
+          <ShieldAlert size={48} color={themeColors.textMuted} style={{ marginBottom: 12 }} />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: themeColors.text, marginBottom: 8, textAlign: 'center' }}>
             No Active Disputes
           </Text>
-          <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 24, maxWidth: 320 }}>
+          <Text style={{ fontSize: 14, color: themeColors.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 24, maxWidth: 320 }}>
             All your service contracts are in good standing with zero-trust escrow protection. If an artisan defaults or work has serious defects, you can file a mediation claim here.
           </Text>
           <TouchableOpacity
-            style={[styles.fileNewBtn, { paddingHorizontal: 20, paddingVertical: 12 }]}
+            style={[styles.fileNewBtn, { paddingHorizontal: 20, paddingVertical: 12 }, isDark && { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}
             onPress={() => setShowFileModal(true)}
             activeOpacity={0.8}
           >
-            <Text style={[styles.fileNewBtnText, { fontSize: 14 }]}>+ File Dispute Claim</Text>
+            <Text style={[styles.fileNewBtnText, { fontSize: 14 }, isDark && { color: '#EF4444' }]}>+ File Dispute Claim</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Dispute Status Banner */}
-          <View style={styles.statusCard}>
+          <View style={[styles.statusCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <View style={styles.statusHeaderRow}>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText}>⚖️ {activeDispute?.status?.replace('_', ' ') || 'MEDIATION IN PROGRESS'}</Text>
+              <View style={[styles.statusBadge, isDark && { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Scale size={13} color={isDark ? '#FBBF24' : '#D97706'} />
+                  <Text style={[styles.statusBadgeText, isDark && { color: '#FBBF24' }]}>
+                    {activeDispute?.status?.replace('_', ' ') || 'MEDIATION IN PROGRESS'}
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.timerText}>⏳ SLA: Active Arbitration</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Clock size={12} color={themeColors.textMuted} />
+                <Text style={[styles.timerText, { color: themeColors.textMuted }]}>SLA: Active Arbitration</Text>
+              </View>
             </View>
 
-            <Text style={styles.caseTitle}>
+            <Text style={[styles.caseTitle, { color: themeColors.text }]}>
               {activeDispute?.title || activeDispute?.reason || 'Service Scope & Quality Review'}
             </Text>
-            <Text style={styles.contractRef}>
+            <Text style={[styles.contractRef, { color: themeColors.textMuted }]}>
               Contract: {activeDispute?.contract?.title || 'Protected Service Agreement'}
             </Text>
 
-            <View style={styles.escrowHoldBox}>
-              <Text style={styles.escrowHoldLabel}>FROZEN DISPUTED FUNDS</Text>
-              <Text style={styles.escrowHoldAmount}>{formatCurrency(disputedAmount)}</Text>
-              <Text style={styles.escrowHoldSub}>
+            <View style={[styles.escrowHoldBox, isDark && { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
+              <Text style={[styles.escrowHoldLabel, isDark && { color: '#EF4444' }]}>FROZEN DISPUTED FUNDS</Text>
+              <Text style={[styles.escrowHoldAmount, isDark && { color: '#F87171' }]}>{formatCurrency(disputedAmount)}</Text>
+              <Text style={[styles.escrowHoldSub, isDark && { color: '#FCA5A5' }]}>
                 Funds cannot be disbursed to artisan until arbitration concludes or mutual agreement is reached.
               </Text>
             </View>
@@ -225,30 +258,36 @@ export const ClientDisputeWorkspaceScreen: React.FC<ClientDisputeWorkspaceScreen
 
           {/* AI Oga John Mediation Recommendation */}
           {activeDispute?.aiRecommendation ? (
-            <View style={styles.aiInsightBox}>
+            <View style={[styles.aiInsightBox, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
               <View style={styles.aiHeader}>
-                <Text style={styles.aiBadge}>🤖 Oga John AI Mediation Insight</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Bot size={14} color="#10B981" />
+                  <Text style={[styles.aiBadge, isDark && { color: '#34D399' }]}>Oga John AI Mediation Insight</Text>
+                </View>
               </View>
-              <Text style={styles.aiText}>{activeDispute.aiRecommendation}</Text>
+              <Text style={[styles.aiText, { color: themeColors.text }]}>{activeDispute.aiRecommendation}</Text>
             </View>
           ) : (
-            <View style={styles.aiInsightBox}>
+            <View style={[styles.aiInsightBox, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
               <View style={styles.aiHeader}>
-                <Text style={styles.aiBadge}>🤖 Oga John AI Mediation Protocol</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Bot size={14} color="#10B981" />
+                  <Text style={[styles.aiBadge, isDark && { color: '#34D399' }]}>Oga John AI Mediation Protocol</Text>
+                </View>
               </View>
-              <Text style={styles.aiText}>
+              <Text style={[styles.aiText, { color: themeColors.text }]}>
                 Escrow vault is locked. Both client and artisan evidence statements and site photos are being audited by human arbitration officers.
               </Text>
             </View>
           )}
 
           {/* 3-Party Arbitration Chat Room */}
-          <View style={styles.chatSection}>
-            <Text style={styles.chatSectionTitle}>Arbitration Dialogue</Text>
+          <View style={[styles.chatSection, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <Text style={[styles.chatSectionTitle, { color: themeColors.textMuted }]}>Arbitration Dialogue</Text>
 
             {chatLog.length === 0 ? (
               <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                <Text style={{ fontSize: 13, color: colors.textMuted }}>No statements submitted yet. Send a message below.</Text>
+                <Text style={{ fontSize: 13, color: themeColors.textMuted }}>No statements submitted yet. Send a message below.</Text>
               </View>
             ) : (
               chatLog.map((c, i) => (
@@ -257,34 +296,40 @@ export const ClientDisputeWorkspaceScreen: React.FC<ClientDisputeWorkspaceScreen
                   style={[
                     styles.bubble,
                     c.sender === 'client'
-                      ? styles.bubbleClient
+                      ? [styles.bubbleClient, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.3)' }]
                       : c.sender === 'arbiter'
-                      ? styles.bubbleArbiter
-                      : styles.bubbleArtisan,
+                      ? [styles.bubbleArbiter, isDark && { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.3)' }]
+                      : [styles.bubbleArtisan, { backgroundColor: themeColors.surfaceSubtle }],
                   ]}
                 >
                   <View style={styles.bubbleHead}>
                     <Text
                       style={[
                         styles.senderName,
-                        c.sender === 'arbiter' && styles.arbiterName,
+                        { color: themeColors.text },
+                        c.sender === 'arbiter' && [styles.arbiterName, isDark && { color: '#FBBF24' }],
                       ]}
                     >
                       {c.name}
                     </Text>
-                    <Text style={styles.msgTime}>{c.time}</Text>
+                    <Text style={[styles.msgTime, { color: themeColors.textMuted }]}>{c.time}</Text>
                   </View>
-                  <Text style={styles.msgText}>{c.text}</Text>
+                  <Text style={[styles.msgText, { color: themeColors.text }]}>{c.text}</Text>
                 </View>
               ))
             )}
 
             {/* Chat Input */}
-            <View style={styles.chatInputRow}>
+            <View style={[styles.chatInputRow, { borderTopColor: themeColors.border }]}>
               <TextInput
-                style={styles.chatInput}
+                style={[styles.chatInput, {
+                  backgroundColor: themeColors.inputBg,
+                  borderColor: themeColors.inputBorder,
+                  color: themeColors.text,
+                  borderWidth: 1,
+                }]}
                 placeholder="Type response to arbiter & contractor..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={themeColors.textMuted}
                 value={chatInput}
                 onChangeText={setChatInput}
               />
@@ -303,17 +348,17 @@ export const ClientDisputeWorkspaceScreen: React.FC<ClientDisputeWorkspaceScreen
       {/* File Claim Modal */}
       <Modal visible={showFileModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { backgroundColor: themeColors.surface }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>File Dispute Claim</Text>
-              <TouchableOpacity onPress={() => setShowFileModal(false)}>
-                <Text style={styles.closeBtn}>✕</Text>
+              <Text style={[styles.modalTitle, { color: themeColors.text }]}>File Dispute Claim</Text>
+              <TouchableOpacity onPress={() => setShowFileModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <X size={20} color={themeColors.textMuted} />
               </TouchableOpacity>
             </View>
 
             {!contractId && (
               <>
-                <Text style={styles.inputLabel}>SELECT CONTRACT</Text>
+                <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>SELECT CONTRACT</Text>
                 {myContracts && myContracts.length > 0 ? (
                   <ScrollView style={styles.contractPickerScroll} nestedScrollEnabled>
                     {myContracts.map((c: any) => {
@@ -321,13 +366,17 @@ export const ClientDisputeWorkspaceScreen: React.FC<ClientDisputeWorkspaceScreen
                       return (
                         <TouchableOpacity
                           key={c.id}
-                          style={[styles.contractPickerItem, isSel && styles.contractPickerItemActive]}
+                          style={[
+                            styles.contractPickerItem,
+                            { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border },
+                            isSel && [styles.contractPickerItemActive, isDark && { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: '#EF4444' }],
+                          ]}
                           onPress={() => setSelectedContractId(c.id)}
                         >
-                          <Text style={[styles.contractPickerTitle, isSel && styles.contractPickerTitleActive]}>
+                          <Text style={[styles.contractPickerTitle, { color: themeColors.text }, isSel && styles.contractPickerTitleActive]}>
                             {c.title}
                           </Text>
-                          <Text style={styles.contractPickerMeta}>
+                          <Text style={[styles.contractPickerMeta, { color: themeColors.textMuted }]}>
                             {formatCurrency(c.totalAmount || 0)} • {c.status}
                           </Text>
                         </TouchableOpacity>
@@ -335,12 +384,12 @@ export const ClientDisputeWorkspaceScreen: React.FC<ClientDisputeWorkspaceScreen
                     })}
                   </ScrollView>
                 ) : (
-                  <Text style={styles.noContractsText}>No active contracts found to lodge a claim.</Text>
+                  <Text style={[styles.noContractsText, { color: themeColors.textMuted }]}>No active contracts found to lodge a claim.</Text>
                 )}
               </>
             )}
 
-            <Text style={styles.inputLabel}>Select Reason</Text>
+            <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Select Reason</Text>
             <View style={styles.reasonRow}>
               {[
                 { label: 'Defect in Work', val: 'POOR_QUALITY' },
@@ -349,12 +398,17 @@ export const ClientDisputeWorkspaceScreen: React.FC<ClientDisputeWorkspaceScreen
               ].map((r) => (
                 <TouchableOpacity
                   key={r.val}
-                  style={[styles.reasonChip, selectedReason === r.val && styles.reasonChipActive]}
+                  style={[
+                    styles.reasonChip,
+                    { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border },
+                    selectedReason === r.val && [styles.reasonChipActive, isDark && { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: '#EF4444' }],
+                  ]}
                   onPress={() => setSelectedReason(r.val)}
                 >
                   <Text
                     style={[
                       styles.reasonChipText,
+                      { color: themeColors.textMuted },
                       selectedReason === r.val && styles.reasonChipTextActive,
                     ]}
                   >
@@ -364,13 +418,18 @@ export const ClientDisputeWorkspaceScreen: React.FC<ClientDisputeWorkspaceScreen
               ))}
             </View>
 
-            <Text style={styles.inputLabel}>Describe the defect or violation</Text>
+            <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Describe the defect or violation</Text>
             <TextInput
-              style={styles.descInput}
+              style={[styles.descInput, {
+                backgroundColor: themeColors.inputBg,
+                borderColor: themeColors.inputBorder,
+                color: themeColors.text,
+                borderWidth: 1,
+              }]}
               multiline
               numberOfLines={4}
               placeholder="Provide exact details of what was not completed according to the contract..."
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={themeColors.textMuted}
               value={claimDescription}
               onChangeText={setClaimDescription}
             />

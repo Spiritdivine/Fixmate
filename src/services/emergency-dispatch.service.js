@@ -55,13 +55,19 @@ export class EmergencyDispatchService {
 
     const dispatchedArtisans = [];
 
-    // 3. Multicast high-priority notifications and SMS to candidate artisans
-    for (const match of candidates) {
-      const artisanProfile = await prisma.artisanProfile.findUnique({
-        where: { id: match.artisanProfileId },
-        include: { user: true },
-      });
+    // 3. Batch fetch candidate profiles in a single query (Eliminating N+1 queries)
+    const profileIds = candidates.map((m) => m.artisanProfileId).filter(Boolean);
+    const profiles = profileIds.length > 0
+      ? await prisma.artisanProfile.findMany({
+          where: { id: { in: profileIds } },
+          include: { user: true },
+        })
+      : [];
+    const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
+    // 4. Multicast high-priority notifications and SMS to candidate artisans
+    for (const match of candidates) {
+      const artisanProfile = profileMap.get(match.artisanProfileId);
       if (!artisanProfile?.user) continue;
 
       const artisanUser = artisanProfile.user;

@@ -32,11 +32,21 @@ export const errorHandler = (err, req, res, next) => {
   const message = error.message || 'Internal Server Error';
   const errors = error.errors || [];
 
+  // Log unhandled server errors (5xx) with request context
+  if (statusCode >= 500) {
+    console.error(`\n🚨 [500 Server Error] ${req.method} ${req.originalUrl}`);
+    console.error(`Message: ${message}`);
+    if (error.stack) console.error(error.stack);
+    console.error(`User: ${req.user ? req.user.id : 'Anonymous'} | IP: ${req.ip}\n`);
+  }
+
   res.status(statusCode).json({
     success: false,
     statusCode,
     message,
     errors,
+    ...(error.errorCode && { errorCode: error.errorCode }),
+    ...(error.requiresAuth && { requiresAuth: error.requiresAuth }),
     ...(env.NODE_ENV === 'development' && { stack: error.stack }),
   });
 };

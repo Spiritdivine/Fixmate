@@ -14,6 +14,7 @@ const router = Router();
 router.get('/conversations', authenticate, ChatController.getConversations);
 router.post('/conversations/artisan/:artisanId', authenticate, ChatController.getOrCreateArtisanConversation);
 router.patch('/conversations/:id/mute', authenticate, validate(conversationParamSchema), ChatController.toggleMute);
+router.patch('/conversations/:id/read', authenticate, validate(conversationParamSchema), ChatController.markAsRead);
 router.delete('/conversations/:id', authenticate, validate(conversationParamSchema), ChatController.leaveConversation);
 
 // Messages

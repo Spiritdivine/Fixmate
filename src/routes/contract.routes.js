@@ -7,6 +7,8 @@ import {
   getContractSchema,
   updateMilestoneScheduleSchema,
   milestoneParamSchema,
+  createChangeOrderSchema,
+  respondChangeOrderSchema,
 } from '../validators/contract.validator.js';
 
 const router = Router();
@@ -36,6 +38,28 @@ router.delete(
   requireRoles('CLIENT'),
   validate(milestoneParamSchema),
   ContractController.deleteMilestone
+);
+
+// Contract Change Orders (Variations / Mid-project Scope & Budget adjustments)
+router.post(
+  '/:id/change-orders',
+  authenticate,
+  requireRoles('ARTISAN'),
+  validate(createChangeOrderSchema),
+  ContractController.createChangeOrder
+);
+router.get(
+  '/:id/change-orders',
+  authenticate,
+  validate(getContractSchema),
+  ContractController.getChangeOrders
+);
+router.patch(
+  '/:id/change-orders/:changeOrderId/respond',
+  authenticate,
+  requireRoles('CLIENT'),
+  validate(respondChangeOrderSchema),
+  ContractController.respondToChangeOrder
 );
 
 // Contract Cancellation

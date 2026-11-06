@@ -13,6 +13,7 @@ import {
   ExternalLink,
   ChevronRight,
 } from 'lucide-react';
+import { SeoHead } from '../../components/seo/SeoHead';
 
 export const TermsOfServicePage: React.FC = () => {
   const [activeSection, setActiveSection] = useState('regulatory');
@@ -39,6 +40,12 @@ export const TermsOfServicePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FAF7F0] text-[#141A16] font-sans antialiased selection:bg-[#123E2A] selection:text-white pb-24">
+      <SeoHead
+        title="Terms of Service & Smart Escrow Protocol | Artifix Nigeria"
+        description="Statutory agreements, milestone rules, cryptographic dispute procedures, and platform code of conduct for Artifix clients and artisans."
+        canonical="https://artifixhq.xyz/terms"
+        ogType="website"
+      />
       {/* ============================================================ */}
       {/* 1. EDITORIAL HEADER & METADATA                               */}
       {/* ============================================================ */}
@@ -127,10 +134,10 @@ export const TermsOfServicePage: React.FC = () => {
               </p>
               <div className="pt-2 text-xs font-semibold">
                 <a
-                  href="mailto:legal@artifix.ng"
+                  href="mailto:legal@artifixhq.xyz"
                   className="inline-flex items-center gap-1.5 text-white hover:text-emerald-200 transition-colors"
                 >
-                  <span>legal@artifix.ng</span>
+                  <span>legal@artifixhq.xyz</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </a>
               </div>

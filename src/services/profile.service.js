@@ -3,6 +3,7 @@ import { ApiError } from '../utils/api-error.js';
 import { ArtisanSpatialRepository } from '../repositories/artisan-spatial.repository.js';
 import { GeoUtils } from '../utils/geo.utils.js';
 import { spatialCache } from '../utils/spatial-cache.js';
+import { cacheStore } from '../config/redis.js';
 
 export class ProfileService {
   static async updateArtisanProfile(userId, data) {
@@ -70,9 +71,25 @@ export class ProfileService {
       throw ApiError.notFound('Client profile not found');
     }
 
-    return prisma.clientProfile.update({
-      where: { id: profile.id },
-      data,
+    const { avatarUrl, phone, phoneNumber, ...profileFields } = data;
+    const userUpdates = {};
+    if (avatarUrl !== undefined) userUpdates.avatarUrl = avatarUrl;
+    if (phone !== undefined || phoneNumber !== undefined) {
+      userUpdates.phoneNumber = (phoneNumber || phone).trim();
+    }
+
+    return prisma.$transaction(async (tx) => {
+      if (Object.keys(userUpdates).length > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: userUpdates,
+        });
+      }
+
+      return tx.clientProfile.update({
+        where: { id: profile.id },
+        data: profileFields,
+      });
     });
   }
 
@@ -490,6 +507,82 @@ export class ProfileService {
     throw ApiError.badRequest(
       'Wallet address modification is disabled. Your account is permanently bound to your Privy embedded wallet.'
     );
+  }
+
+  static async getArtisanSkills(userId) {
+    const profile = await prisma.artisanProfile.findUnique({
+      where: { userId },
+    });
+    if (!profile) throw ApiError.notFound('Artisan profile not found');
+
+    const skills = await prisma.artisanSkill.findMany({
+      where: { artisanProfileId: profile.id },
+      include: {
+        skill: {
+          include: {
+            category: { select: { id: true, name: true, slug: true } },
+          },
+        },
+      },
+      orderBy: { skill: { name: 'asc' } },
+    });
+
+    return skills.map((s) => s.skill);
+  }
+
+  static async addArtisanSkill(userId, skillId) {
+    const profile = await prisma.artisanProfile.findUnique({
+      where: { userId },
+    });
+    if (!profile) throw ApiError.notFound('Artisan profile not found');
+
+    const skill = await prisma.skill.findUnique({
+      where: { id: skillId },
+      include: { category: true },
+    });
+    if (!skill) throw ApiError.notFound('Skill not found');
+
+    await prisma.artisanSkill.upsert({
+      where: {
+        artisanProfileId_skillId: {
+          artisanProfileId: profile.id,
+          skillId,
+        },
+      },
+      create: {
+        artisanProfileId: profile.id,
+        skillId,
+      },
+      update: {},
+    });
+
+    spatialCache.invalidateAll();
+    if (cacheStore.isRedisActive()) {
+      await cacheStore.delByPattern('artisan:*');
+    }
+
+    return skill;
+  }
+
+  static async removeArtisanSkill(userId, skillId) {
+    const profile = await prisma.artisanProfile.findUnique({
+      where: { userId },
+    });
+    if (!profile) throw ApiError.notFound('Artisan profile not found');
+
+    await prisma.artisanSkill.deleteMany({
+      where: {
+        artisanProfileId: profile.id,
+        skillId,
+      },
+    });
+
+    spatialCache.invalidateAll();
+    if (cacheStore.isRedisActive()) {
+      await cacheStore.delByPattern('artisan:*');
+    }
+
+    return { removed: true, skillId };
   }
 }
 

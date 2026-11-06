@@ -8,7 +8,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { ApiResponse, AuthResponse } from '../../types';
 
 export const AdminLogin: React.FC = () => {
-  const [identifier, setIdentifier] = useState('admin@artisanplatform.com');
+  const [identifier, setIdentifier] = useState('admin@artifixhq.xyz');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +104,7 @@ export const AdminLogin: React.FC = () => {
           <AuthInput
             label="Admin Email Address"
             type="email"
-            placeholder="admin@artifix.ng"
+            placeholder="admin@artifixhq.xyz"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             required

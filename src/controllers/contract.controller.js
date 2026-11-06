@@ -55,6 +55,38 @@ export class ContractController {
       next(error);
     }
   }
+
+  static async createChangeOrder(req, res, next) {
+    try {
+      const result = await ContractService.createChangeOrder(req.user.id, req.params.id, req.body);
+      res.status(201).json(new ApiResponse(201, result, 'Change order requested successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getChangeOrders(req, res, next) {
+    try {
+      const result = await ContractService.getChangeOrders(req.user.id, req.params.id);
+      res.status(200).json(new ApiResponse(200, result, 'Change orders fetched successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async respondToChangeOrder(req, res, next) {
+    try {
+      const result = await ContractService.respondToChangeOrder(
+        req.user.id,
+        req.params.id,
+        req.params.changeOrderId,
+        req.body
+      );
+      res.status(200).json(new ApiResponse(200, result, `Change order ${req.body.action.toLowerCase()}ed successfully`));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default ContractController;

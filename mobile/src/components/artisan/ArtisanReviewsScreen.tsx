@@ -9,10 +9,16 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { MessageSquare, Flag, Star } from 'lucide-react-native';
 import { colors, radius, spacing, typography, shadows } from '../../theme';
 import { ReviewService } from '../../services/review.service';
 import { ReviewRecord } from '../../types/review-contracts';
 import { useAuthStore } from '../../stores/authStore';
+import { ReviewReplyModal, ReviewReplyTarget } from './ReviewReplyModal';
+import { DisputeReviewModal } from './DisputeReviewModal';
+import { useToast } from '../shared/ToastContext';
+import { useReviewReply } from '../../hooks';
 
 interface ArtisanReviewsScreenProps {
   artisanId?: string;
@@ -24,11 +30,19 @@ export const ArtisanReviewsScreen: React.FC<ArtisanReviewsScreenProps> = ({
   onBack,
 }) => {
   const { user } = useAuthStore();
+  const { showSuccess } = useToast();
   const targetId = artisanId || user?.artisanProfile?.id || user?.id || '';
 
   const [reviews, setReviews] = useState<ReviewRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedStarFilter, setSelectedStarFilter] = useState<'ALL' | number>('ALL');
+
+  // Modals state
+  const [replyTarget, setReplyTarget] = useState<ReviewReplyTarget | null>(null);
+  const [disputeTarget, setDisputeTarget] = useState<ReviewReplyTarget | null>(null);
+  const [repliesMap, setRepliesMap] = useState<Record<string, string>>({});
+  const { submitReply, deleteReply } = useReviewReply();
 
   const fetchReviews = useCallback(async () => {
     if (!targetId) {
@@ -162,8 +176,41 @@ export const ArtisanReviewsScreen: React.FC<ArtisanReviewsScreenProps> = ({
           </View>
         </View>
 
+        {/* Star Rating Filter Chips */}
+        <View style={styles.starFiltersBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.starFiltersScroll}>
+            {(['ALL', 5, 4, 3, 2, 1] as const).map((star) => (
+              <TouchableOpacity
+                key={String(star)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSelectedStarFilter(star);
+                }}
+                style={[
+                  styles.starFilterChip,
+                  selectedStarFilter === star && styles.starFilterChipActive,
+                ]}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.starFilterText,
+                    selectedStarFilter === star && styles.starFilterTextActive,
+                  ]}
+                >
+                  {star === 'ALL' ? 'All Reviews' : `${star} ★`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* Customer Reviews Feed */}
-        <Text style={styles.feedHeading}>Recent Client Reviews</Text>
+        <Text style={styles.feedHeading}>
+          {selectedStarFilter === 'ALL'
+            ? 'Recent Client Reviews'
+            : `${selectedStarFilter}-Star Reviews`}
+        </Text>
 
         {loading ? (
           <View style={styles.centerWrap}>
@@ -179,35 +226,125 @@ export const ArtisanReviewsScreen: React.FC<ArtisanReviewsScreenProps> = ({
             </Text>
           </View>
         ) : (
-          reviews.map((item) => (
-            <View key={item.id} style={styles.reviewCard}>
-              <View style={styles.reviewHeader}>
-                <View>
-                  <Text style={styles.clientName}>{item.clientName || 'Fixmate Client'}</Text>
-                  <Text style={styles.dateText}>
-                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Verified Client'}
-                  </Text>
+          reviews
+            .filter((r) => {
+              if (selectedStarFilter === 'ALL') return true;
+              return Math.round(r.rating || 5) === selectedStarFilter;
+            })
+            .map((item) => (
+              <View key={item.id} style={styles.reviewCard}>
+                <View style={styles.reviewHeader}>
+                  <View>
+                    <Text style={styles.clientName}>{item.clientName || 'Valued Client'}</Text>
+                    <Text style={styles.dateText}>
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Verified Client'}
+                    </Text>
+                  </View>
+                  <View style={styles.ratingBox}>
+                    <Text style={styles.starText}>★ {item.rating}</Text>
+                  </View>
                 </View>
-                <View style={styles.ratingBox}>
-                  <Text style={styles.starText}>★ {item.rating}</Text>
+
+                <Text style={styles.commentBody}>"{item.comment}"</Text>
+
+                {item.tags && item.tags.length > 0 && (
+                  <View style={styles.tagsRow}>
+                    {item.tags.map((t, idx) => (
+                      <View key={idx} style={styles.tagPill}>
+                        <Text style={styles.tagText}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Public Artisan Reply if exists */}
+                {repliesMap[item.id] ? (
+                  <View style={styles.replyBox}>
+                    <View style={styles.replyHeaderRow}>
+                      <Text style={styles.replyAuthor}>Your Response</Text>
+                      <View style={styles.publicBadge}>
+                        <Text style={styles.publicBadgeText}>Public</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.replyBodyText}>{repliesMap[item.id]}</Text>
+                  </View>
+                ) : null}
+
+                {/* Review Action Buttons */}
+                <View style={styles.reviewActionsRow}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setReplyTarget({
+                        reviewId: item.id,
+                        clientName: item.clientName || 'Valued Client',
+                        rating: item.rating || 5,
+                        date: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Verified Client',
+                        clientComment: item.comment,
+                        existingReply: repliesMap[item.id],
+                      });
+                    }}
+                    style={styles.replyActionBtn}
+                    activeOpacity={0.7}
+                  >
+                    <MessageSquare size={13} color={colors.brand.forest} />
+                    <Text style={styles.replyActionText}>
+                      {repliesMap[item.id] ? 'Edit Response' : 'Reply Publicly'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setDisputeTarget({
+                        reviewId: item.id,
+                        clientName: item.clientName || 'Valued Client',
+                        rating: item.rating || 5,
+                        date: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Verified Client',
+                        clientComment: item.comment,
+                      });
+                    }}
+                    style={styles.disputeActionBtn}
+                    activeOpacity={0.7}
+                  >
+                    <Flag size={13} color="#EF4444" />
+                    <Text style={styles.disputeActionText}>Flag / Dispute</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-
-              <Text style={styles.commentBody}>"{item.comment}"</Text>
-
-              {item.tags && item.tags.length > 0 && (
-                <View style={styles.tagsRow}>
-                  {item.tags.map((t, idx) => (
-                    <View key={idx} style={styles.tagPill}>
-                      <Text style={styles.tagText}>{t}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          ))
+            ))
         )}
       </ScrollView>
+
+      {/* REVIEW PUBLIC REPLY MODAL */}
+      <ReviewReplyModal
+        visible={!!replyTarget}
+        onClose={() => setReplyTarget(null)}
+        review={replyTarget}
+        onSubmitReply={async (reviewId, text) => {
+          setRepliesMap((prev) => ({ ...prev, [reviewId]: text }));
+          showSuccess('Response Published', 'Your reply is now live for all prospective clients.');
+          submitReply({ reviewId, replyText: text });
+        }}
+        onDeleteReply={async (reviewId) => {
+          setRepliesMap((prev) => {
+            const copy = { ...prev };
+            delete copy[reviewId];
+            return copy;
+          });
+          deleteReply(reviewId);
+        }}
+      />
+
+      {/* DISPUTE REVIEW MODAL */}
+      <DisputeReviewModal
+        visible={!!disputeTarget}
+        onClose={() => setDisputeTarget(null)}
+        review={disputeTarget}
+        onSubmitDispute={async (reviewId, reason, explanation) => {
+          // Submitted to moderation
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -447,5 +584,96 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     lineHeight: 18,
+  },
+  starFiltersBar: {
+    marginTop: spacing.md,
+  },
+  starFiltersScroll: {
+    gap: 8,
+  },
+  starFilterChip: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  starFilterChipActive: {
+    backgroundColor: colors.brand.forest,
+    borderColor: colors.brand.forest,
+  },
+  starFilterText: {
+    fontSize: typography.size.xs,
+    color: colors.neutral[600],
+    fontWeight: '600',
+  },
+  starFilterTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  replyBox: {
+    backgroundColor: '#F0FDF4',
+    borderLeftWidth: 3,
+    borderColor: '#10B981',
+    borderRadius: radius.md,
+    padding: 10,
+    marginTop: 10,
+  },
+  replyHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  replyAuthor: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.brand.emeraldDark,
+  },
+  publicBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radius.full,
+  },
+  publicBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.brand.emeraldDark,
+  },
+  replyBodyText: {
+    fontSize: typography.size.xs,
+    color: colors.neutral[700],
+    lineHeight: 17,
+  },
+  reviewActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  replyActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  replyActionText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.brand.forest,
+  },
+  disputeActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  disputeActionText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#EF4444',
   },
 });

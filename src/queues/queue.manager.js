@@ -7,6 +7,7 @@ export const QUEUE_NAMES = {
   NOTIFICATIONS: 'artisan:notifications',
   MEDIA_PROCESSING: 'artisan:media_processing',
   BLOCKCHAIN_TRANSACTIONS: 'artisan:blockchain_tx',
+  LOYALTY_POINTS: 'artisan:loyalty_points',
 };
 
 const defaultJobOptions = {
@@ -21,6 +22,7 @@ const defaultJobOptions = {
 
 let notificationQueueInstance = null;
 let mediaQueueInstance = null;
+let loyaltyQueueInstance = null;
 
 if (cacheStore.isRedisActive() && redis) {
   try {
@@ -30,6 +32,11 @@ if (cacheStore.isRedisActive() && redis) {
     });
 
     mediaQueueInstance = new Queue(QUEUE_NAMES.MEDIA_PROCESSING, {
+      connection: redis,
+      defaultJobOptions,
+    });
+
+    loyaltyQueueInstance = new Queue(QUEUE_NAMES.LOYALTY_POINTS, {
       connection: redis,
       defaultJobOptions,
     });
@@ -96,11 +103,43 @@ export async function enqueueNotification(data) {
   return { id: `local-${Date.now()}`, data };
 }
 
+/**
+ * Enqueues a loyalty point or referral event to BullMQ, or falls back to async background execution.
+ */
+export async function enqueueLoyaltyEvent(data) {
+  if (loyaltyQueueInstance) {
+    try {
+      return await loyaltyQueueInstance.add('loyalty_event', data);
+    } catch (err) {
+      console.warn('[Queue] Failed to enqueue loyalty event to Redis, executing directly:', err.message);
+    }
+  }
+
+  // Graceful direct execution fallback (non-blocking)
+  setImmediate(async () => {
+    try {
+      const { ReferralService } = await import('../services/referral.service.js');
+      const { action, payload } = data;
+      if (action === 'EVALUATE_CONTRACT_COMPLETION') {
+        await ReferralService.evaluateContractQualification(payload.contractId);
+      }
+    } catch (err) {
+      console.warn('[Loyalty Direct Fallback] Error processing loyalty event:', err.message);
+    }
+  });
+
+  return { id: `local-loyalty-${Date.now()}`, data };
+}
+
 export const notificationQueue = notificationQueueInstance;
 export const mediaQueue = mediaQueueInstance;
+export const loyaltyQueue = loyaltyQueueInstance;
 export default {
   notificationQueue,
   mediaQueue,
+  loyaltyQueue,
   enqueueNotification,
+  enqueueLoyaltyEvent,
   QUEUE_NAMES,
 };
+

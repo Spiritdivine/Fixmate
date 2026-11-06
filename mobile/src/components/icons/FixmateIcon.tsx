@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { colors } from '../../theme/colors';
 
 export interface FixmateIconProps {
@@ -12,7 +12,7 @@ export interface IconContainerProps {
   children: React.ReactNode;
   variant?: 'cream' | 'sage' | 'forest' | 'emerald' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 /**

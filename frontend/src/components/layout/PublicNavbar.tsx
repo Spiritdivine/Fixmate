@@ -3,29 +3,55 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   ChevronDown,
   ChevronRight,
+  LayoutDashboard,
+  LogOut,
+  User as UserIcon,
 } from 'lucide-react';
 import { trackEvent } from '../../lib/posthog';
+import { useAuthStore } from '../../stores/authStore';
 
 export const PublicNavbar: React.FC = () => {
+  const { user, logout } = useAuthStore();
   const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileAboutExpanded, setMobileAboutExpanded] = useState(false);
 
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const userTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const navContainerRef = useRef<HTMLElement | null>(null);
   const location = useLocation();
 
-  // Auto-close open dropdown and mobile menu on route change
+  // Determine role-based dashboard link
+  const dashboardLink =
+    user?.role === 'ADMIN' || user?.role === 'SUPPORT'
+      ? '/admin/dashboard'
+      : user?.role === 'CLIENT'
+      ? '/client/dashboard'
+      : '/artisan/dashboard';
+
+  // Format user display name & initials
+  const displayName =
+    user?.role === 'ARTISAN'
+      ? user.artisanProfile?.firstName || user.artisanProfile?.businessName || user.email.split('@')[0]
+      : user?.clientProfile?.firstName || user?.email.split('@')[0] || 'My Account';
+  const roleLabel =
+    user?.role === 'ARTISAN' ? 'Artisan' : user?.role === 'CLIENT' ? 'Client' : 'Admin';
+  const initials = displayName.slice(0, 2).toUpperCase();
+
+  // Auto-close open dropdowns and mobile menu on route change
   useEffect(() => {
     setAboutDropdownOpen(false);
+    setUserDropdownOpen(false);
     setMobileMenuOpen(false);
   }, [location.pathname, location.hash]);
 
-  // Handle outside clicks to close desktop dropdown
+  // Handle outside clicks to close desktop dropdowns
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (navContainerRef.current && !navContainerRef.current.contains(e.target as Node)) {
         setAboutDropdownOpen(false);
+        setUserDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -226,23 +252,97 @@ export const PublicNavbar: React.FC = () => {
 
           </nav>
 
-          {/* Right Action Controls: Log In & Get Started Button */}
-          <div className="hidden md:flex items-center gap-4 lg:gap-5 shrink-0">
-            <Link
-              to="/login"
-              onClick={() => trackEvent('landing_v2_auth_clicked', { target: 'login', location: 'header' })}
-              className="text-xs lg:text-[13px] font-semibold text-[#141A16] hover:text-stone-600 transition-colors whitespace-nowrap"
-            >
-              Log In
-            </Link>
-            <Link
-              to="/register"
-              onClick={() => trackEvent('landing_v2_cta_clicked', { target: 'get_started', location: 'header' })}
-              className="inline-flex items-center gap-1.5 bg-[#123E2A] text-white text-xs lg:text-[13px] font-semibold px-4 lg:px-6 py-2 lg:py-2.5 rounded-xl hover:bg-[#0E3222] transition-all shadow-sm active:scale-95 whitespace-nowrap"
-            >
-              <span>Get Started</span>
-              <span aria-hidden="true">→</span>
-            </Link>
+          {/* Right Action Controls: Logged In User Pill OR Log In & Get Started */}
+          <div className="hidden md:flex items-center gap-3 lg:gap-4 shrink-0">
+            {user ? (
+              <div className="flex items-center gap-2.5">
+                {/* User Account Dropdown */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setUserDropdownOpen((prev) => !prev)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 transition-colors cursor-pointer shadow-2xs"
+                    aria-expanded={userDropdownOpen}
+                    aria-haspopup="true"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-emerald-800 text-white font-bold text-xs flex items-center justify-center">
+                      {initials}
+                    </div>
+                    <div className="flex flex-col text-left leading-tight">
+                      <span className="text-xs font-bold text-stone-900 max-w-[120px] truncate">
+                        {displayName}
+                      </span>
+                      <span className="text-[10px] text-stone-500 font-medium">
+                        {roleLabel}
+                      </span>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 text-stone-400 transition-transform ${userDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {userDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-[#FAF7F0] border border-stone-200/90 rounded-2xl shadow-xl p-2 space-y-1 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-3 py-2 border-b border-stone-200/70">
+                        <p className="text-xs font-bold text-stone-900 truncate">{displayName}</p>
+                        <p className="text-[11px] text-stone-500 truncate">{user.email}</p>
+                        <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                          {roleLabel}
+                        </span>
+                      </div>
+
+                      <Link
+                        to={dashboardLink}
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-stone-800 hover:bg-stone-200/50 transition-colors"
+                      >
+                        <LayoutDashboard className="w-3.5 h-3.5 text-stone-500" />
+                        <span>Go to Dashboard</span>
+                      </Link>
+
+                      <Link
+                        to={`${dashboardLink.replace('/dashboard', '')}/profile`}
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-stone-800 hover:bg-stone-200/50 transition-colors"
+                      >
+                        <UserIcon className="w-3.5 h-3.5 text-stone-500" />
+                        <span>My Profile</span>
+                      </Link>
+
+                      <div className="pt-1 border-t border-stone-200/70">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            logout();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors text-left cursor-pointer"
+                        >
+                          <LogOut className="w-3.5 h-3.5 text-red-500" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  onClick={() => trackEvent('landing_v2_auth_clicked', { target: 'login', location: 'header' })}
+                  className="text-xs lg:text-[13px] font-semibold text-[#141A16] hover:text-stone-600 transition-colors whitespace-nowrap"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => trackEvent('landing_v2_cta_clicked', { target: 'get_started', location: 'header' })}
+                  className="inline-flex items-center gap-1.5 bg-[#123E2A] text-white text-xs lg:text-[13px] font-semibold px-4 lg:px-6 py-2 lg:py-2.5 rounded-xl hover:bg-[#0E3222] transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                >
+                  <span>Get Started</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Hamburger Menu Toggle Button (< md) */}
@@ -375,28 +475,68 @@ export const PublicNavbar: React.FC = () => {
 
             </nav>
 
-            {/* Auth Buttons: Log In & Get Started Button */}
+            {/* Auth Buttons: Logged In Account OR Log In & Get Started Button */}
             <div className="flex flex-col gap-3 pt-4 border-t border-stone-200/70">
-              <Link
-                to="/login"
-                onClick={() => {
-                  trackEvent('landing_v2_auth_clicked', { target: 'login', location: 'mobile_drawer' });
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-center py-3 text-sm font-bold text-[#141A16] border border-stone-300 rounded-xl hover:bg-stone-200/40 transition-colors"
-              >
-                Log In
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => {
-                  trackEvent('landing_v2_cta_clicked', { target: 'get_started', location: 'mobile_drawer' });
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-center py-3 text-sm font-bold text-white bg-[#123E2A] rounded-xl hover:bg-[#0E3222] shadow-md transition-all active:scale-98"
-              >
-                Get Started →
-              </Link>
+              {user ? (
+                <>
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-stone-200">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-800 text-white font-bold text-sm flex items-center justify-center shrink-0">
+                      {initials}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-stone-900 truncate">{displayName}</p>
+                      <p className="text-xs text-stone-500 truncate">{user.email}</p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">
+                      {roleLabel}
+                    </span>
+                  </div>
+
+                  <Link
+                    to={dashboardLink}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full text-center py-3 text-sm font-bold text-white bg-[#123E2A] rounded-xl hover:bg-[#0E3222] shadow-md transition-all active:scale-98 flex items-center justify-center gap-2"
+                  >
+                    <LayoutDashboard className="w-4 h-4 text-emerald-300" />
+                    <span>Go to Dashboard</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      logout();
+                    }}
+                    className="w-full text-center py-2.5 text-sm font-bold text-red-700 border border-red-200 rounded-xl hover:bg-red-50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 text-red-600" />
+                    <span>Sign Out</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => {
+                      trackEvent('landing_v2_auth_clicked', { target: 'login', location: 'mobile_drawer' });
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full text-center py-3 text-sm font-bold text-[#141A16] border border-stone-300 rounded-xl hover:bg-stone-200/40 transition-colors"
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => {
+                      trackEvent('landing_v2_cta_clicked', { target: 'get_started', location: 'mobile_drawer' });
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full text-center py-3 text-sm font-bold text-white bg-[#123E2A] rounded-xl hover:bg-[#0E3222] shadow-md transition-all active:scale-98"
+                  >
+                    Get Started →
+                  </Link>
+                </>
+              )}
             </div>
 
           </div>

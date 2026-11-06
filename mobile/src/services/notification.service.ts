@@ -35,4 +35,10 @@ export class NotificationService {
       platform: devicePlatform,
     });
   }
+
+  static async unregisterPushToken(token: string): Promise<void> {
+    await apiClient.post('/notifications/unregister-token', {
+      pushToken: token,
+    });
+  }
 }

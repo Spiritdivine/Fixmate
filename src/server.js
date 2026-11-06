@@ -4,6 +4,7 @@ import { env } from './config/env.js';
 import { initSocketServer } from './sockets/socket.server.js';
 import prisma from './config/db.js';
 import { MonadListenerService } from './services/monad-listener.service.js';
+import { startCronScheduler, stopCronScheduler } from './cron/cron.manager.js';
 
 const server = http.createServer(app);
 
@@ -34,6 +35,9 @@ const startServer = async () => {
       console.log(`📡 Socket.IO Server active and listening for connections`);
       console.log(`📚 API Health check available at: http://localhost:${PORT}/api/v1/health`);
 
+      // Initialize Automated Background Schedulers (Cron)
+      startCronScheduler();
+
       // Initialize Monad event listener conditionally (Decoupled in production worker)
       if (process.env.ENABLE_INLINE_BLOCKCHAIN_LISTENER === 'true' || env.NODE_ENV === 'development') {
         MonadListenerService.startListening().catch((err) => {
@@ -53,6 +57,9 @@ const startServer = async () => {
 const gracefulShutdown = async (signal) => {
   console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
   
+  // Stop automated cron jobs
+  stopCronScheduler();
+
   // Stop blockchain polling
   MonadListenerService.stopListening();
 

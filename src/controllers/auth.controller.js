@@ -4,7 +4,19 @@ import { ApiResponse } from '../utils/api-response.js';
 export class AuthController {
   static async register(req, res, next) {
     try {
-      const result = await AuthService.register(req.body);
+      const clientIp = req.ip || req.connection?.remoteAddress;
+      const deviceData = {
+        platform: req.headers['x-device-platform'] || req.headers['user-agent'],
+        deviceId: req.headers['x-device-id'] || req.body.deviceId,
+        screenResolution: req.headers['x-screen-resolution'] || req.body.screenResolution,
+        hardwareModel: req.headers['x-hardware-model'] || req.body.hardwareModel,
+      };
+
+      const result = await AuthService.register({
+        ...req.body,
+        clientIp,
+        deviceData,
+      });
       res.status(201).json(new ApiResponse(201, result, 'Registration successful'));
     } catch (error) {
       next(error);
@@ -57,7 +69,11 @@ export class AuthController {
 
   static async getMe(req, res, next) {
     try {
-      res.status(200).json(new ApiResponse(200, req.user, 'Current user profile fetched'));
+      const sanitized = { ...req.user };
+      sanitized.hasTransactionPin = Boolean(sanitized.transactionPinHash);
+      delete sanitized.passwordHash;
+      delete sanitized.transactionPinHash;
+      res.status(200).json(new ApiResponse(200, sanitized, 'Current user profile fetched'));
     } catch (error) {
       next(error);
     }
@@ -167,6 +183,59 @@ export class AuthController {
       const { email, token } = req.query;
       const result = await AuthService.verifyEmailToken(email, token);
       res.status(200).json(new ApiResponse(200, result, 'Email verified successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async socialLogin(req, res, next) {
+    try {
+      const { provider, idToken, role } = req.body;
+      const deviceInfo = req.headers['user-agent'];
+      const ipAddress = req.ip || req.connection?.remoteAddress;
+
+      const result = await AuthService.socialLogin(provider, idToken, role, deviceInfo, ipAddress);
+      res.status(200).json(new ApiResponse(200, result, 'Social sign-in successful'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async switchRole(req, res, next) {
+    try {
+      const { role } = req.body;
+      const result = await AuthService.switchRole(req.user.id, role);
+      res.status(200).json(new ApiResponse(200, result, `Switched active role to ${role}`));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async setTransactionPin(req, res, next) {
+    try {
+      const { pin } = req.body;
+      const result = await AuthService.setTransactionPin(req.user.id, pin);
+      res.status(200).json(new ApiResponse(200, result, result.message));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async changeTransactionPin(req, res, next) {
+    try {
+      const { currentPin, newPin } = req.body;
+      const result = await AuthService.changeTransactionPin(req.user.id, currentPin, newPin);
+      res.status(200).json(new ApiResponse(200, result, result.message));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async verifyTransactionPin(req, res, next) {
+    try {
+      const { pin } = req.body;
+      const result = await AuthService.verifyTransactionPin(req.user.id, pin);
+      res.status(200).json(new ApiResponse(200, result, 'PIN verified successfully'));
     } catch (error) {
       next(error);
     }

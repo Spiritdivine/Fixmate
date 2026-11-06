@@ -63,10 +63,14 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       const refreshToken = localStorage.getItem('refresh_token');
+      const isProtectedRoute = /^\/(client|artisan|admin)/.test(window.location.pathname);
+
       if (!refreshToken) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        if (isProtectedRoute) {
+          window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
 
@@ -91,7 +95,9 @@ apiClient.interceptors.response.use(
         processQueue(refreshErr as AxiosError, null);
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        if (isProtectedRoute) {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;

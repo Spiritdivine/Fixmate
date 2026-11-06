@@ -51,6 +51,11 @@ const envSchema = z.object({
   // Resend Email Configuration
   RESEND_API_KEY: optionalCleanString,
   EMAIL_FROM: cleanString.default('Artifix <noreply@artifixhq.xyz>'),
+  // Social Auth Configuration
+  GOOGLE_CLIENT_ID: optionalCleanString,
+  GOOGLE_IOS_CLIENT_ID: optionalCleanString,
+  GOOGLE_ANDROID_CLIENT_ID: optionalCleanString,
+  APPLE_BUNDLE_ID: optionalCleanString,
   // AI Diagnostics Configuration
   GEMINI_API_KEY: optionalCleanString,
   OPENAI_API_KEY: optionalCleanString,

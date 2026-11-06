@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { DutyStatusToggle } from './DutyStatusToggle';
 import { CountdownTimer } from '../shared/CountdownTimer';
 import { colors, radius, spacing, typography, shadows } from '../../theme';
@@ -18,17 +19,20 @@ import { useAuthStore } from '../../stores/authStore';
 import { WalletService } from '../../services/wallet.service';
 import { ContractService } from '../../services/contract.service';
 import { JobService } from '../../services/job.service';
+import { triggerHaptic } from '../../lib/optimistic-helpers';
 
 interface ArtisanCockpitScreenProps {
   onAcceptLead?: (leadId: string) => void;
   onDeclineLead?: (leadId: string) => void;
   onViewActiveProject?: (contractId?: string) => void;
   onNavigateToWallet?: () => void;
+  onViewInvitations?: () => void;
   onLaunchMaps?: () => void;
   onCallClient?: () => void;
   onSnapPhoto?: (milestoneId?: string) => void;
   onAvatarPress?: () => void;
   onNotificationPress?: () => void;
+  onScanQr?: () => void;
 }
 
 export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
@@ -36,18 +40,15 @@ export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
   onDeclineLead,
   onViewActiveProject,
   onNavigateToWallet,
+  onViewInvitations,
   onLaunchMaps,
   onCallClient,
   onSnapPhoto,
   onAvatarPress,
   onNotificationPress,
+  onScanQr,
 }) => {
   const { user } = useAuthStore();
-  const [walletBalance, setWalletBalance] = useState<number>(0);
-  const [activeContract, setActiveContract] = useState<any>(null);
-  const [radarLead, setRadarLead] = useState<any>(null);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
 
   const artisanName = user?.artisanProfile?.businessName ||
     (user?.clientProfile?.firstName ? `${user.clientProfile.firstName} ${user.clientProfile.lastName || ''}`.trim() : null) ||
@@ -58,44 +59,52 @@ export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
   const avatarUrl = user?.avatarUrl || user?.artisanProfile?.avatarUrl ||
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150';
 
-  const loadCockpitData = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    try {
+  const {
+    data: cockpitData,
+    isLoading: loading,
+    isRefetching: refreshing,
+    refetch,
+  } = useQuery({
+    queryKey: ['artisan-cockpit-overview'],
+    queryFn: async () => {
       const [walletRes, contractsRes, jobsRes] = await Promise.allSettled([
         WalletService.getMyWallet(),
         ContractService.getMyContracts('ARTISAN'),
         JobService.listJobs({ limit: 5 }),
       ]);
 
+      let walletBalance = 0;
+      let activeContract: any = null;
+      let radarLead: any = null;
+
       if (walletRes.status === 'fulfilled' && walletRes.value) {
-        setWalletBalance((walletRes.value as any).balance || 0);
+        walletBalance = (walletRes.value as any).balance || 0;
       }
 
       if (contractsRes.status === 'fulfilled' && Array.isArray(contractsRes.value)) {
-        const active = contractsRes.value.find((c: any) => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS') || contractsRes.value[0];
-        setActiveContract(active || null);
+        activeContract =
+          contractsRes.value.find((c: any) => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS') ||
+          contractsRes.value[0] ||
+          null;
       }
 
       if (jobsRes.status === 'fulfilled' && Array.isArray(jobsRes.value)) {
-        const emergencyOrOpen = jobsRes.value.find((j: any) => j.status === 'OPEN' || j.urgency === 'EMERGENCY' || j.urgency === 'HIGH') || jobsRes.value[0];
-        setRadarLead(emergencyOrOpen || null);
+        radarLead =
+          jobsRes.value.find((j: any) => j.status === 'OPEN' || j.urgency === 'EMERGENCY' || j.urgency === 'HIGH') ||
+          jobsRes.value[0] ||
+          null;
       }
-    } catch (err) {
-      console.warn('Error loading cockpit data:', err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    loadCockpitData();
-  }, [loadCockpitData]);
+      return { walletBalance, activeContract, radarLead };
+    },
+    staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
+  });
+
+  const walletBalance = cockpitData?.walletBalance ?? 0;
+  const activeContract = cockpitData?.activeContract ?? null;
+  const radarLead = cockpitData?.radarLead ?? null;
+  const [dismissedLeadId, setDismissedLeadId] = React.useState<string | null>(null);
+  const visibleRadarLead = radarLead?.id === dismissedLeadId ? null : radarLead;
 
   const activeMilestones = activeContract?.milestones || [];
   const currentMilestone = activeMilestones.find((m: any) => m.status === 'IN_PROGRESS' || m.status === 'SUBMITTED') || activeMilestones[0];
@@ -111,7 +120,7 @@ export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => loadCockpitData(true)}
+            onRefresh={() => { refetch(); }}
             tintColor={colors.brand.mint}
             colors={[colors.brand.forest]}
           />
@@ -140,17 +149,30 @@ export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
               <Text style={styles.profileChevron}>›</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.bellButton}
-              onPress={onNotificationPress}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.bellIcon}>🔔</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>1</Text>
-              </View>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {onScanQr && (
+                <TouchableOpacity
+                  style={styles.bellButton}
+                  onPress={onScanQr}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.bellIcon}>📷</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.bellButton}
+                onPress={onNotificationPress}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.bellIcon}>🔔</Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>1</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
+
 
           {/* ONLINE / OFFLINE TOGGLE */}
           <View style={styles.toggleWrapper}>
@@ -195,26 +217,26 @@ export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
         </View>
 
         {/* 2. URGENT JOB LEAD (LEAD RADAR CARD) */}
-        {radarLead ? (
+        {visibleRadarLead ? (
           <View style={styles.leadCard}>
             {/* Header Row: Urgent Tag + Timer */}
             <View style={styles.leadHeaderRow}>
               <View style={styles.urgentTag}>
                 <Text style={styles.urgentZap}>⚡</Text>
                 <Text style={styles.urgentTagText}>
-                  {radarLead.urgency === 'EMERGENCY' ? 'Emergency Radar Lead' : 'Nearby Lead'}
+                  {visibleRadarLead.urgency === 'EMERGENCY' ? 'Emergency Radar Lead' : 'Nearby Lead'}
                 </Text>
               </View>
               <CountdownTimer initialSeconds={180} />
             </View>
 
             {/* Issue Title */}
-            <Text style={styles.leadTitle}>{radarLead.title}</Text>
+            <Text style={styles.leadTitle}>{visibleRadarLead.title}</Text>
 
             {/* Location & Distance */}
             <View style={styles.locationRow}>
               <Text style={styles.leadLocation}>
-                📍 {radarLead.location || 'Lagos, Nigeria'} (Nearby)
+                📍 {visibleRadarLead.location || 'Lagos, Nigeria'} (Nearby)
               </Text>
             </View>
 
@@ -222,7 +244,7 @@ export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
             <View style={styles.budgetRow}>
               <Text style={styles.lockIcon}>🔒</Text>
               <Text style={styles.budgetValue}>
-                {formatCurrency(Number(radarLead.budget || radarLead.budgetMax || 25000))}
+                {formatCurrency(Number(visibleRadarLead.budget || visibleRadarLead.budgetMax || 25000))}
               </Text>
               <Text style={styles.budgetTag}>(Target Escrow)</Text>
             </View>
@@ -231,7 +253,11 @@ export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
             <View style={styles.leadActionRow}>
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => onDeclineLead?.(radarLead.id)}
+                onPress={() => {
+                  triggerHaptic('light');
+                  setDismissedLeadId(visibleRadarLead.id);
+                  onDeclineLead?.(visibleRadarLead.id);
+                }}
                 style={styles.declineButton}
               >
                 <Text style={styles.declineText}>✕ Decline</Text>
@@ -239,7 +265,7 @@ export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
 
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => onAcceptLead?.(radarLead.id)}
+                onPress={() => onAcceptLead?.(visibleRadarLead.id)}
                 style={styles.acceptButton}
               >
                 <Text style={styles.acceptText}>✓ View & Bid</Text>
@@ -332,8 +358,20 @@ export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
                 <Text style={styles.quickActionIcon}>📷</Text>
                 <Text style={styles.quickActionText}>Snap Photo</Text>
               </TouchableOpacity>
+
+              {onScanQr && (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={onScanQr}
+                  style={[styles.quickActionBtn, { borderColor: '#10B981', borderWidth: 1 }]}
+                >
+                  <Text style={styles.quickActionIcon}>⚡</Text>
+                  <Text style={[styles.quickActionText, { color: '#10B981', fontWeight: '700' }]}>Arrival QR</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
+
         ) : (
           <View style={styles.noActiveCard}>
             <Text style={styles.noActiveEmoji}>🛠️</Text>
@@ -343,6 +381,26 @@ export const ArtisanCockpitScreen: React.FC<ArtisanCockpitScreenProps> = ({
             </Text>
           </View>
         )}
+
+        {/* 4. DIRECT CLIENT INVITATIONS ENTRY */}
+        <TouchableOpacity
+          style={styles.invitationCard}
+          onPress={onViewInvitations}
+          activeOpacity={0.85}
+        >
+          <View style={styles.invitationLeft}>
+            <View style={styles.invitationIconCircle}>
+              <Text style={styles.invitationIconText}>✉️</Text>
+            </View>
+            <View style={styles.invitationMeta}>
+              <Text style={styles.invitationTitle}>Direct Job Offers</Text>
+              <Text style={styles.invitationSub}>Review private invitations sent by clients</Text>
+            </View>
+          </View>
+          <View style={styles.invitationRight}>
+            <Text style={styles.invitationActionText}>View ›</Text>
+          </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -770,5 +828,55 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     fontWeight: '700',
     color: colors.neutral[700],
+  },
+  invitationCard: {
+    marginHorizontal: spacing.base,
+    marginTop: 12,
+    backgroundColor: '#0E3524',
+    borderRadius: radius.xl,
+    padding: spacing.base,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#1C5B3E',
+  },
+  invitationLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  invitationIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  invitationIconText: {
+    fontSize: 20,
+  },
+  invitationMeta: {
+    flex: 1,
+  },
+  invitationTitle: {
+    fontSize: typography.size.sm + 1,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  invitationSub: {
+    fontSize: typography.size.xs,
+    color: colors.brand.emeraldLight,
+    marginTop: 2,
+  },
+  invitationRight: {
+    paddingLeft: 8,
+  },
+  invitationActionText: {
+    fontSize: typography.size.sm,
+    fontWeight: '700',
+    color: colors.brand.emeraldLight,
   },
 });

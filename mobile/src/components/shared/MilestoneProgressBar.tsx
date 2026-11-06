@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, typography } from '../../theme';
+import { Check } from 'lucide-react-native';
+import { colors, radius, typography, useTheme } from '../../theme';
 
 interface Step {
   number: number;
@@ -16,6 +17,8 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = ({
   steps,
   currentStep,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
+
   return (
     <View style={styles.container}>
       <View style={styles.stepsRow}>
@@ -31,18 +34,18 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = ({
                   style={[
                     styles.circle,
                     isCompleted && styles.circleCompleted,
-                    isCurrent && styles.circleCurrent,
-                    !isCompleted && !isCurrent && styles.circleUpcoming,
+                    isCurrent && [styles.circleCurrent, isDark && { backgroundColor: themeColors.primary }],
+                    !isCompleted && !isCurrent && [styles.circleUpcoming, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }],
                   ]}
                 >
                   {isCompleted ? (
-                    <Text style={styles.checkIcon}>✓</Text>
+                    <Check size={11} color="#FFFFFF" strokeWidth={3} />
                   ) : (
                     <Text
                       style={[
                         styles.numberText,
                         isCurrent && styles.numberCurrent,
-                        !isCurrent && styles.numberUpcoming,
+                        !isCurrent && [styles.numberUpcoming, { color: themeColors.textMuted }],
                       ]}
                     >
                       {step.number}
@@ -54,8 +57,9 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = ({
                 <Text
                   style={[
                     styles.labelText,
-                    isCurrent && styles.labelCurrent,
-                    isCompleted && styles.labelCompleted,
+                    { color: themeColors.textMuted },
+                    isCurrent && [styles.labelCurrent, { color: themeColors.text }],
+                    isCompleted && [styles.labelCompleted, isDark && { color: '#34D399' }],
                   ]}
                   numberOfLines={2}
                 >
@@ -68,6 +72,7 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = ({
                 <View
                   style={[
                     styles.connectorLine,
+                    { backgroundColor: themeColors.border },
                     step.number < currentStep && styles.connectorCompleted,
                   ]}
                 />

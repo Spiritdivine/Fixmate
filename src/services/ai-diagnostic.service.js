@@ -33,7 +33,69 @@ if (env.GEMINI_API_KEY) {
   }
 }
 
+let cachedTaxonomy = null;
+let lastTaxonomyFetchTime = 0;
+const TAXONOMY_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export class AiDiagnosticService {
+  /**
+   * Dynamically fetch active trade categories and associated skills from DB with 5-minute TTL cache
+   * @returns {Promise<{ categories: Array, taxonomyPromptString: string, validSlugs: Set<string> }>}
+   */
+  static async getActiveCategoryTaxonomy() {
+    const now = Date.now();
+    if (cachedTaxonomy && now - lastTaxonomyFetchTime < TAXONOMY_CACHE_TTL_MS) {
+      return cachedTaxonomy;
+    }
+
+    try {
+      const dbCategories = await prisma.jobCategory.findMany({
+        where: { isActive: true },
+        include: { skills: true },
+        orderBy: { name: 'asc' },
+      });
+
+      const validSlugs = new Set(dbCategories.map((c) => c.slug));
+
+      const lines = dbCategories.map((c) => {
+        const skillList = c.skills?.length
+          ? c.skills.map((s) => s.name).join(', ')
+          : 'General maintenance in this trade';
+        return `- Slug: "${c.slug}" | Trade: "${c.name}" | Jurisdiction & Scope: Core competencies include ${skillList}.`;
+      });
+
+      const taxonomyPromptString = lines.join('\n');
+
+      cachedTaxonomy = {
+        categories: dbCategories,
+        taxonomyPromptString,
+        validSlugs,
+      };
+      lastTaxonomyFetchTime = now;
+      return cachedTaxonomy;
+    } catch (err) {
+      console.error('Failed to fetch active category taxonomy from DB:', err.message);
+      if (cachedTaxonomy) return cachedTaxonomy;
+      return {
+        categories: [],
+        taxonomyPromptString: `- Slug: "electrical-and-wiring" | Trade: "Electrical & Wiring"
+- Slug: "plumbing-and-pipefitting" | Trade: "Plumbing & Pipefitting"
+- Slug: "carpentry-and-woodwork" | Trade: "Carpentry & Woodwork"
+- Slug: "masonry-and-tiling" | Trade: "Masonry & Tiling"
+- Slug: "hvac-and-ac-repair" | Trade: "HVAC & Air Conditioning"
+- Slug: "painting-and-pop" | Trade: "Painting & POP Ceiling"`,
+        validSlugs: new Set([
+          'electrical-and-wiring',
+          'plumbing-and-pipefitting',
+          'carpentry-and-woodwork',
+          'masonry-and-tiling',
+          'hvac-and-ac-repair',
+          'painting-and-pop',
+        ]),
+      };
+    }
+  }
+
   /**
    * Run multimodal diagnostic analysis with unified Zod schema, safety shield, and economic price indexing
    */
@@ -90,18 +152,145 @@ export class AiDiagnosticService {
       }
     }
 
-    // 2.5 Intent Gating: Disclose whether an actual fault/repair issue is indicated
-    const userIntent = this._detectUserIntent(
-      effectiveTextPrompt,
-      activeVisionImages?.length || 0,
-      Boolean(voiceAudioBuffer || voiceAudioUrl)
-    );
+    // 3. Cache lookup for pure text queries
+    let parsedResult = null;
+    const cacheKey =
+      effectiveTextPrompt && (!activeVisionImages || activeVisionImages.length === 0)
+        ? AiCacheService.hashKey(effectiveTextPrompt, '', clientAddress || '')
+        : null;
 
-    if (!userIntent.hasIssue) {
-      // Pure greeting or general inquiry with no issue indicated:
-      // 1. Never tag a chat as being a particular craft (category = null).
-      // 2. Never recommend or match artisans (matchedArtisans = []).
-      // 3. Do not generate fake diagnostic titles, probable causes, labor costs, or BOM items.
+    if (cacheKey) {
+      const cached = await AiCacheService.getAsync(cacheKey);
+      if (cached) {
+        parsedResult = { ...cached, isCacheHit: true };
+      }
+    }
+
+    // Fetch active dynamic trade taxonomy from DB
+    const taxonomy = await this.getActiveCategoryTaxonomy();
+
+    // 4. Model Inference Tier: OpenAI -> Gemini -> Heuristic Fallback
+    if (!parsedResult) {
+      if (openaiClient && AiCacheService.isProviderHealthy('openai')) {
+        try {
+          parsedResult = await this._callOpenAI({
+            textPrompt: effectiveTextPrompt,
+            imageUrls: activeVisionImages,
+            dynamicTaxonomyPrompt: taxonomy.taxonomyPromptString,
+          });
+          AiCacheService.recordProviderSuccess('openai');
+        } catch (error) {
+          AiCacheService.recordProviderFailure('openai', error);
+          console.warn(`⚠️ OpenAI diagnostic call failed (${error.message}). Falling back to Gemini / rules.`);
+        }
+      }
+
+      if (!parsedResult && geminiClient && AiCacheService.isProviderHealthy('gemini')) {
+        try {
+          parsedResult = await this._callGemini({
+            textPrompt: effectiveTextPrompt,
+            imageUrls: activeVisionImages,
+            dynamicTaxonomyPrompt: taxonomy.taxonomyPromptString,
+          });
+          AiCacheService.recordProviderSuccess('gemini');
+        } catch (error) {
+          AiCacheService.recordProviderFailure('gemini', error);
+          console.warn(`⚠️ Gemini API call failed (${error.message}). Falling back to internal diagnostic rules.`);
+        }
+      }
+
+      if (!parsedResult) {
+        parsedResult = this._simulateDiagnostic({ textPrompt: effectiveTextPrompt, imageUrls });
+      }
+
+      // 5. Schema Validation & Normalization via Zod
+      parsedResult = this._validateAndNormalize(parsedResult);
+
+      if (cacheKey && parsedResult) {
+        AiCacheService.set(cacheKey, parsedResult);
+      }
+    }
+
+    // 5.4 Out-of-Scope Gating: Reject motor vehicles, personal consumer electronics, non-property inquiries
+    if (parsedResult.userIntent === 'OUT_OF_SCOPE') {
+      const session = await prisma.aiDiagnosticSession.create({
+        data: {
+          userId,
+          clientSessionToken: persistedGuestToken,
+          diagnosticStatus: 'INFORMATION_GATHERING',
+          diagnosticState: DiagnosticStateService.initialState(),
+          promptVersion: OGA_JOHN_PROMPT_VERSION,
+          inputType: 'TEXT',
+          rawTextPrompt: textPrompt || null,
+          transcribedAudio: audioTranscriptionResult?.literalTranscript || null,
+          voiceAudioUrl: voiceAudioUrl || null,
+          diagnosticTitle: 'Out of Scope Request',
+          probableCause: null,
+          severity: 'LOW',
+          urgency: 'ROUTINE',
+          isHazardous: false,
+          safetyInstructions: [],
+          diyAllowed: false,
+          diyGuide: null,
+          clarificationQuestion: null,
+          clarificationOptions: [],
+          artisanAudioScript: null,
+          estimatedBOM: [],
+          estimatedLaborMin: null,
+          estimatedLaborMax: null,
+          currency: 'NGN',
+          matchedCategoryId: null,
+          recommendedSkills: [],
+          clientLatitude: clientCoords?.latitude ? Number(clientCoords.latitude) : null,
+          clientLongitude: clientCoords?.longitude ? Number(clientCoords.longitude) : null,
+          clientAddress: clientAddress || null,
+        },
+        include: {
+          category: true,
+          mediaFiles: true,
+        },
+      });
+
+      const conversationalReply =
+        parsedResult.conversationalReply ||
+        'Fixmate specializes strictly in residential and commercial property maintenance (such as electrical wiring, plumbing, HVAC and AC repair, carpentry, masonry, and painting). We do not service motor vehicles or personal electronic devices like phones or laptops.';
+
+      await prisma.aiDiagnosticTurn.createMany({
+        data: [
+          { diagnosticSessionId: session.id, role: 'user', content: textPrompt || 'Out of scope inquiry' },
+          { diagnosticSessionId: session.id, role: 'assistant', content: conversationalReply },
+        ],
+      });
+
+      return {
+        session,
+        diagnosis: {
+          diagnosticTitle: 'Out of Scope Request',
+          probableCause: null,
+          severity: 'LOW',
+          urgency: 'ROUTINE',
+          isHazardous: false,
+          diyAllowed: false,
+          categorySlug: null,
+          estimatedBOM: [],
+          estimatedLaborMin: null,
+          estimatedLaborMax: null,
+          conversationalReply,
+        },
+        conversationalReply,
+        category: null,
+        diyRecommended: false,
+        matchedArtisans: [],
+        preliminaryArtisans: [],
+        matchingNotice: null,
+        clarification: null,
+        artisanScript: null,
+        guestAccessToken,
+      };
+    }
+
+    // 5.5 Dynamic AI Intent Handling: Pure Greeting vs Diagnostic Consultation
+    if (parsedResult.userIntent === 'GREETING') {
       const session = await prisma.aiDiagnosticSession.create({
         data: {
           userId,
@@ -140,7 +329,7 @@ export class AiDiagnosticService {
         },
       });
 
-      const conversationalReply = await this._generateDynamicGreeting(textPrompt);
+      const conversationalReply = parsedResult.conversationalReply || await this._generateDynamicGreeting(textPrompt);
       await prisma.aiDiagnosticTurn.createMany({
         data: [
           { diagnosticSessionId: session.id, role: 'user', content: textPrompt || 'Hello' },
@@ -175,54 +364,6 @@ export class AiDiagnosticService {
       };
     }
 
-    // 3. Cache lookup for pure text queries
-    let parsedResult = null;
-    const cacheKey =
-      effectiveTextPrompt && (!activeVisionImages || activeVisionImages.length === 0)
-        ? AiCacheService.hashKey(effectiveTextPrompt, '', clientAddress || '')
-        : null;
-
-    if (cacheKey) {
-      const cached = await AiCacheService.getAsync(cacheKey);
-      if (cached) {
-        parsedResult = { ...cached, isCacheHit: true };
-      }
-    }
-
-    // 4. Model Inference Tier: OpenAI -> Gemini -> Heuristic Fallback
-    if (!parsedResult) {
-      if (openaiClient && AiCacheService.isProviderHealthy('openai')) {
-        try {
-          parsedResult = await this._callOpenAI({ textPrompt: effectiveTextPrompt, imageUrls: activeVisionImages });
-          AiCacheService.recordProviderSuccess('openai');
-        } catch (error) {
-          AiCacheService.recordProviderFailure('openai', error);
-          console.warn(`⚠️ OpenAI diagnostic call failed (${error.message}). Falling back to Gemini / rules.`);
-        }
-      }
-
-      if (!parsedResult && geminiClient && AiCacheService.isProviderHealthy('gemini')) {
-        try {
-          parsedResult = await this._callGemini({ textPrompt: effectiveTextPrompt, imageUrls: activeVisionImages });
-          AiCacheService.recordProviderSuccess('gemini');
-        } catch (error) {
-          AiCacheService.recordProviderFailure('gemini', error);
-          console.warn(`⚠️ Gemini API call failed (${error.message}). Falling back to internal diagnostic rules.`);
-        }
-      }
-
-      if (!parsedResult) {
-        parsedResult = this._simulateDiagnostic({ textPrompt: effectiveTextPrompt, imageUrls });
-      }
-
-      // 5. Schema Validation & Normalization via Zod
-      parsedResult = this._validateAndNormalize(parsedResult);
-
-      if (cacheKey && parsedResult) {
-        AiCacheService.set(cacheKey, parsedResult);
-      }
-    }
-
     // 6. Domain 1 Safety Shield: Deterministic regex scan & mandatory containment enforcement
     parsedResult = SafetyShieldService.scanAndEnforce(effectiveTextPrompt, parsedResult);
 
@@ -240,7 +381,7 @@ export class AiDiagnosticService {
       Boolean(parsedResult.clarificationQuestion) ||
       (!parsedResult.probableCause || parsedResult.probableCause.toLowerCase().includes('triage') || parsedResult.probableCause.toLowerCase().includes('inspection'))
     );
-    const bomAsked = this._isBomRequested(effectiveTextPrompt);
+    const bomAsked = parsedResult.bomRequested === true;
 
     if (isInfoGathering && !bomAsked) {
       parsedResult.estimatedBOM = [];
@@ -255,17 +396,25 @@ export class AiDiagnosticService {
       });
     }
 
-    // 9. Resolve category from database by slug or canonical fallback
+    // 9. Resolve category from database by slug validated against active DB taxonomy
     let category = null;
-    if (parsedResult.categorySlug) {
+    if (parsedResult.categorySlug && taxonomy.validSlugs.has(parsedResult.categorySlug)) {
+      category = await prisma.jobCategory.findUnique({
+        where: { slug: parsedResult.categorySlug },
+      });
+    } else if (parsedResult.categorySlug) {
       category = await prisma.jobCategory.findFirst({
         where: {
+          isActive: true,
           OR: [
             { slug: { contains: parsedResult.categorySlug, mode: 'insensitive' } },
             { name: { contains: parsedResult.categorySlug.replace(/-/g, ' '), mode: 'insensitive' } },
           ],
         },
       });
+    }
+    if (!category) {
+      parsedResult.categorySlug = null;
     }
 
     // If category wasn't matched, leave it as null rather than forcing an unrelated trade
@@ -357,6 +506,32 @@ export class AiDiagnosticService {
       ],
     });
 
+    // Persist normalized forensic diagnostic evidence
+    try {
+      const evidenceRecords = [];
+      if (effectiveTextPrompt) {
+        evidenceRecords.push({
+          diagnosticSessionId: session.id,
+          evidenceType: 'USER_STATEMENT',
+          normalizedFact: effectiveTextPrompt.substring(0, 500),
+          confidenceBand: 'high',
+        });
+      }
+      if (parsedResult.probableCause) {
+        evidenceRecords.push({
+          diagnosticSessionId: session.id,
+          evidenceType: mediaFiles && mediaFiles.length > 0 ? 'PHOTO_FEATURE' : 'DIAGNOSTIC_INFERENCE',
+          normalizedFact: parsedResult.probableCause.substring(0, 500),
+          confidenceBand: parsedResult.confidence || 'moderate',
+        });
+      }
+      if (evidenceRecords.length > 0) {
+        await prisma.diagnosticEvidence.createMany({ data: evidenceRecords });
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not record diagnostic evidence:', err.message);
+    }
+
     // Record audit log if safety hazard or emergency was flagged
     if (parsedResult.isHazardous || parsedResult.urgency === 'EMERGENCY') {
       try {
@@ -397,11 +572,17 @@ export class AiDiagnosticService {
 
     let matchedArtisans = [];
     let matchingNotice = null;
-    const isEmergencyHazard =
+    const isLifeSafetyEmergency =
       parsedResult.urgency === 'EMERGENCY' ||
-      parsedResult.isHazardous === true ||
-      parsedResult.severity === 'CRITICAL';
-    const shouldMatchArtisans = (isEmergencyHazard || clientRequestedArtisan === true) && category != null;
+      parsedResult.severity === 'CRITICAL' ||
+      (Array.isArray(parsedResult.hazardTypes) &&
+        parsedResult.hazardTypes.some((h) => ['GAS_EXPLOSION', 'ACTIVE_FLOODING', 'FIRE_ARC'].includes(h)));
+    const shouldMatchArtisans =
+      (isLifeSafetyEmergency ||
+        clientRequestedArtisan === true ||
+        parsedResult.userIntent === 'ARTISAN_HIRE_REQUESTED' ||
+        parsedResult.shouldMatchArtisans === true) &&
+      category != null;
 
     if (shouldMatchArtisans) {
       const matchResult = await MatchingEngineService.findTopMatches({
@@ -457,20 +638,23 @@ export class AiDiagnosticService {
       });
 
       if (matchedArtisans && matchedArtisans.length > 0) {
-        for (const artisan of matchedArtisans) {
-          try {
-            await prisma.diagnosticMatch.create({
-              data: {
-                diagnosticSessionId: session.id,
-                artisanProfileId: artisan.id,
-                matchScore: artisan.matchScore || 90.0,
-                distanceKm: artisan.distanceKm ? Number(artisan.distanceKm) : null,
-                matchRationale: 'Recommended during initial diagnostic intake',
-              },
-            });
-          } catch (matchErr) {
-            // Ignore duplicate or non-fatal constraint errors
-          }
+        const matchData = matchedArtisans
+          .filter((a) => a?.id)
+          .map((artisan) => ({
+            diagnosticSessionId: session.id,
+            artisanProfileId: artisan.id,
+            matchScore: artisan.matchScore || 90.0,
+            distanceKm: artisan.distanceKm ? Number(artisan.distanceKm) : null,
+            matchRationale: 'Recommended during initial diagnostic intake',
+          }));
+
+        if (matchData.length > 0) {
+          await prisma.diagnosticMatch.createMany({
+            data: matchData,
+            skipDuplicates: true,
+          }).catch((err) => {
+            console.warn('⚠️ Non-fatal notice creating diagnostic matches batch:', err.message);
+          });
         }
       }
     } catch (saveErr) {
@@ -491,54 +675,99 @@ export class AiDiagnosticService {
   }
 
   /**
-   * Master Artisan Conversational Diagnostic via OpenAI GPT-4o with FULL structured output
+   * Shared Master Diagnostic System Prompt incorporating the 4 Engineering Principles:
+   * 1. Scope and Safety Gate (Property maintenance only; out-of-scope rejection; electrical hazard dominance)
+   * 2. Dynamic Trade Taxonomy (Database-backed category slugs and jurisdictions, no hardcoded words)
+   * 3. Root-Cause & Multi-Trade Reasoning (Underlying fault priority over superficial symptoms)
+   * 4. Evidence-Based Classification (categorySlug: null on ambiguity; 1 targeted clarifying question)
    */
-  /**
-   * Master Artisan Conversational Diagnostic via OpenAI GPT-4o with FULL structured output
-   */
-  static async _callOpenAI({ textPrompt, imageUrls = [] }) {
-    if (!openaiClient) throw new Error('OpenAI client not initialized');
+  static _buildMasterDiagnosticSystemPrompt(dynamicTaxonomyPrompt = '') {
+    const taxonomySection = dynamicTaxonomyPrompt
+      ? `ACTIVE DATABASE TRADE TAXONOMY & JURISDICTIONS:\n${dynamicTaxonomyPrompt}`
+      : `ACTIVE DATABASE TRADE TAXONOMY & JURISDICTIONS:
+- Slug: "electrical-and-wiring" | Trade: "Electrical & Wiring" | Scope: Distribution boards, breakers, circuits, lighting, switches, inverters, solar, generators, electrical safety.
+- Slug: "plumbing-and-pipefitting" | Trade: "Plumbing & Pipefitting" | Scope: Water supply, pipes, taps, toilets, drainage, pumps, water heaters, pipe leaks.
+- Slug: "carpentry-and-woodwork" | Trade: "Carpentry & Woodwork" | Scope: Furniture, doors, frames, roof trusses, cabinetry, wardrobes, timber structures.
+- Slug: "masonry-and-tiling" | Trade: "Masonry & Tiling" | Scope: Brickwork, plastering, screeding, ceramic/granite tiling, structural masonry.
+- Slug: "hvac-and-ac-repair" | Trade: "HVAC & Air Conditioning" | Scope: Split units, chillers, refrigeration, compressors, ducting, cooling systems.
+- Slug: "painting-and-pop" | Trade: "Painting & POP Ceiling" | Scope: Wall finishes, emulsion/gloss paint, POP ceiling designs, screeding, waterproofing.`;
 
-    const systemPrompt = `You are Oga John, the Chief AI Diagnostic Engineer and Senior Technical Consultant for Artifix (Fixmate), Nigeria.
-You apply the diagnostic reasoning, practical knowledge, and communication standards of an experienced multidisciplinary maintenance consultant across electrical, plumbing, HVAC, generator plants, carpentry/furniture, masonry, and roofing.
+    return `You are Oga John, the Chief AI Diagnostic Engineer and Senior Technical Consultant for Artifix (Fixmate), Nigeria.
+You apply the diagnostic reasoning, engineering principles, and communication standards of an experienced multidisciplinary maintenance consultant across electrical, plumbing, HVAC, generator plants, carpentry/furniture, masonry, and painting/roofing.
 You are an AI assistant, not a physically present tradesperson. Never falsely claim personal physical work history, manual inspections, or guaranteed physical outcomes.
 
-MISSION & DIAGNOSTIC REASONING PROTOCOL (Acknowledge -> Reassure -> Protect -> Diagnose -> Request Evidence -> Recommend Next Step):
-1. ACKNOWLEDGE EMOTION & ISSUE:
-   - Connect with the homeowner's emotion, frustration, or concern with natural empathy.
-   - If they speak Nigerian English or Pidgin ("my couch leg just dey, break o", "wetin i fit do about am?"), mirror their tone naturally without mockery or excessive slang.
-2. SCREEN SAFETY / PROTECT FIRST:
-   - If there is any physical hazard (sparks, smoke, burning odor, gas smell, flooding, ceiling sag, unstable/collapsing furniture), issue an immediate clear precaution FIRST (e.g. "Abeg, no sit on that couch for now so e no go collapse further" or "Isolate the main distribution board breaker immediately").
-3. ESTABLISH PLAUSIBLE CAUSES:
-   - Do NOT guess blindly or force an early conclusion. Formulate 2-3 plausible hypotheses.
-4. ASK THE SINGLE NEXT BEST QUESTION:
-   - Ask ONE targeted, high-value question that narrows down the failure mechanism (e.g. "Is the leg wooden or metal, and did it snap in two or did the screws pull out from the frame?").
-5. REQUEST VISUAL EVIDENCE:
-   - If a photo helps distinguish the damage, invite the user to upload one ("If you fit send a clear picture of where the leg connects to the frame..."). Tell them NOT to buy materials yet.
-6. PROFESSIONAL VS DIY GATING (CRITICAL):
-   - IF THIS PROBLEM REQUIRES PROFESSIONAL SERVICES (electrical wiring/breakers, gas leaks, water main bursts, HVAC refrigerant, generator engine faults, structural damage):
-     * DO NOT give the user a DIY step-by-step repair guide!
-     * Set "diyAllowed": false, and explain in "diyRiskReason" why specialized trade tools/skills are required.
-     * In "conversationalReply", give immediate containment precautions, explain why professional care is needed, and warmly ask: "Would you like me to connect you with a verified, vetted specialist nearby to handle this safely for you?"
-   - IF THIS PROBLEM IS GENUINELY SAFE FOR DIY (e.g. tightening a loose hinge, replacing a faucet tap washer, unblocking a surface sink P-trap, cleaning AC dust filter mesh):
-     * Set "diyAllowed": true.
-     * Make "diyGuide" practical and detailed with clear household tools, steps, and explicit stop conditions.
-7. NO SELF-REINTRODUCTION:
-   - NEVER introduce yourself as "Hello, I am Oga John" in this response. The chat UI already displays your identity. Get straight to the problem.
-8. RESTRICTED BILL OF MATERIALS & PRICING:
-   - Restrict giving Bill of Materials (BOM) or parts cost breakdowns to when EXPLICITLY asked by the user ("what materials do I need?", "cost of parts", "BOM") or when reaching a confirmed ASSESSMENT_READY status where repair materials were specifically requested.
-   - If the diagnosis is in early triage / INFORMATION_GATHERING, "estimatedBOM" MUST be [] (empty array), and "estimatedLaborMin" and "estimatedLaborMax" MUST be null.
-   - NEVER invent or hallucinate fake parts or pricing when the diagnostic facts are incomplete.
-9. CONCISE & NATURAL TONE:
-   - Keep responses crisp, direct, and conversational. NEVER be verbose, rambling, or overly wordy.
-   - Plain text without unsolicited tables.
+ENGINEERING PRINCIPLES & CORE PROTOCOLS:
+
+1. SCOPE AND SAFETY GATE:
+   - PROPERTY MAINTENANCE SCOPE: Fixmate is strictly dedicated to residential, commercial property, and building infrastructure maintenance.
+   - OUT-OF-SCOPE INQUIRIES: Motor vehicles (cars, motorcycles, auto engines/transmissions), personal electronics (smartphones, laptops, tablets, consumer TVs, computer hardware), medical devices, or industrial plant machinery are OUT OF SCOPE.
+     * When the user inquiry is out of scope:
+       - Set "userIntent": "OUT_OF_SCOPE"
+       - Set "categorySlug": null
+       - Set "diagnosticTitle": "Out of Scope Request"
+       - Set "probableCause": null
+       - Set "shouldMatchArtisans": false
+       - Set "bomRequested": false
+       - Set "estimatedBOM": []
+       - In "conversationalReply", politely and warmly explain that Fixmate specializes exclusively in property, building, and household infrastructure maintenance (electrical, plumbing, HVAC, carpentry, masonry, painting), and cannot diagnose or repair motor vehicles or personal electronics.
+   - HAZARD DOMINANCE: Life and property safety take absolute priority over ordinary diagnosis or artisan matching.
+     * When water and electricity interact dangerously (e.g. water leaking into a socket, damp distribution board, wet breaker, sparking water heater):
+       - ELECTRICAL HAZARD TAKES ABSOLUTE DOMINANCE.
+       - Prioritize immediate electrical containment (shutting off the main incomer breaker) before considering plumbing repairs.
+       - Never instruct a user to touch wet electrical appliances or approach energized circuits.
+
+2. DYNAMIC TRADE TAXONOMY & JURISDICTION:
+${taxonomySection}
+   - Determine "categorySlug" strictly based on engineering jurisdiction and physical systems from the active database taxonomy above.
+   - NEVER rely on superficial keyword coincidence (e.g. "outdoor unit" of an AC is HVAC, not Carpentry/door; "water heater" electrical element is Electrical/Plumbing root).
+   - If the issue matches an active category, return its exact slug. If the issue is out of scope or ambiguous, return null.
+
+3. ROOT-CAUSE AND MULTI-TRADE REASONING:
+   - Separate the underlying fault from its superficial symptoms.
+   - If a leaking pipe causes ceiling paint to peel or POP plaster to soften, the ROOT CAUSE is plumbing/water ingress; do not classify it as cosmetic painting until the water source is arrested.
+   - If multiple trades are involved, preserve that uncertainty in your "hypotheses", prioritize immediate hazard containment, and do not force the problem into an arbitrary category.
+
+4. EVIDENCE-BASED CLASSIFICATION:
+   - When evidence is insufficient or ambiguous (e.g. "something is making noise", "it stopped working" without identifying the equipment), return "categorySlug": null.
+   - Set "clarificationNeeded": true.
+   - Ask ONE targeted, high-value clarifying question to identify the specific component and failure mode.
+   - Provide 2-3 realistic clarification options.
+   - Never invent or hallucinate a trade category, repair diagnosis, bill of materials, or price estimate to complete the request. Treat model confidence as an estimate.
+
+5. USER INTENT CLASSIFICATION:
+   - "GREETING": If user is just saying hello, pleasantry, or asking who you are without describing any physical problem:
+     * Set "userIntent": "GREETING", "categorySlug": null, "diagnosticTitle": null, "probableCause": null, "shouldMatchArtisans": false, "estimatedBOM": [].
+     * In "conversationalReply", warmly introduce yourself as Oga John and ask what building/home maintenance issue they have today.
+   - "DIAGNOSTIC_CONSULTATION": If user describes a problem, fault, noise, leak, damage, or asks how to troubleshoot/fix something:
+     * Set "userIntent": "DIAGNOSTIC_CONSULTATION".
+     * Set "shouldMatchArtisans": false. Do NOT recommend or match an artisan unsolicited during diagnosis! Explain the issue and ask if they would like to be connected with a specialist.
+   - "ARTISAN_HIRE_REQUESTED": If user explicitly asks to hire, find, or send an artisan/technician:
+     * Set "userIntent": "ARTISAN_HIRE_REQUESTED".
+     * Set "shouldMatchArtisans": true.
+   - "OUT_OF_SCOPE": If user asks about vehicles, phones, laptops, or non-property items.
+
+6. DIAGNOSTIC REASONING PROTOCOL (For DIAGNOSTIC_CONSULTATION):
+   - Acknowledge emotion & issue with natural empathy, mirroring Nigerian English or Pidgin naturally if spoken.
+   - Screen safety / protect first: If there is physical hazard (sparks, burning smell, gas leak, flooding, collapsing furniture), issue an immediate clear precaution FIRST.
+   - Formulate 2-3 plausible hypotheses.
+   - Ask ONE targeted, high-value question narrowing down the failure.
+   - Request visual evidence: Invite user to upload a clear photo if helpful.
+   - Professional vs DIY gating:
+     * For dangerous faults (arcing, gas, refrigerant, engine knock, structural damage), set "diyAllowed": false, do not give DIY steps, and offer verified specialist assistance.
+     * For safe fixes (tightening loose hinge, tap washer, sink P-trap clear, AC dust mesh), set "diyAllowed": true and provide clear steps.
+   - No self-reintroduction in consultation: If already diagnosing, get straight to the problem without "Hello, I am Oga John".
+
+7. RESTRICTED BILL OF MATERIALS & PRICING:
+   - Set "bomRequested": true and populate "estimatedBOM" ONLY when the user EXPLICITLY asks for parts, pricing, materials, or bill of materials.
+   - In all other cases, set "bomRequested": false and "estimatedBOM": [].
 
 You MUST respond strictly with a valid JSON object matching this schema:
 {
-  "conversationalReply": "Crisp, concise, empathetic conversational reply in clean markdown. Plain text without verbosity or self-reintroduction.",
-  "diagnosticTitle": "Short 3-5 word technical title",
-  "probableCause": "Precise 1-sentence technical root cause summary",
-  "categorySlug": "One of: electrical-and-wiring, plumbing-and-pipefitting, hvac-and-ac-repair, generator-and-power-plants, carpentry-and-woodwork, masonry-and-tiling, painting-and-pop, appliance-repair, or null",
+  "userIntent": "GREETING" | "DIAGNOSTIC_CONSULTATION" | "ARTISAN_HIRE_REQUESTED" | "OUT_OF_SCOPE",
+  "conversationalReply": "Crisp, concise, empathetic conversational reply in clean markdown. Plain text without verbosity.",
+  "diagnosticTitle": "Short 3-5 word technical title or null if greeting/out of scope",
+  "probableCause": "Precise 1-sentence technical root cause summary or null if greeting/out of scope",
+  "categorySlug": "Exact slug from active taxonomy, or null if ambiguous or out of scope",
   "severity": "LOW, MODERATE, HIGH, or CRITICAL",
   "urgency": "ROUTINE, SCHEDULED, URGENT, or EMERGENCY",
   "isHazardous": true or false,
@@ -550,6 +779,8 @@ You MUST respond strictly with a valid JSON object matching this schema:
   "diyRiskReason": "Reason why DIY is unsafe, or null",
   "diyGuide": "Detailed DIY steps if safe, or null if professional required",
   "requiresArtisan": true or false,
+  "shouldMatchArtisans": true or false,
+  "bomRequested": true or false,
   "clarificationNeeded": true or false,
   "clarificationQuestion": "Targeted question if symptoms unclear, or null",
   "clarificationOptions": ["Specific realistic answer A tailored to the question", "Specific realistic answer B"],
@@ -560,6 +791,15 @@ You MUST respond strictly with a valid JSON object matching this schema:
   "recommendedSkills": ["skill-slug-1"],
   "visualObservations": "Visual notes from attached photo or null"
 }`;
+  }
+
+  /**
+   * Master Artisan Conversational Diagnostic via OpenAI GPT-4o with FULL structured output
+   */
+  static async _callOpenAI({ textPrompt, imageUrls = [], dynamicTaxonomyPrompt = '' }) {
+    if (!openaiClient) throw new Error('OpenAI client not initialized');
+
+    const systemPrompt = this._buildMasterDiagnosticSystemPrompt(dynamicTaxonomyPrompt);
 
     const userContent =
       imageUrls.length > 0
@@ -582,73 +822,14 @@ You MUST respond strictly with a valid JSON object matching this schema:
     return JSON.parse(response.choices[0].message.content);
   }
 
+
   /**
    * Call Gemini 2.0 Flash Multimodal Vision & Reasoning API with FULL schema
    */
-  static async _callGemini({ textPrompt, imageUrls = [] }) {
+  static async _callGemini({ textPrompt, imageUrls = [], dynamicTaxonomyPrompt = '' }) {
     if (!geminiClient) throw new Error('Gemini client not initialized');
 
-    const systemPrompt = `You are Oga John, the Chief AI Diagnostic Engineer and Senior Technical Consultant for Fixmate (Artifix), Nigeria.
-You apply the diagnostic reasoning, practical knowledge, and communication standards of an experienced multidisciplinary maintenance consultant across electrical, plumbing, HVAC, generator plants, carpentry/furniture, masonry, and roofing.
-You are an AI assistant, not a physically present tradesperson. Never falsely claim personal physical work history, manual inspections, or guaranteed physical outcomes.
-
-MISSION & DIAGNOSTIC REASONING PROTOCOL (Acknowledge -> Reassure -> Protect -> Diagnose -> Request Evidence -> Recommend Next Step):
-1. ACKNOWLEDGE EMOTION & ISSUE:
-   - Connect with the homeowner's emotion, frustration, or concern with natural empathy.
-   - If they speak Nigerian English or Pidgin ("my couch leg just dey, break o", "wetin i fit do about am?"), mirror their tone naturally without mockery or excessive slang.
-2. SCREEN SAFETY / PROTECT FIRST:
-   - If there is any physical hazard (sparks, smoke, burning odor, gas smell, flooding, ceiling sag, unstable/collapsing furniture), issue an immediate clear precaution FIRST (e.g. "Abeg, no sit on that couch for now so e no go collapse further" or "Isolate the main distribution board breaker immediately").
-3. ESTABLISH PLAUSIBLE CAUSES:
-   - Do NOT guess blindly or force an early conclusion. Formulate 2-3 plausible hypotheses.
-4. ASK THE SINGLE NEXT BEST QUESTION:
-   - Ask ONE targeted, high-value question that narrows down the failure mechanism.
-5. REQUEST VISUAL EVIDENCE:
-   - If a photo helps distinguish the damage, invite the user to upload one ("If you fit send a clear picture of where the leg connects to the frame..."). Tell them NOT to buy materials yet.
-6. PROFESSIONAL VS DIY GATING (CRITICAL):
-   - IF THIS PROBLEM REQUIRES PROFESSIONAL SERVICES (electrical wiring/breakers, gas leaks, water main bursts, HVAC refrigerant, generator engine faults, structural damage):
-     * DO NOT give the user a DIY step-by-step repair guide!
-     * Set "diyAllowed": false, and explain in "diyRiskReason" why specialized trade tools/skills are required.
-     * In "conversationalReply", give immediate containment precautions, explain why professional care is needed, and warmly ask: "Would you like me to connect you with a verified, vetted specialist nearby to handle this safely for you?"
-   - IF THIS PROBLEM IS GENUINELY SAFE FOR DIY (e.g. tightening a loose hinge, replacing a faucet tap washer, unblocking a surface sink P-trap, cleaning AC dust filter mesh):
-     * Set "diyAllowed": true.
-     * Make "diyGuide" practical and detailed with clear household tools, steps, and explicit stop conditions.
-7. NO SELF-REINTRODUCTION:
-   - NEVER introduce yourself as "Hello, I am Oga John" in this response. The chat UI already displays your identity. Get straight to the problem.
-8. RESTRICTED BILL OF MATERIALS & PRICING:
-   - Restrict giving Bill of Materials (BOM) or parts cost breakdowns to when EXPLICITLY asked by the user ("what materials do I need?", "cost of parts", "BOM") or when reaching a confirmed ASSESSMENT_READY status where repair materials were specifically requested.
-   - If the diagnosis is in early triage / INFORMATION_GATHERING, "estimatedBOM" MUST be [] (empty array), and "estimatedLaborMin" and "estimatedLaborMax" MUST be null.
-   - NEVER invent or hallucinate fake parts or pricing when the diagnostic facts are incomplete.
-9. CONCISE & NATURAL TONE:
-   - Keep responses crisp, direct, and conversational. NEVER be verbose, rambling, or overly wordy.
-   - Plain text without unsolicited tables.
-
-Return strictly a valid JSON object matching this specification:
-{
-  "conversationalReply": "Warm, practical master-artisan advice in markdown. Plain text without verbosity or self-reintroduction.",
-  "diagnosticTitle": "Short 3-5 word technical title",
-  "probableCause": "Precise root cause",
-  "categorySlug": "One of: electrical-and-wiring, plumbing-and-pipefitting, hvac-and-ac-repair, generator-and-power-plants, carpentry-and-woodwork, masonry-and-tiling, painting-and-pop, appliance-repair, or null",
-  "severity": "LOW, MODERATE, HIGH, or CRITICAL",
-  "urgency": "ROUTINE, SCHEDULED, URGENT, or EMERGENCY",
-  "isHazardous": true or false,
-  "hazardTypes": ["NONE", "ELECTRICAL_SHOCK", "FIRE_ARC", "GAS_EXPLOSION", "ACTIVE_FLOODING"],
-  "safetyInstructions": [
-    { "stepNumber": 1, "action": "Actionable step", "urgency": "IMMEDIATE_ACTION", "targetComponent": "Breaker/Valve/Frame" }
-  ],
-  "diyAllowed": true or false,
-  "diyRiskReason": "Why DIY is unsafe, or null",
-  "diyGuide": "Safe steps if allowed, or null",
-  "requiresArtisan": true or false,
-  "clarificationNeeded": true or false,
-  "clarificationQuestion": "Question or null",
-  "clarificationOptions": ["Specific realistic answer A tailored to the question", "Specific realistic answer B"],
-  "estimatedBOM": [],
-  "estimatedLaborMin": null,
-  "estimatedLaborMax": null,
-  "currency": "NGN",
-  "recommendedSkills": ["skill-slug-1"],
-  "visualObservations": "Observations or null"
-}`;
+    const systemPrompt = this._buildMasterDiagnosticSystemPrompt(dynamicTaxonomyPrompt);
 
     const contents = [{ text: systemPrompt }];
     if (textPrompt) {
@@ -817,23 +998,89 @@ Return strictly a valid JSON object matching this specification:
       };
     }
 
+    // HVAC & Air Conditioning fault
+    const isHvacIssue =
+      /\b(ac|a\/c|air\s*condition(?:er|ing)?|split\s*unit|compressor|chiller|freon|refrigerant|cooling|evaporator|condenser|fan\s*coil)\b/i.test(lower) ||
+      (lower.includes('warm air') && (lower.includes('unit') || lower.includes('outdoor') || lower.includes('ac') || lower.includes('blow'))) ||
+      (lower.includes('outdoor unit') && (lower.includes('ac') || lower.includes('loud') || lower.includes('noise') || lower.includes('fan')));
+
+    if (isHvacIssue) {
+      const isLoudCompressor = lower.includes('loud') || lower.includes('noise') || lower.includes('buzz') || lower.includes('sound');
+      const isNotCooling = lower.includes('warm') || lower.includes('not cool') || lower.includes('not blowing cold') || lower.includes('hot air');
+      
+      return {
+        conversationalReply: isNotCooling && isLoudCompressor
+          ? 'I understand how frustrating it can be when your AC is blowing warm air while the outdoor unit is unusually loud. This typically points to a malfunctioning compressor motor, a damaged condenser fan, or low refrigerant pressure. Since working with high-voltage dual capacitors and pressurized refrigerant lines requires certified diagnostic tools, would you like me to connect you with a verified HVAC specialist nearby to inspect this safely?'
+          : 'Air conditioning systems require proper refrigerant charge, clean condenser airflow, and balanced capacitor voltage to cool effectively. To protect the compressor motor from overheating or burning out, please switch off the unit at its isolator. Would you like me to connect you with a verified HVAC specialist nearby?',
+        diagnosticTitle: isLoudCompressor ? 'HVAC Compressor / Condenser Fault' : 'Air Conditioner Cooling Performance Loss',
+        probableCause: isLoudCompressor
+          ? 'Failing compressor motor, defective start capacitor, or obstructed outdoor condenser fan.'
+          : 'Low refrigerant charge, clogged condenser coils, or faulty thermostatic expansion valve.',
+        severity: 'MODERATE',
+        urgency: 'SCHEDULED',
+        isHazardous: false,
+        hazardTypes: ['NONE'],
+        safetyInstructions: [
+          { stepNumber: 1, action: 'Turn off the AC via remote and switch off its local isolator switch to prevent compressor burnout.', urgency: 'PRECAUTIONARY', targetComponent: 'AC Isolator Switch' },
+          { stepNumber: 2, action: 'Do NOT attempt to open the outdoor condenser electrical cover while power is connected.', urgency: 'IMMEDIATE_ACTION', targetComponent: 'Outdoor Unit Cover' },
+        ],
+        diyAllowed: false,
+        diyRiskReason: 'HVAC sealed refrigeration systems and high-voltage dual capacitors pose electrical shock and pressurized refrigerant hazard. Requires certified HVAC technician.',
+        diyGuide: null,
+        requiresArtisan: true,
+        clarificationQuestion: 'Is the outdoor condenser fan spinning when the loud noise occurs, or is the sound coming from a buzzing motor that refuses to spin?',
+        clarificationOptions: ['Fan is spinning, but making grinding noise', 'Fan is completely stuck, humming loudly', 'Outdoor unit vibrates violently'],
+        estimatedBOM: [],
+        estimatedLaborMin: null,
+        estimatedLaborMax: null,
+        currency: 'NGN',
+        categorySlug: 'hvac-and-ac-repair',
+        recommendedSkills: ['ac-repair', 'refrigerant-charging', 'compressor-servicing'],
+        visualObservations: imageUrls.length > 0 ? 'Outdoor condensing unit reference logged.' : null,
+        symptoms: ['AC blowing warm air, abnormal noise from outdoor condenser unit reported'],
+        possibleCauses: [
+          {
+            label: 'Faulty run/start capacitor preventing compressor or fan startup',
+            supportingEvidence: ['Loud humming/buzzing with warm air symptoms'],
+            missingEvidence: ['Capacitance microfarad multimeter test'],
+            likelihoodBand: 'high',
+          },
+          {
+            label: 'Compressor mechanical failure or low refrigerant pressure',
+            supportingEvidence: ['Outdoor unit noise combined with zero cooling'],
+            missingEvidence: ['Manifold gauge pressure reading'],
+            likelihoodBand: 'moderate',
+          },
+        ],
+        guidanceSteps: [
+          {
+            stepNumber: 1,
+            instruction: 'Switch off the AC isolator switch beside the outdoor unit to avoid overheating the compressor.',
+            risk: 'low',
+            stopConditions: ['Do not touch live electrical terminals inside the outdoor unit.'],
+          },
+        ],
+        nextAction: 'answer_clarification',
+      };
+    }
+
     // Carpentry & Furniture fault
-    if (
+    const isCarpentry =
       lower.includes('couch') ||
       lower.includes('sofa') ||
       lower.includes('chair') ||
       lower.includes('table') ||
       lower.includes('desk') ||
       lower.includes('wood') ||
-      lower.includes('leg') ||
-      lower.includes('door') ||
-      lower.includes('hinge') ||
-      lower.includes('cupboard') ||
       lower.includes('cabinet') ||
       lower.includes('wardrobe') ||
       lower.includes('drawer') ||
-      lower.includes('bed')
-    ) {
+      lower.includes('cupboard') ||
+      /\b(?<!in|out)doors?\b/i.test(lower) ||
+      /\bhinges?\b/i.test(lower) ||
+      (/\blegs?\b/i.test(lower) && (lower.includes('broken') || lower.includes('wobble') || lower.includes('snap') || lower.includes('furniture')));
+
+    if (isCarpentry) {
       return {
         conversationalReply: 'Sorry about that! Make we first see whether na the leg or fitting itself break or the joint wey hold am don give way. For now, abeg no sit or put heavy load on am so e no go collapse further. Is the piece wooden or metal, and did it snap or detach from the frame?',
         diagnosticTitle: 'Furniture Structural Support Defect',
@@ -1051,64 +1298,6 @@ Return strictly a valid JSON object matching this specification:
   }
 
   /**
-   * Helper to detect if user explicitly asked for BOM/materials/parts
-   */
-  static _isBomRequested(text = '') {
-    if (!text) return false;
-    const pattern = /(bill\s*of\s*materials?|\bbom\b|\bparts?\b|\bmaterials?\b|cost\s*(of\s*)?(parts|materials)|price\s*(of\s*)?(parts|materials)|what\s*(do\s*i\s*)?(need\s*to\s*)?buy|pricing\s*breakdown|cost\s*breakdown|list\s*(of\s*)?(parts|materials))/i;
-    return pattern.test(text);
-  }
-
-  /**
-   * Discern whether the input prompt describes an actual physical repair issue or is merely a greeting/general inquiry
-   */
-  static _detectUserIntent(textPrompt, imagesCount = 0, hasAudio = false) {
-    if (imagesCount > 0 || hasAudio) {
-      return { isGreeting: false, hasIssue: true };
-    }
-
-    const clean = (textPrompt || '').trim().toLowerCase();
-    if (!clean) {
-      return { isGreeting: false, hasIssue: false };
-    }
-
-    // Common trade & repair fault vocabulary
-    const faultKeywords = [
-      'leak', 'pipe', 'tap', 'sink', 'toilet', 'drain', 'water', 'plumb', 'flush', 'clog', 'tank', 'sump',
-      'wire', 'spark', 'shock', 'light', 'socket', 'switch', 'breaker', 'fuse', 'electric', 'voltage', 'current', 'power', 'nepa', 'phase', 'tripping', 'trip',
-      'ac', 'air condition', 'cool', 'gas', 'compressor', 'fridge', 'refrigerator', 'chiller', 'freon', 'r410',
-      'gen', 'generator', 'engine', 'carburetor', 'oil', 'alternator', 'starter', 'cam',
-      'door', 'wood', 'table', 'chair', 'cupboard', 'cabinet', 'hinge', 'lock', 'carpent', 'wardrobe', 'drawer',
-      'paint', 'wall', 'crack', 'damp', 'ceiling', 'roof', 'tile', 'masonry', 'cement', 'plaster',
-      'break', 'broken', 'damage', 'fault', 'spoil', 'not working', 'burnt', 'smell', 'smoke', 'burst', 'flood', 'overflow',
-      'noise', 'humming', 'vibration', 'pressure', 'slow', 'stuck', 'jammed', 'loose', 'drip', 'dripping',
-      'artisan', 'technician', 'plumber', 'electrician', 'carpenter', 'mechanic', 'repairman', 'fix', 'hire', 'service', 'install'
-    ];
-
-    const hasIssueKeyword = faultKeywords.some((kw) => clean.includes(kw));
-    if (hasIssueKeyword) {
-      return { isGreeting: false, hasIssue: true };
-    }
-
-    // Standard conversational greetings and introductory prompts
-    const greetingWords = [
-      'hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'good day',
-      'how far', 'how are you', 'oga john', 'help', 'start', 'test', 'yo', 'sup',
-      'who are you', 'what do you do', 'what can you do', 'how does this work', 'welcome', 'morning', 'afternoon', 'evening'
-    ];
-
-    const isGreeting = greetingWords.some(
-      (g) => clean === g || clean === `${g}!` || clean === `${g}.` || clean.startsWith(`${g} `)
-    );
-
-    if (isGreeting || clean.length < 12) {
-      return { isGreeting: true, hasIssue: false };
-    }
-
-    return { isGreeting: false, hasIssue: false };
-  }
-
-  /**
    * Dynamically synthesize contextual greeting without pre-programmed rigid templates
    */
   static async _generateDynamicGreeting(textPrompt = '') {
@@ -1317,10 +1506,13 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
     const isHazardEscalated = hazardCheck.isHazardous && (!session.isHazardous || hazardCheck.severity === 'CRITICAL');
     const effectiveUrgency = isHazardEscalated ? 'EMERGENCY' : (hazardCheck.urgency || session.urgency);
 
+    const taxonomy = await this.getActiveCategoryTaxonomy();
+
     const systemPrompt = buildOgaJohnTurnPrompt({
       session,
       diagnosticState: session.diagnosticState || DiagnosticStateService.initialState(),
       urgency: effectiveUrgency,
+      dynamicTaxonomyPrompt: taxonomy.taxonomyPromptString,
     });
 
     let parsedResponse = null;
@@ -1447,30 +1639,27 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
       parsedResponse.conversationalReply = outputSafety.sanitizedText;
     }
 
-    // 3.5 Topic Override & Dynamic Trade Pivot: Allow user to switch focus at any time
-    const promptTextLower = effectiveUserMessage.toLowerCase();
-    let detectedSlug = null;
-    if (promptTextLower.includes('carpent') || promptTextLower.includes('wood') || promptTextLower.includes('couch') || promptTextLower.includes('furniture') || promptTextLower.includes('table') || promptTextLower.includes('chair') || promptTextLower.includes('cabinet') || promptTextLower.includes('hinge') || promptTextLower.includes('door')) {
-      detectedSlug = 'carpentry';
-    } else if (promptTextLower.includes('plumb') || promptTextLower.includes('pipe') || promptTextLower.includes('leak') || promptTextLower.includes('tap') || promptTextLower.includes('sink') || promptTextLower.includes('toilet') || promptTextLower.includes('drain')) {
-      detectedSlug = 'plumbing';
-    } else if (promptTextLower.includes('electr') || promptTextLower.includes('wire') || promptTextLower.includes('spark') || promptTextLower.includes('breaker') || promptTextLower.includes('socket') || promptTextLower.includes('light') || promptTextLower.includes('power')) {
-      detectedSlug = 'electrical';
-    } else if (promptTextLower.includes('ac') || promptTextLower.includes('air cond') || promptTextLower.includes('hvac') || promptTextLower.includes('chiller') || promptTextLower.includes('cooling') || promptTextLower.includes('fridge')) {
-      detectedSlug = 'hvac';
-    } else if (promptTextLower.includes('gen') || promptTextLower.includes('generator')) {
-      detectedSlug = 'generator-repair';
-    } else if (promptTextLower.includes('paint') || promptTextLower.includes('pop ceiling')) {
-      detectedSlug = 'painting';
-    } else if (promptTextLower.includes('mason') || promptTextLower.includes('tile') || promptTextLower.includes('tiling') || promptTextLower.includes('brick') || promptTextLower.includes('crack')) {
-      detectedSlug = 'masonry';
-    } else if (parsedResponse.categorySlug) {
-      detectedSlug = parsedResponse.categorySlug;
-    }
-
-    if (detectedSlug) {
+    // 3.5 Dynamic Trade Classification: AI semantic judgment validated against DB taxonomy
+    const detectedSlug = parsedResponse.categorySlug || null;
+    if (detectedSlug && taxonomy.validSlugs.has(detectedSlug)) {
+      const foundCategory = await prisma.jobCategory.findUnique({
+        where: { slug: detectedSlug },
+      });
+      if (foundCategory && (!session.matchedCategoryId || session.matchedCategoryId !== foundCategory.id)) {
+        session.matchedCategoryId = foundCategory.id;
+        session.category = foundCategory;
+        await prisma.aiDiagnosticSession.update({
+          where: { id: sessionId },
+          data: {
+            matchedCategoryId: foundCategory.id,
+            diagnosticTitle: parsedResponse.updatedProbableCause || `${foundCategory.name} Issue`,
+          },
+        });
+      }
+    } else if (detectedSlug) {
       const foundCategory = await prisma.jobCategory.findFirst({
         where: {
+          isActive: true,
           OR: [
             { slug: { contains: detectedSlug, mode: 'insensitive' } },
             { name: { contains: detectedSlug.replace(/-/g, ' '), mode: 'insensitive' } },
@@ -1487,38 +1676,30 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
             diagnosticTitle: parsedResponse.updatedProbableCause || `${foundCategory.name} Issue`,
           },
         });
+      } else if (!foundCategory) {
+        parsedResponse.categorySlug = null;
       }
     }
 
-    // 4. Resolve Artisan Matches (Strict Intent Gating + Affirmative Response Detection)
+    // Out-of-Scope Safety Gate Override
+    if (parsedResponse.intent === 'OUT_OF_SCOPE') {
+      parsedResponse.shouldMatchArtisans = false;
+      parsedResponse.categorySlug = null;
+      parsedResponse.estimatedBOM = [];
+      parsedResponse.bomRequested = false;
+    }
+
+    // 4. Resolve Artisan Matches (Strict AI Semantic Intent Gating)
     let matchedArtisans = [];
     let matchingNotice = null;
 
-    // Check if the previous assistant message offered a professional referral
-    const lastAssistantMsg = (conversationHistory || [])
-      .filter((m) => m.role === 'assistant')
-      .slice(-1)[0]?.content?.toLowerCase() || '';
-
-    const assistantOfferedProfessional =
-      lastAssistantMsg.includes('connect you with a') ||
-      lastAssistantMsg.includes('verified') ||
-      lastAssistantMsg.includes('specialist') ||
-      lastAssistantMsg.includes('professional') ||
-      lastAssistantMsg.includes('artisan') ||
-      !session.diyAllowed;
-
-    const affirmativePattern = /\b(yes|yes please|sure|okay|ok|go ahead|connect me|please do|find one|match me|get me someone|i need one|send one|book one|yes i do)\b/i;
-    const isAffirmativeResponse = assistantOfferedProfessional && affirmativePattern.test(promptTextLower);
-
-    const professionalKeywords = /\b(hire|match|artisan|professional|specialist|handyman|plumber|electrician|carpenter|mechanic|technician|someone to fix|connect me|send someone|who is around|who dey around|find someone|find one|book one|bring out|waiting|recommend someone|find me a|closest professional|closest carpenter|closest plumber|closest electrician|find me a carpenter|get me a carpenter)\b/i;
+    // AI Semantic Intent determines whether artisan matching is requested
     const explicitHire =
-      professionalKeywords.test(promptTextLower) ||
-      isAffirmativeResponse ||
-      parsedResponse.intent === 'MATCH_ONLY' ||
-      parsedResponse.intent === 'MATCH_REQUESTED' ||
-      parsedResponse.shouldMatchArtisans === true;
+      parsedResponse.intent !== 'OUT_OF_SCOPE' &&
+      (parsedResponse.intent === 'MATCH_REQUESTED' ||
+        parsedResponse.intent === 'MATCH_ONLY' ||
+        parsedResponse.shouldMatchArtisans === true);
 
-    // Fast-path: When user explicitly requests an artisan, bypass diagnostic badgering!
     if (explicitHire) {
       parsedResponse.intent = 'MATCH_REQUESTED';
       parsedResponse.shouldMatchArtisans = true;
@@ -1536,6 +1717,10 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
         const tradeTitle = session.category?.name || 'Specialist';
         parsedResponse.conversationalReply = `Understood! Connecting you with verified ${tradeTitle} specialists nearby who can inspect and fix this for you.`;
       }
+    } else {
+      // User is diagnosing: do not force match or dispatch
+      parsedResponse.intent = parsedResponse.intent || 'CONVERSATIONAL';
+      parsedResponse.shouldMatchArtisans = false;
     }
 
     const isEmergency =
@@ -1589,7 +1774,7 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
 
     // 5. Handle On-Demand BOM if requested or confirmed
     let activeBOM = session.estimatedBOM || [];
-    const isBomAsked = this._isBomRequested(effectiveUserMessage) || this._isBomRequested(userMessage);
+    const isBomAsked = parsedResponse.bomRequested === true || parsedResponse.intent === 'BOM_REQUESTED';
 
     if (parsedResponse.estimatedBOM && parsedResponse.estimatedBOM.length > 0) {
       activeBOM = await BomPricingService.adjustBomToMarket({
@@ -1632,20 +1817,23 @@ Do NOT pretend an issue exists yet. Do NOT output markdown headers, just 2 frien
     });
 
     if (matchedArtisans && matchedArtisans.length > 0) {
-      for (const artisan of matchedArtisans) {
-        try {
-          await prisma.diagnosticMatch.create({
-            data: {
-              diagnosticSessionId: sessionId,
-              artisanProfileId: artisan.id,
-              matchScore: artisan.matchScore || 90.0,
-              distanceKm: artisan.distanceKm ? Number(artisan.distanceKm) : null,
-              matchRationale: 'Recommended during conversational consultation',
-            },
-          });
-        } catch (matchErr) {
-          // Ignore duplicate or non-fatal constraint errors
-        }
+      const matchData = matchedArtisans
+        .filter((a) => a?.id)
+        .map((artisan) => ({
+          diagnosticSessionId: sessionId,
+          artisanProfileId: artisan.id,
+          matchScore: artisan.matchScore || 90.0,
+          distanceKm: artisan.distanceKm ? Number(artisan.distanceKm) : null,
+          matchRationale: 'Recommended during conversational consultation',
+        }));
+
+      if (matchData.length > 0) {
+        await prisma.diagnosticMatch.createMany({
+          data: matchData,
+          skipDuplicates: true,
+        }).catch((err) => {
+          console.warn('⚠️ Non-fatal notice creating conversational diagnostic matches batch:', err.message);
+        });
       }
     }
 

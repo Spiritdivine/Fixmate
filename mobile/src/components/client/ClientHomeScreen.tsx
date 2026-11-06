@@ -8,17 +8,21 @@ import {
   Image,
   SafeAreaView,
 } from 'react-native';
-import { Camera, Scan, Bot, MapPin, Star, Plus, ShieldCheck } from 'lucide-react-native';
+import { Camera, Scan, Bot, MapPin, Star, Plus, ShieldCheck, CheckCircle2, BadgeCheck, Wrench, ChevronRight } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { AppHeader } from '../shared/AppHeader';
+import { SkeletonPlaceholder } from '../shared/SkeletonPlaceholder';
 import { ArtisanTradeIcon, IconContainer } from '../icons';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { colors, radius, spacing, typography, shadows, touchTargets } from '../../theme';
 import { ProfileService } from '../../services/profile.service';
 import { ContractService } from '../../services/contract.service';
 import { NotificationService } from '../../services/notification.service';
 import { LocationProvider, GeoCoordinate } from '../../lib/location-provider';
 import { formatCurrency } from '../../lib/formatters';
 import { JobService } from '../../services/job.service';
+import { useAuthStore } from '../../stores/authStore';
+import { useTheme } from '../../theme';
 
 interface ClientHomeScreenProps {
   onNavigateToMilestoneReview?: (contractId?: string, milestoneId?: string) => void;
@@ -29,6 +33,8 @@ interface ClientHomeScreenProps {
   onAvatarPress?: () => void;
   onNotificationPress?: () => void;
   onNavigateToPopularTrades?: () => void;
+  onNavigateToArtisanDirectory?: () => void;
+  onNavigateToQrScan?: () => void;
 }
 
 export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
@@ -40,26 +46,51 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
   onAvatarPress,
   onNotificationPress,
   onNavigateToPopularTrades,
+  onNavigateToArtisanDirectory,
+  onNavigateToQrScan,
 }) => {
-  const [currentLocation, setCurrentLocation] = useState<GeoCoordinate>({
-    latitude: 6.4474,
-    longitude: 3.4723,
-    addressName: 'Lekki Phase 1, Lagos',
-  });
+  const user = useAuthStore((s) => s.user);
+  const { colors, isDark } = useTheme();
+
+  const clientName = user?.clientProfile?.firstName
+    ? `${user.clientProfile.firstName} ${user.clientProfile.lastName || ''}`.trim()
+    : user?.email ? user.email.split('@')[0] : 'Client';
+  const clientAvatar = user?.avatarUrl || user?.clientProfile?.avatarUrl;
+
+  const [currentLocation, setCurrentLocation] = useState<GeoCoordinate>(() =>
+    LocationProvider.getCachedLocation()
+  );
 
   useEffect(() => {
-    LocationProvider.getCurrentLocation().then(setCurrentLocation).catch(() => {});
+    LocationProvider.getCurrentLocation()
+      .then((loc) => {
+        setCurrentLocation((prev) => {
+          if (
+            prev.latitude === loc.latitude &&
+            prev.longitude === loc.longitude &&
+            prev.addressName === loc.addressName
+          ) {
+            return prev;
+          }
+          return loc;
+        });
+      })
+      .catch(() => {});
   }, []);
 
-  // Live Query: Nearby Artisans
-  const { data: liveArtisans } = useQuery({
-    queryKey: ['artisans', 'nearby', currentLocation.latitude, currentLocation.longitude],
+  // Live Query: Nearby Artisans (with stabilized coordinate keys)
+  const roundedLat = LocationProvider.roundCoord(currentLocation.latitude);
+  const roundedLng = LocationProvider.roundCoord(currentLocation.longitude);
+
+  const { data: liveArtisans, isLoading: isLoadingArtisans } = useQuery({
+    queryKey: ['artisans', 'nearby', roundedLat, roundedLng],
     queryFn: () =>
       ProfileService.getNearbyArtisans({
-        lat: currentLocation.latitude,
-        lng: currentLocation.longitude,
+        lat: roundedLat,
+        lng: roundedLng,
         radiusKm: 15,
       }),
+    staleTime: 1000 * 60 * 5, // Fresh for 5 minutes
   });
 
   // Live Query: Active Client Contracts
@@ -123,13 +154,18 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
   const activeMilestone = activeContract?.milestones?.find((m: any) => m.status === 'SUBMITTED' || m.status === 'IN_PROGRESS');
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <AppHeader
-        location={currentLocation.addressName || 'Lekki Phase 1, Lagos'}
+        location={currentLocation.addressName || user?.clientProfile?.address || 'Lekki Phase 1, Lagos'}
         unreadCount={unreadCount}
+        userAvatarUrl={clientAvatar}
+        userName={clientName}
+        theme={isDark ? 'dark' : 'light'}
         onAvatarPress={onAvatarPress}
         onNotificationPress={onNotificationPress}
+        onScanPress={onNavigateToQrScan}
       />
+
 
       <ScrollView
         style={styles.scrollView}
@@ -138,7 +174,16 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
       >
         {/* 1. ACTIVE REPAIR HERO CARD OR WELCOME PROMPT */}
         {activeContract ? (
-          <View style={styles.activeJobCard}>
+          <View
+            style={[
+              styles.activeJobCard,
+              isDark && {
+                backgroundColor: '#0F261A',
+                borderWidth: 1,
+                borderColor: 'rgba(52, 211, 153, 0.25)',
+              },
+            ]}
+          >
             {/* Status pill & title */}
             <View style={styles.activeBadgeRow}>
               <View style={styles.activePill}>
@@ -154,10 +199,10 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
               Your contracted artisan is actively working on this repair.
             </Text>
 
-            {/* Work Submitted Alert Pill */}
+            {/* Work Submitted Alert Banner (Flattened surface, concentric R=6) */}
             {activeMilestone?.status === 'SUBMITTED' && (
               <View style={styles.workSubmittedAlert}>
-                <Text style={styles.checkGreen}>✓</Text>
+                <CheckCircle2 size={16} color={colors.brand.emerald} strokeWidth={2.2} />
                 <View>
                   <Text style={styles.alertPrimary}>Work Proof Submitted</Text>
                   <Text style={styles.alertSecondary}>Awaiting Your Inspection & Release</Text>
@@ -165,7 +210,7 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
               </View>
             )}
 
-            {/* Artisan Profile Mini-row */}
+            {/* Artisan Profile Mini-row (Concentric R=6) */}
             <View style={styles.artisanRow}>
               <Image
                 source={{ uri: currentArtisanProfile?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120' }}
@@ -177,44 +222,57 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
                     {currentArtisanProfile?.businessName || currentArtisanProfile?.title || 'Contracted Specialist'}
                   </Text>
                   <View style={styles.verifiedBadge}>
-                    <Text style={styles.verifiedCheck}>✓</Text>
+                    <BadgeCheck size={12} color="#D1FAE5" />
                     <Text style={styles.verifiedText}>Verified Artisan</Text>
                   </View>
                 </View>
-                <Text style={styles.artisanStats}>
-                  {currentArtisanProfile?.rating ? `${currentArtisanProfile.rating} ★` : '5.0 ★'} ({currentArtisanProfile?.completedJobsCount || 0} jobs)
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 }}>
+                  <Star size={10} color="#F59E0B" fill="#F59E0B" />
+                  <Text style={styles.artisanStats}>
+                    {currentArtisanProfile?.rating ? currentArtisanProfile.rating : '5.0'} ({currentArtisanProfile?.completedJobsCount || 0} jobs)
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.chevronWhite}>›</Text>
+              <ChevronRight size={18} color="rgba(255,255,255,0.7)" />
             </View>
 
             {/* Release Button */}
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => onNavigateToMilestoneReview?.(activeContract.id, activeMilestone?.id)}
-              style={styles.reviewButton}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                onNavigateToMilestoneReview?.(activeContract.id, activeMilestone?.id);
+              }}
+              style={[styles.reviewButton, isDark && { backgroundColor: colors.primary }]}
             >
               <Text style={styles.reviewButtonText}>
                 Review Proof & Release {formatCurrency(activeMilestone?.amount || activeContract.totalAmount)}
               </Text>
-              <Text style={styles.reviewArrow}>›</Text>
+              <ChevronRight size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.noActiveJobCard}>
-            <View style={styles.noActiveBadgeRow}>
-              <View style={styles.noActivePill}>
-                <Text style={styles.noActivePillText}>🛡️ Fixmate Escrow Protected</Text>
-              </View>
-            </View>
+          <View
+            style={[
+              styles.noActiveJobCard,
+              isDark && {
+                backgroundColor: '#0F261A',
+                borderWidth: 1,
+                borderColor: 'rgba(52, 211, 153, 0.25)',
+              },
+            ]}
+          >
             <Text style={styles.noActiveTitle}>Need a Home Repair or Fix?</Text>
             <Text style={styles.noActiveSub}>
               Snap a photo with Oga John AI for instant diagnosis or post a job to receive quotes from certified artisans.
             </Text>
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => onNavigateToPostJob?.()}
-              style={styles.noActiveBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                onNavigateToPostJob?.();
+              }}
+              style={[styles.noActiveBtn, isDark && { backgroundColor: colors.primary }]}
             >
               <Text style={styles.noActiveBtnText}>+ Post a Repair Request</Text>
             </TouchableOpacity>
@@ -224,27 +282,34 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
         {/* 2. OGA JOHN AI SCAN BANNER */}
         <TouchableOpacity
           activeOpacity={0.9}
-          onPress={onNavigateToAiScan}
-          style={styles.aiBanner}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            onNavigateToAiScan?.();
+          }}
+          style={[
+            styles.aiBanner,
+            isDark && {
+              backgroundColor: '#0D2B1D',
+              borderWidth: 1,
+              borderColor: 'rgba(52, 211, 153, 0.2)',
+            },
+          ]}
         >
           <View style={styles.aiContentLeft}>
             <View style={styles.aiHeaderRow}>
-              <View style={styles.cameraIconBox}>
+              <View style={[styles.cameraIconBox, isDark && { backgroundColor: colors.primary }]}>
                 <Camera size={13} color="#FFFFFF" strokeWidth={1.85} />
               </View>
               <Text style={styles.aiTitle}>Oga John AI</Text>
-              <View style={styles.betaPill}>
-                <Text style={styles.betaText}>Beta</Text>
-              </View>
             </View>
 
             <Text style={styles.aiSubtitle}>
               Something broken? Snap a photo to get an instant diagnosis & cost estimate.
             </Text>
 
-            <View style={styles.scanButton}>
-              <Scan size={13} color={colors.brand.forest} strokeWidth={1.85} />
-              <Text style={styles.scanText}>Scan Damage Now</Text>
+            <View style={[styles.scanButton, isDark && { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
+              <Scan size={13} color={isDark ? '#34D399' : colors.brand.forest} strokeWidth={1.85} />
+              <Text style={[styles.scanText, isDark && { color: '#34D399' }]}>Scan Damage Now</Text>
             </View>
           </View>
 
@@ -255,9 +320,16 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
 
         {/* 3. QUICK SERVICES - ARCHITECTURAL TRADE SILHOUETTES */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Skilled Artisan Trades</Text>
-          <TouchableOpacity activeOpacity={0.7} onPress={onNavigateToPopularTrades}>
-            <Text style={styles.viewAllText}>View all trades ›</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Skilled Artisan Trades</Text>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            hitSlop={touchTargets.hitSlop}
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              onNavigateToPopularTrades?.();
+            }}
+          >
+            <Text style={[styles.viewAllText, { color: isDark ? '#34D399' : colors.brand.emeraldDark }]}>View all trades ›</Text>
           </TouchableOpacity>
         </View>
 
@@ -266,35 +338,75 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
             <TouchableOpacity
               key={service.id}
               activeOpacity={0.75}
-              onPress={() => onSelectService?.(service.name)}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                onSelectService?.(service.name);
+              }}
               style={styles.serviceItem}
             >
-              <IconContainer variant={service.container} size="md" style={styles.serviceIconContainer}>
+              <IconContainer
+                variant={isDark ? 'forest' : service.container}
+                size="md"
+                style={[
+                  styles.serviceIconContainer,
+                  isDark && { backgroundColor: colors.surfaceSubtle, borderColor: colors.border },
+                ]}
+              >
                 <ArtisanTradeIcon
                   trade={service.name}
                   size={22}
-                  color={colors.icons.primary}
+                  color={isDark ? '#34D399' : colors.icons.primary}
                   strokeWidth={1.85}
                 />
               </IconContainer>
-              <Text style={styles.serviceName}>{service.name}</Text>
+              <Text style={[styles.serviceName, { color: colors.text }]}>{service.name}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* 4. NEARBY VERIFIED ARTISANS */}
+        {/* 4. NEARBY VERIFIED ARTISANS (Doherty Threshold Skeleton State) */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Nearby Verified Artisans</Text>
-          <TouchableOpacity activeOpacity={0.7} onPress={onNavigateToPopularTrades}>
-            <Text style={styles.viewAllText}>View all ›</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Nearby Verified Artisans</Text>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            hitSlop={touchTargets.hitSlop}
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              if (onNavigateToArtisanDirectory) {
+                onNavigateToArtisanDirectory();
+              } else {
+                onNavigateToPopularTrades?.();
+              }
+            }}
+          >
+            <Text style={[styles.viewAllText, { color: isDark ? '#34D399' : colors.brand.emeraldDark }]}>View all ›</Text>
           </TouchableOpacity>
         </View>
 
-        {displayArtisans.length === 0 ? (
-          <View style={styles.emptyArtisansCard}>
-            <Text style={styles.emptyArtisansIcon}>🧑‍🔧</Text>
-            <Text style={styles.emptyArtisansTitle}>No Artisans On Duty Nearby</Text>
-            <Text style={styles.emptyArtisansSub}>
+        {isLoadingArtisans ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.artisansCarousel}
+          >
+            {[1, 2, 3].map((key) => (
+              <View key={key} style={[styles.artisanCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <SkeletonPlaceholder width="100%" height={120} borderRadius={radius.lg} />
+                <View style={[styles.cardBody, { gap: 6, paddingHorizontal: 4 }]}>
+                  <SkeletonPlaceholder width="75%" height={16} borderRadius={4} />
+                  <SkeletonPlaceholder width="50%" height={12} borderRadius={4} />
+                  <SkeletonPlaceholder width="40%" height={12} borderRadius={4} />
+                  <SkeletonPlaceholder width="60%" height={14} borderRadius={4} style={{ marginTop: 4 }} />
+                  <SkeletonPlaceholder width="100%" height={36} borderRadius={radius.full} style={{ marginTop: 8 }} />
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        ) : displayArtisans.length === 0 ? (
+          <View style={[styles.emptyArtisansCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Wrench size={36} color={colors.textMuted} strokeWidth={1.5} style={{ marginBottom: 12 }} />
+            <Text style={[styles.emptyArtisansTitle, { color: colors.text }]}>No Artisans On Duty Nearby</Text>
+            <Text style={[styles.emptyArtisansSub, { color: colors.textMuted }]}>
               Post a custom repair request and verified tradespeople across Lagos will be notified to submit quotes.
             </Text>
           </View>
@@ -305,14 +417,14 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
             contentContainerStyle={styles.artisansCarousel}
           >
             {displayArtisans.map((artisan) => (
-              <View key={artisan.id} style={styles.artisanCard}>
-                <Image source={{ uri: artisan.avatarUrl }} style={styles.cardAvatar} />
+              <View key={artisan.id} style={[styles.artisanCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Image source={{ uri: artisan.avatarUrl }} style={[styles.cardAvatar, { backgroundColor: colors.surfaceSubtle }]} />
                 <View style={styles.cardBody}>
-                  <Text style={styles.cardName}>{artisan.name}</Text>
-                  <Text style={styles.cardTrade}>{artisan.trade}</Text>
+                  <Text style={[styles.cardName, { color: colors.text }]}>{artisan.name}</Text>
+                  <Text style={[styles.cardTrade, { color: colors.textMuted }]}>{artisan.trade}</Text>
                   <View style={styles.metaIconRow}>
-                    <MapPin size={11} color={colors.icons.primary} strokeWidth={1.85} />
-                    <Text style={styles.cardDistance}>{artisan.distance}</Text>
+                    <MapPin size={11} color={isDark ? '#34D399' : colors.icons.primary} strokeWidth={1.85} />
+                    <Text style={[styles.cardDistance, { color: colors.textMuted }]}>{artisan.distance}</Text>
                   </View>
                   <View style={styles.metaIconRow}>
                     <Star size={11} color="#F59E0B" fill="#F59E0B" strokeWidth={1.85} />
@@ -320,14 +432,18 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
                       {artisan.rating} <Text style={styles.ratingCount}>({artisan.reviewsCount})</Text>
                     </Text>
                   </View>
-                  <Text style={styles.cardPrice}>{artisan.startingPrice}</Text>
+                  <Text style={[styles.cardPrice, { color: colors.text }]}>{artisan.startingPrice}</Text>
 
                   <TouchableOpacity
                     activeOpacity={0.8}
-                    onPress={() => onSelectArtisan?.(artisan.id)}
-                    style={styles.bookNowButton}
+                    hitSlop={touchTargets.hitSlop}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      onSelectArtisan?.(artisan.id);
+                    }}
+                    style={[styles.bookNowButton, { backgroundColor: colors.surfaceSubtle, borderColor: colors.border }]}
                   >
-                    <Text style={styles.bookNowText}>Book Now</Text>
+                    <Text style={[styles.bookNowText, { color: isDark ? '#34D399' : colors.text }]}>Book Now</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -336,18 +452,22 @@ export const ClientHomeScreen: React.FC<ClientHomeScreenProps> = ({
         )}
       </ScrollView>
 
-      {/* STICKY BOTTOM ACTION: POST A CUSTOM JOB */}
-      <View style={styles.stickyFooter}>
+      {/* STICKY BOTTOM ACTION: POST A CUSTOM JOB (Fitts's Law Thumb Zone) */}
+      <View style={[styles.stickyFooter, { backgroundColor: isDark ? 'rgba(17, 28, 21, 0.95)' : 'rgba(255, 255, 255, 0.95)', borderTopColor: colors.border }]}>
         <TouchableOpacity
           activeOpacity={0.85}
-          onPress={() => onNavigateToPostJob?.()}
-          style={styles.postJobButton}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            onNavigateToPostJob?.();
+          }}
+          style={[styles.postJobButton, { backgroundColor: colors.primary }]}
         >
           <Plus size={18} color="#FFFFFF" strokeWidth={2.2} />
           <Text style={styles.postJobText}>Post a Custom Job</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+
   );
 };
 
@@ -414,11 +534,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: radius.md,
+    borderRadius: 6,
     marginTop: 12,
     gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   checkGreen: {
     color: colors.brand.emerald,
@@ -439,7 +557,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     padding: 10,
-    borderRadius: radius.lg,
+    borderRadius: 6,
     marginTop: 12,
     gap: 10,
   },
@@ -571,7 +689,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: radius.full,
+    borderRadius: 8,
     marginTop: 12,
     alignSelf: 'flex-start',
     gap: 6,

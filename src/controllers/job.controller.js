@@ -32,7 +32,8 @@ export class JobController {
 
   static async delete(req, res, next) {
     try {
-      await JobService.deleteJob(req.user.id, req.params.id);
+      const reason = req.body?.reason || req.query?.reason || null;
+      await JobService.deleteJob(req.user.id, req.params.id, reason);
       res.status(200).json(new ApiResponse(200, null, 'Job deleted successfully'));
     } catch (error) {
       next(error);
@@ -50,7 +51,7 @@ export class JobController {
 
   static async list(req, res, next) {
     try {
-      const result = await JobService.getJobs(req.query);
+      const result = await JobService.getJobs(req.query, req.user?.id);
       res.status(200).json(new ApiResponse(200, result, 'Jobs fetched successfully'));
     } catch (error) {
       next(error);
@@ -59,7 +60,7 @@ export class JobController {
 
   static async getById(req, res, next) {
     try {
-      const result = await JobService.getJobById(req.params.id);
+      const result = await JobService.getJobById(req.params.id, req.user?.id);
       res.status(200).json(new ApiResponse(200, result, 'Job details'));
     } catch (error) {
       next(error);
@@ -68,7 +69,7 @@ export class JobController {
 
   static async getMyJobs(req, res, next) {
     try {
-      const result = await JobService.getClientJobs(req.user.id);
+      const result = await JobService.getClientJobs(req.user.id, req.query?.status);
       res.status(200).json(new ApiResponse(200, result, 'Client jobs fetched'));
     } catch (error) {
       next(error);
@@ -176,6 +177,35 @@ export class JobController {
     try {
       const result = await JobService.getSavedJobs(req.user.id);
       res.status(200).json(new ApiResponse(200, result, 'Saved jobs fetched'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Generates or fetches on-site QR check-in token for active job (Client only)
+   */
+  static async getCheckInToken(req, res, next) {
+    try {
+      const result = await JobService.getCheckInToken(req.user.id, req.params.id);
+      res.status(200).json(new ApiResponse(200, result, 'Check-in QR code generated'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Artisan verifies physical on-site arrival by scanning client's QR
+   */
+  static async verifyArrival(req, res, next) {
+    try {
+      const { token, latitude, longitude } = req.body;
+      const result = await JobService.verifyArrival(req.user.id, req.params.id, {
+        token,
+        latitude,
+        longitude,
+      });
+      res.status(200).json(new ApiResponse(200, result, 'On-site arrival successfully verified'));
     } catch (error) {
       next(error);
     }

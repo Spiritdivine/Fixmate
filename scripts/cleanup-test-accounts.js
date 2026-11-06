@@ -30,10 +30,13 @@ const TEST_ACCOUNT_EMAILS = [
 
 // Explicit allowlist of accounts that MUST NEVER be deleted
 const PROTECTED_EMAILS = [
+  'admin@artifixhq.xyz',
   'admin@artisanplatform.com',
   'treasury@artifixhq.xyz',
+  'artisan@artifixhq.xyz',
+  'client@artifixhq.xyz',
   'artisan@fixmate.ng',
-  'client@fixmate.ng'
+  'client@fixmate.ng',
 ];
 
 async function main() {

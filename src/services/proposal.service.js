@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import { ApiError } from '../utils/api-error.js';
 import { NotificationService } from './notification.service.js';
+import { JobEventDispatcher } from '../events/job.events.js';
 
 export class ProposalService {
   static async submitProposal(artisanId, data) {
@@ -18,7 +19,7 @@ export class ProposalService {
 
     if (existing) throw ApiError.conflict('You have already submitted a proposal for this job');
 
-    return prisma.$transaction(async (tx) => {
+    const createdProposal = await prisma.$transaction(async (tx) => {
       const proposal = await tx.proposal.create({
         data: {
           jobId,
@@ -54,6 +55,11 @@ export class ProposalService {
 
       return proposal;
     });
+
+    // Real-Time Domain Event Emission to Client Room
+    JobEventDispatcher.onProposalSubmitted(job.clientId, createdProposal, job);
+
+    return createdProposal;
   }
 
   static async updateProposal(artisanId, proposalId, data) {
@@ -116,6 +122,9 @@ export class ProposalService {
       `Your proposal for "${proposal.job.title}" has been marked as ${status.toLowerCase()}`,
       `/jobs/${proposal.jobId}`
     );
+
+    // Real-Time Domain Event Emission to Artisan Room
+    JobEventDispatcher.onProposalStatusChanged(proposal.artisanId, proposalId, proposal.jobId, status);
 
     return updated;
   }

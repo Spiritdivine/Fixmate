@@ -35,9 +35,9 @@ export const RoleSelectionScreen: React.FC<RoleSelectionScreenProps> = ({
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.introWrap}>
           <BrandLogo variant="full" theme="light" size={42} style={{ alignSelf: 'flex-start', marginBottom: spacing.md }} />
-          <Text style={styles.mainTitle}>How will you use Fixmate?</Text>
+          <Text style={styles.mainTitle}>How will you use Artifix?</Text>
           <Text style={styles.subTitle}>
-            Choose your profile type. You can switch between roles or manage both from your account settings later.
+            Choose your profile type. Your account workspace and verification requirements will be tailored to this role.
           </Text>
         </View>
 
@@ -68,7 +68,7 @@ export const RoleSelectionScreen: React.FC<RoleSelectionScreenProps> = ({
           <View style={styles.perksList}>
             <Text style={styles.perkItem}>✓ Instant Oga John AI damage diagnostics</Text>
             <Text style={styles.perkItem}>✓ Funds held safely until you inspect & release</Text>
-            <Text style={styles.perkItem}>✓ 30-day Fixmate warranty on all repairs</Text>
+            <Text style={styles.perkItem}>✓ 30-day Artifix warranty on all repairs</Text>
           </View>
         </TouchableOpacity>
 

@@ -7,11 +7,14 @@ import {
   SafeAreaView,
   StatusBar,
   Modal,
+  ScrollView,
 } from 'react-native';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { queryClient } from './src/lib/query-client';
 import { socketManager } from './src/lib/socket-manager';
 import { PushNotificationManager } from './src/lib/notification-manager';
+import { ChatService } from './src/services/chat.service';
+import * as Haptics from 'expo-haptics';
 import {
   Home,
   ClipboardList,
@@ -27,7 +30,20 @@ import {
   Settings,
   LogOut,
   Sparkles,
+  FileText,
+  Heart,
+  ShieldAlert,
+  Star,
+  Users,
+  Gift,
+  QrCode,
 } from 'lucide-react-native';
+
+
+// Shared UI & Context
+import { ToastProvider, useToast, UserAvatar } from './src/components/shared';
+import { ReferralCapture } from './src/lib/referral-capture';
+import { ThemeProvider, useTheme } from './src/theme';
 
 // Auth & Onboarding Suite
 import { WelcomeSplashScreen } from './src/components/auth/WelcomeSplashScreen';
@@ -47,16 +63,27 @@ import { OgaJohnAiStudioScreen } from './src/components/client/OgaJohnAiStudioSc
 import { PostJobWizardScreen } from './src/components/client/PostJobWizardScreen';
 import { MyJobsScreen } from './src/components/client/MyJobsScreen';
 import { JobDetailsAndProposalsScreen } from './src/components/client/JobDetailsAndProposalsScreen';
+import { ProposalDetailsScreen } from './src/components/client/ProposalDetailsScreen';
 import { AcceptProposalWizardScreen } from './src/components/client/AcceptProposalWizardScreen';
 import { ArtisanPublicProfileScreen } from './src/components/client/ArtisanPublicProfileScreen';
-import { ClientChatScreen } from './src/components/client/ClientChatScreen';
+import { ChatInboxScreen, ChatThreadScreen } from './src/components/chat';
 import { ClientWalletScreen } from './src/components/client/ClientWalletScreen';
+import { ClientTransactionActivityScreen } from './src/components/client/ClientTransactionActivityScreen';
 import { ClientContractsListScreen } from './src/components/client/ClientContractsListScreen';
+import { ContractDetailsScreen } from './src/components/client/ContractDetailsScreen';
 import { ClientDisputeWorkspaceScreen } from './src/components/client/ClientDisputeWorkspaceScreen';
+import { ProposalService } from './src/services/proposal.service';
 import { ClientNotificationsScreen } from './src/components/client/ClientNotificationsScreen';
 import { ClientProfileSettingsScreen } from './src/components/client/ClientProfileSettingsScreen';
 import { SavedArtisansScreen } from './src/components/client/SavedArtisansScreen';
 import { ClientReviewsScreen } from './src/components/client/ClientReviewsScreen';
+import { ArtisanDirectoryScreen } from './src/components/client/ArtisanDirectoryScreen';
+import { ClientDisputesListScreen } from './src/components/client/ClientDisputesListScreen';
+import { ClientReviewHistoryScreen } from './src/components/client/ClientReviewHistoryScreen';
+import { ClientProfileEditScreen } from './src/components/client/ClientProfileEditScreen';
+import { ClientSettingsScreen } from './src/components/client/ClientSettingsScreen';
+import { ClientBottomBar } from './src/components/client/ClientBottomBar';
+import { ArtisanBottomBar } from './src/components/artisan/ArtisanBottomBar';
 
 // Artisan Screens
 import { ArtisanCockpitScreen } from './src/components/artisan/ArtisanCockpitScreen';
@@ -77,6 +104,11 @@ import { ArtisanNotificationsScreen } from './src/components/artisan/ArtisanNoti
 import { ArtisanSettingsScreen } from './src/components/artisan/ArtisanSettingsScreen';
 import { ArtisanReviewsScreen } from './src/components/artisan/ArtisanReviewsScreen';
 import { SavedJobsScreen } from './src/components/artisan/SavedJobsScreen';
+import { ArtisanInvitationsScreen } from './src/components/artisan/ArtisanInvitationsScreen';
+import { ArtisanPeerNetworkScreen } from './src/components/artisan/ArtisanPeerNetworkScreen';
+import { ArtisanDisputesListScreen } from './src/components/artisan/ArtisanDisputesListScreen';
+import { ReferralRewardsScreen } from './src/components/shared/ReferralRewardsScreen';
+import { QRScannerModal } from './src/components/shared/QRScannerModal';
 
 import { colors, radius, spacing, typography } from './src/theme';
 import { BrandLogo } from './src/components/shared/BrandLogo';
@@ -97,23 +129,32 @@ export type ScreenKey =
   | 'CLIENT_MY_JOBS'
   | 'CLIENT_OGA_JOHN'
   | 'CLIENT_CHAT'
+  | 'CLIENT_CHAT_THREAD'
   | 'CLIENT_WALLET'
+  | 'CLIENT_TRANSACTION_ACTIVITY'
   | 'CLIENT_MILESTONE'
   | 'CLIENT_POPULAR'
   | 'CLIENT_POST_JOB'
   | 'CLIENT_PROPOSALS'
+  | 'CLIENT_PROPOSAL_DETAILS'
   | 'CLIENT_ACCEPT_PROPOSAL'
   | 'CLIENT_ARTISAN_PROFILE'
   | 'CLIENT_CONTRACTS'
+  | 'CLIENT_CONTRACT_DETAILS'
   | 'CLIENT_DISPUTE'
   | 'CLIENT_NOTIFICATIONS'
   | 'CLIENT_SETTINGS'
   | 'CLIENT_SAVED'
   | 'CLIENT_REVIEWS'
+  | 'CLIENT_ARTISAN_DIRECTORY'
+  | 'CLIENT_DISPUTES_LIST'
+  | 'CLIENT_REVIEW_HISTORY'
+  | 'CLIENT_PROFILE_EDIT'
   // Artisan 5 Core Tabs & Sub-screens
   | 'ARTISAN_COCKPIT'
   | 'ARTISAN_ACTIVE'
   | 'ARTISAN_CHAT'
+  | 'ARTISAN_CHAT_THREAD'
   | 'ARTISAN_WALLET'
   | 'ARTISAN_PROFILE'
   | 'ARTISAN_INCOMING'
@@ -128,12 +169,16 @@ export type ScreenKey =
   | 'ARTISAN_NOTIFICATIONS'
   | 'ARTISAN_SETTINGS'
   | 'ARTISAN_REVIEWS'
-  | 'ARTISAN_SAVED';
+  | 'ARTISAN_SAVED'
+  | 'ARTISAN_INVITATIONS'
+  | 'ARTISAN_PEER_NETWORK'
+  | 'ARTISAN_DISPUTES_LIST'
+  | 'REFERRALS_REWARDS';
 
 function InnerApp() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
-  const [role, setRole] = useState<'CLIENT' | 'ARTISAN'>('CLIENT');
-  const [currentScreen, setCurrentScreen] = useState<ScreenKey>('CLIENT_HOME');
+  const [role, setRole] = useState<'CLIENT' | 'ARTISAN'>('ARTISAN');
+  const [currentScreen, setCurrentScreen] = useState<ScreenKey>('ARTISAN_COCKPIT');
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [registeredRole, setRegisteredRole] = useState<'CLIENT' | 'ARTISAN'>('CLIENT');
   const [registeredEmail, setRegisteredEmail] = useState<string>('');
@@ -150,14 +195,28 @@ function InnerApp() {
   const [selectedArtisanName, setSelectedArtisanName] = useState<string | undefined>(undefined);
   const [profileReturnScreen, setProfileReturnScreen] = useState<ScreenKey>('CLIENT_HOME');
   const [postJobInitialData, setPostJobInitialData] = useState<{ title?: string; trade?: string; budget?: number; description?: string } | undefined>(undefined);
+  const [showQRScanner, setShowQRScanner] = useState<boolean>(false);
 
   const logoutStore = useAuthStore((s) => s.logout);
   const initAuth = useAuthStore((s) => s.initAuth);
   const user = useAuthStore((s) => s.user);
+  const activeRole = useAuthStore((s) => s.activeRole);
+  const setActiveRole = useAuthStore((s) => s.setActiveRole);
+  const { showInfo } = useToast();
+  const { colors: themeColors, isDark } = useTheme();
+
+  const { data: globalConversations } = useQuery({
+    queryKey: ['chat-conversations'],
+    queryFn: () => ChatService.getConversations(),
+    enabled: isAuthenticated,
+  });
+  const totalUnreadChatCount = (globalConversations || []).reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0);
 
   const dynamicClientName = user?.clientProfile?.firstName
     ? `${user.clientProfile.firstName} ${user.clientProfile.lastName || ''}`.trim()
-    : user?.email ? user.email.split('@')[0] : 'Fixmate Client';
+    : user?.email ? user.email.split('@')[0] : 'Valued Client';
+  const dynamicClientAvatar = user?.avatarUrl || user?.clientProfile?.avatarUrl;
+  const dynamicClientPhone = user?.phoneNumber || user?.phone || user?.clientProfile?.phone || '';
   const dynamicArtisanName = user?.artisanProfile?.businessName || user?.artisanProfile?.title || 'Master Artisan';
   const dynamicInitials = (role === 'CLIENT' ? dynamicClientName : dynamicArtisanName)
     .split(' ')
@@ -168,6 +227,7 @@ function InnerApp() {
 
   useEffect(() => {
     initAuth().catch(() => {});
+    ReferralCapture.init().catch(() => {});
   }, [initAuth]);
 
   useEffect(() => {
@@ -180,10 +240,37 @@ function InnerApp() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (user?.role) {
-      setRole(user.role === 'ARTISAN' ? 'ARTISAN' : 'CLIENT');
+    if (activeRole === 'ARTISAN' || activeRole === 'CLIENT') {
+      setRole(activeRole);
+      setCurrentScreen(activeRole === 'ARTISAN' ? 'ARTISAN_COCKPIT' : 'CLIENT_HOME');
     }
-  }, [user?.role]);
+  }, [activeRole]);
+
+  // Keep-Alive tab persistence sets
+  const [visitedClientTabs, setVisitedClientTabs] = useState<Set<ScreenKey>>(new Set(['CLIENT_HOME']));
+  const [visitedArtisanTabs, setVisitedArtisanTabs] = useState<Set<ScreenKey>>(new Set(['ARTISAN_COCKPIT']));
+
+  useEffect(() => {
+    const clientTabs: ScreenKey[] = ['CLIENT_HOME', 'CLIENT_MY_JOBS', 'CLIENT_OGA_JOHN', 'CLIENT_CHAT', 'CLIENT_WALLET'];
+    if (clientTabs.includes(currentScreen)) {
+      setVisitedClientTabs((prev) => {
+        if (prev.has(currentScreen)) return prev;
+        const next = new Set(prev);
+        next.add(currentScreen);
+        return next;
+      });
+    }
+
+    const artisanTabs: ScreenKey[] = ['ARTISAN_COCKPIT', 'ARTISAN_ACTIVE', 'ARTISAN_CHAT', 'ARTISAN_WALLET', 'ARTISAN_PROFILE'];
+    if (artisanTabs.includes(currentScreen)) {
+      setVisitedArtisanTabs((prev) => {
+        if (prev.has(currentScreen)) return prev;
+        const next = new Set(prev);
+        next.add(currentScreen);
+        return next;
+      });
+    }
+  }, [currentScreen]);
 
   const handleLogout = async () => {
     setShowAccountMenu(false);
@@ -194,6 +281,11 @@ function InnerApp() {
     }
     setIsAuthenticated(false);
     setCurrentScreen('AUTH_SPLASH');
+  };
+
+  const handleTabPress = (screen: ScreenKey) => {
+    Haptics.selectionAsync().catch(() => {});
+    setCurrentScreen(screen);
   };
 
   const isClientTabActive = (tabKey: ScreenKey) => {
@@ -216,7 +308,7 @@ function InnerApp() {
       );
     }
     if (tabKey === 'CLIENT_OGA_JOHN') return currentScreen === 'CLIENT_OGA_JOHN';
-    if (tabKey === 'CLIENT_CHAT') return currentScreen === 'CLIENT_CHAT';
+    if (tabKey === 'CLIENT_CHAT') return currentScreen === 'CLIENT_CHAT' || currentScreen === 'CLIENT_CHAT_THREAD';
     if (tabKey === 'CLIENT_WALLET') {
       return (
         currentScreen === 'CLIENT_WALLET' ||
@@ -245,7 +337,7 @@ function InnerApp() {
         currentScreen === 'ARTISAN_DISPUTE'
       );
     }
-    if (tabKey === 'ARTISAN_CHAT') return currentScreen === 'ARTISAN_CHAT';
+    if (tabKey === 'ARTISAN_CHAT') return currentScreen === 'ARTISAN_CHAT' || currentScreen === 'ARTISAN_CHAT_THREAD';
     if (tabKey === 'ARTISAN_WALLET') {
       return (
         currentScreen === 'ARTISAN_WALLET' ||
@@ -267,7 +359,7 @@ function InnerApp() {
   return (
     <View style={styles.container}>
       <StatusBar
-        barStyle={role === 'ARTISAN' && isAuthenticated ? 'light-content' : 'dark-content'}
+        barStyle={isDark || (role === 'ARTISAN' && isAuthenticated) ? 'light-content' : 'dark-content'}
       />
 
       {/* Screen Render */}
@@ -318,6 +410,11 @@ function InnerApp() {
                   setCurrentScreen('AUTH_OTP');
                 }}
                 onNavigateToLogin={() => setCurrentScreen('AUTH_LOGIN')}
+                onSocialLoginSuccess={(loggedRole) => {
+                  setRole(loggedRole);
+                  setIsAuthenticated(true);
+                  setCurrentScreen(loggedRole === 'CLIENT' ? 'CLIENT_HOME' : 'ARTISAN_COCKPIT');
+                }}
               />
             )}
 
@@ -371,84 +468,140 @@ function InnerApp() {
         {/* ========================================================= */}
         {isAuthenticated && role === 'CLIENT' && (
           <>
-            {currentScreen === 'CLIENT_HOME' && (
-              <ClientHomeScreen
-                onNavigateToMilestoneReview={(contractId, milestoneId) => {
-                  if (contractId) setSelectedContractId(contractId);
-                  if (milestoneId) setSelectedMilestoneId(milestoneId);
-                  setCurrentScreen('CLIENT_MILESTONE');
-                }}
-                onNavigateToAiScan={() => setCurrentScreen('CLIENT_OGA_JOHN')}
-                onNavigateToPostJob={(init) => {
-                  setPostJobInitialData(init);
-                  setCurrentScreen('CLIENT_POST_JOB');
-                }}
-                onSelectArtisan={(artisanId) => {
-                  if (artisanId) setSelectedArtisanId(artisanId);
-                  setCurrentScreen('CLIENT_ARTISAN_PROFILE');
-                }}
-                onSelectService={(serviceName) => {
-                  setPostJobInitialData({ trade: serviceName });
-                  setCurrentScreen('CLIENT_POST_JOB');
-                }}
-                onAvatarPress={() => setShowAccountMenu(true)}
-                onNotificationPress={() => setCurrentScreen('CLIENT_NOTIFICATIONS')}
-                onNavigateToPopularTrades={() => setCurrentScreen('CLIENT_POPULAR')}
-              />
+            {/* Core Tab 1: Client Home */}
+            {visitedClientTabs.has('CLIENT_HOME') && (
+              <View style={[styles.tabContentContainer, { display: currentScreen === 'CLIENT_HOME' ? 'flex' : 'none' }]}>
+                <ClientHomeScreen
+                  onNavigateToMilestoneReview={(contractId, milestoneId) => {
+                    if (contractId) setSelectedContractId(contractId);
+                    if (milestoneId) setSelectedMilestoneId(milestoneId);
+                    setCurrentScreen('CLIENT_MILESTONE');
+                  }}
+                  onNavigateToAiScan={() => setCurrentScreen('CLIENT_OGA_JOHN')}
+                  onNavigateToPostJob={(init) => {
+                    setPostJobInitialData(init);
+                    setCurrentScreen('CLIENT_POST_JOB');
+                  }}
+                  onSelectArtisan={(artisanId) => {
+                    if (artisanId) setSelectedArtisanId(artisanId);
+                    setCurrentScreen('CLIENT_ARTISAN_PROFILE');
+                  }}
+                  onSelectService={(serviceName) => {
+                    setPostJobInitialData({ trade: serviceName });
+                    setCurrentScreen('CLIENT_POST_JOB');
+                  }}
+                  onAvatarPress={() => setShowAccountMenu(true)}
+                  onNotificationPress={() => setCurrentScreen('CLIENT_NOTIFICATIONS')}
+                  onNavigateToPopularTrades={() => setCurrentScreen('CLIENT_POPULAR')}
+                  onNavigateToArtisanDirectory={() => setCurrentScreen('CLIENT_ARTISAN_DIRECTORY')}
+                  onNavigateToQrScan={() => setShowQRScanner(true)}
+                />
+
+              </View>
             )}
 
-            {currentScreen === 'CLIENT_MY_JOBS' && (
-              <MyJobsScreen
-                onBack={() => setCurrentScreen('CLIENT_HOME')}
-                onSelectJob={(jobId) => {
-                  setSelectedJobId(jobId);
-                  setCurrentScreen('CLIENT_PROPOSALS');
-                }}
-                onPostNewJob={() => {
-                  setPostJobInitialData(undefined);
-                  setCurrentScreen('CLIENT_POST_JOB');
-                }}
-              />
+            {/* Core Tab 2: My Jobs */}
+            {visitedClientTabs.has('CLIENT_MY_JOBS') && (
+              <View style={[styles.tabContentContainer, { display: currentScreen === 'CLIENT_MY_JOBS' ? 'flex' : 'none' }]}>
+                <MyJobsScreen
+                  onBack={() => setCurrentScreen('CLIENT_HOME')}
+                  onSelectJob={(jobId) => {
+                    setSelectedJobId(jobId);
+                    setCurrentScreen('CLIENT_PROPOSALS');
+                  }}
+                  onPostNewJob={() => {
+                    setPostJobInitialData(undefined);
+                    setCurrentScreen('CLIENT_POST_JOB');
+                  }}
+                  onRepostJob={(jobData) => {
+                    setPostJobInitialData(jobData);
+                    setCurrentScreen('CLIENT_POST_JOB');
+                  }}
+                />
+              </View>
             )}
 
-            {currentScreen === 'CLIENT_OGA_JOHN' && (
-              <OgaJohnAiStudioScreen
-                onBack={() => setCurrentScreen('CLIENT_HOME')}
-                onViewArtisanProfile={(artisanId) => {
-                  if (artisanId) setSelectedArtisanId(artisanId);
-                  setProfileReturnScreen('CLIENT_OGA_JOHN');
-                  setCurrentScreen('CLIENT_ARTISAN_PROFILE');
-                }}
-                onBookArtisanChat={(artisanId, conversationId, artisanName) => {
-                  if (artisanId) setSelectedArtisanId(artisanId);
-                  if (conversationId) setSelectedConversationId(conversationId);
-                  if (artisanName) setSelectedArtisanName(artisanName);
-                  setProfileReturnScreen('CLIENT_OGA_JOHN');
-                  setCurrentScreen('CLIENT_CHAT');
-                }}
-                onPostJobWithDiagnosis={(diagnosis) => {
-                  setPostJobInitialData({
-                    title: diagnosis.issueTitle,
-                    trade: diagnosis.trade,
-                    budget: diagnosis.costMin,
-                    description: diagnosis.description,
-                  });
-                  setCurrentScreen('CLIENT_POST_JOB');
-                }}
-              />
+            {/* Core Tab 3: Oga John AI Studio */}
+            {visitedClientTabs.has('CLIENT_OGA_JOHN') && (
+              <View style={[styles.tabContentContainer, { display: currentScreen === 'CLIENT_OGA_JOHN' ? 'flex' : 'none' }]}>
+                <OgaJohnAiStudioScreen
+                  onBack={() => setCurrentScreen('CLIENT_HOME')}
+                  onViewArtisanProfile={(artisanId) => {
+                    if (artisanId) setSelectedArtisanId(artisanId);
+                    setProfileReturnScreen('CLIENT_OGA_JOHN');
+                    setCurrentScreen('CLIENT_ARTISAN_PROFILE');
+                  }}
+                  onBookArtisanChat={async (artisanId, conversationId, artisanName) => {
+                    if (artisanId) setSelectedArtisanId(artisanId);
+                    if (artisanName) setSelectedArtisanName(artisanName);
+                    setProfileReturnScreen('CLIENT_OGA_JOHN');
+                    if (conversationId) {
+                      setSelectedConversationId(conversationId);
+                      setCurrentScreen('CLIENT_CHAT_THREAD');
+                    } else if (artisanId) {
+                      try {
+                        const conv = await ChatService.getOrCreateArtisanConversation(artisanId);
+                        setSelectedConversationId(conv.id);
+                        setCurrentScreen('CLIENT_CHAT_THREAD');
+                      } catch {
+                        setCurrentScreen('CLIENT_CHAT');
+                      }
+                    } else {
+                      setCurrentScreen('CLIENT_CHAT');
+                    }
+                  }}
+                  onPostJobWithDiagnosis={(diagnosis) => {
+                    setPostJobInitialData({
+                      title: diagnosis.issueTitle,
+                      trade: diagnosis.trade,
+                      budget: diagnosis.costMin,
+                      description: diagnosis.description,
+                    });
+                    setCurrentScreen('CLIENT_POST_JOB');
+                  }}
+                />
+              </View>
             )}
 
-            {currentScreen === 'CLIENT_CHAT' && (
-              <ClientChatScreen
+            {/* Core Tab 4: Messages Inbox */}
+            {visitedClientTabs.has('CLIENT_CHAT') && (
+              <View style={[styles.tabContentContainer, { display: currentScreen === 'CLIENT_CHAT' ? 'flex' : 'none' }]}>
+                <ChatInboxScreen
+                  userRole="CLIENT"
+                  onSelectConversation={(convId, name) => {
+                    setSelectedConversationId(convId);
+                    if (name) setSelectedArtisanName(name);
+                    setCurrentScreen('CLIENT_CHAT_THREAD');
+                  }}
+                  onExploreServices={() => setCurrentScreen('CLIENT_HOME')}
+                />
+              </View>
+            )}
+
+            {currentScreen === 'CLIENT_CHAT_THREAD' && selectedConversationId && (
+              <ChatThreadScreen
                 conversationId={selectedConversationId}
-                artisanName={selectedArtisanName}
-                onBack={() => setCurrentScreen(profileReturnScreen || 'CLIENT_HOME')}
+                recipientName={selectedArtisanName}
+                recipientRole="ARTISAN"
+                onBack={() => setCurrentScreen('CLIENT_CHAT')}
                 onOpenMilestoneReview={() => setCurrentScreen('CLIENT_MILESTONE')}
               />
             )}
 
-            {currentScreen === 'CLIENT_WALLET' && (
-              <ClientWalletScreen onBack={() => setCurrentScreen('CLIENT_HOME')} />
+            {/* Core Tab 5: Wallet */}
+            {visitedClientTabs.has('CLIENT_WALLET') && (
+              <View style={[styles.tabContentContainer, { display: currentScreen === 'CLIENT_WALLET' ? 'flex' : 'none' }]}>
+                <ClientWalletScreen
+                  onBack={() => setCurrentScreen('CLIENT_HOME')}
+                  onNavigateToTransactions={() => setCurrentScreen('CLIENT_TRANSACTION_ACTIVITY')}
+                />
+              </View>
+            )}
+
+            {currentScreen === 'CLIENT_TRANSACTION_ACTIVITY' && (
+              <ClientTransactionActivityScreen
+                onBack={() => setCurrentScreen('CLIENT_WALLET')}
+              />
             )}
 
             {/* Client Sub-screens */}
@@ -505,15 +658,65 @@ function InnerApp() {
                 onBack={() => setCurrentScreen('CLIENT_MY_JOBS')}
                 onSelectProposal={(proposal) => {
                   setSelectedProposal(proposal);
-                  setCurrentScreen('CLIENT_ACCEPT_PROPOSAL');
+                  setCurrentScreen('CLIENT_PROPOSAL_DETAILS');
                 }}
                 onViewArtisan={(artisanId) => {
                   if (artisanId) setSelectedArtisanId(artisanId);
                   setCurrentScreen('CLIENT_ARTISAN_PROFILE');
                 }}
-                onChatWithArtisan={(artisanId) => {
+                onChatWithArtisan={async (artisanId) => {
+                  if (artisanId) {
+                    setSelectedArtisanId(artisanId);
+                    try {
+                      const conv = await ChatService.getOrCreateArtisanConversation(artisanId, selectedJobId || undefined);
+                      setSelectedConversationId(conv.id);
+                      setCurrentScreen('CLIENT_CHAT_THREAD');
+                    } catch {
+                      setCurrentScreen('CLIENT_CHAT');
+                    }
+                  } else {
+                    setCurrentScreen('CLIENT_CHAT');
+                  }
+                }}
+              />
+            )}
+
+            {currentScreen === 'CLIENT_PROPOSAL_DETAILS' && selectedProposal && (
+              <ProposalDetailsScreen
+                proposal={selectedProposal}
+                jobTitle={postJobInitialData?.title || 'Job Request'}
+                onBack={() => setCurrentScreen('CLIENT_PROPOSALS')}
+                onAccept={(prop) => {
+                  setSelectedProposal(prop);
+                  setCurrentScreen('CLIENT_ACCEPT_PROPOSAL');
+                }}
+                onDecline={async (propId) => {
+                  try {
+                    await ProposalService.updateStatus(propId, 'REJECTED');
+                    queryClient.invalidateQueries({ queryKey: ['job-proposals', selectedJobId] });
+                    setCurrentScreen('CLIENT_PROPOSALS');
+                  } catch {
+                    setCurrentScreen('CLIENT_PROPOSALS');
+                  }
+                }}
+                onChatWithArtisan={async (artisanId) => {
+                  if (artisanId) {
+                    setSelectedArtisanId(artisanId);
+                    try {
+                      const conv = await ChatService.getOrCreateArtisanConversation(artisanId, selectedJobId || undefined);
+                      setSelectedConversationId(conv.id);
+                      setCurrentScreen('CLIENT_CHAT_THREAD');
+                    } catch {
+                      setCurrentScreen('CLIENT_CHAT');
+                    }
+                  } else {
+                    setCurrentScreen('CLIENT_CHAT');
+                  }
+                }}
+                onViewArtisanProfile={(artisanId) => {
                   if (artisanId) setSelectedArtisanId(artisanId);
-                  setCurrentScreen('CLIENT_CHAT');
+                  setProfileReturnScreen('CLIENT_PROPOSAL_DETAILS');
+                  setCurrentScreen('CLIENT_ARTISAN_PROFILE');
                 }}
               />
             )}
@@ -534,9 +737,19 @@ function InnerApp() {
               <ArtisanPublicProfileScreen
                 artisanId={selectedArtisanId}
                 onBack={() => setCurrentScreen(profileReturnScreen || 'CLIENT_HOME')}
-                onChat={() => {
+                onChat={async () => {
                   setProfileReturnScreen('CLIENT_ARTISAN_PROFILE');
-                  setCurrentScreen('CLIENT_CHAT');
+                  if (selectedArtisanId) {
+                    try {
+                      const conv = await ChatService.getOrCreateArtisanConversation(selectedArtisanId);
+                      setSelectedConversationId(conv.id);
+                      setCurrentScreen('CLIENT_CHAT_THREAD');
+                    } catch {
+                      setCurrentScreen('CLIENT_CHAT');
+                    }
+                  } else {
+                    setCurrentScreen('CLIENT_CHAT');
+                  }
                 }}
                 onRequestQuote={(artisanTrade?: string) => {
                   setPostJobInitialData({ trade: artisanTrade });
@@ -550,11 +763,49 @@ function InnerApp() {
                 onBack={() => setCurrentScreen('CLIENT_WALLET')}
                 onSelectContract={(contractId) => {
                   setSelectedContractId(contractId);
-                  setCurrentScreen('CLIENT_MILESTONE');
+                  setCurrentScreen('CLIENT_CONTRACT_DETAILS');
                 }}
                 onOpenChat={(conversationId) => {
-                  if (conversationId) setSelectedConversationId(conversationId);
-                  setCurrentScreen('CLIENT_CHAT');
+                  if (conversationId) {
+                    setSelectedConversationId(conversationId);
+                    setCurrentScreen('CLIENT_CHAT_THREAD');
+                  } else {
+                    setCurrentScreen('CLIENT_CHAT');
+                  }
+                }}
+              />
+            )}
+
+            {currentScreen === 'CLIENT_CONTRACT_DETAILS' && selectedContractId && (
+              <ContractDetailsScreen
+                contractId={selectedContractId}
+                onBack={() => setCurrentScreen('CLIENT_CONTRACTS')}
+                onOpenChat={async (artisanId) => {
+                  if (artisanId) {
+                    setSelectedArtisanId(artisanId);
+                    try {
+                      const conv = await ChatService.getOrCreateArtisanConversation(artisanId);
+                      setSelectedConversationId(conv.id);
+                      setCurrentScreen('CLIENT_CHAT_THREAD');
+                    } catch {
+                      setCurrentScreen('CLIENT_CHAT');
+                    }
+                  } else {
+                    setCurrentScreen('CLIENT_CHAT');
+                  }
+                }}
+                onApproveMilestone={(contractId, milestoneId) => {
+                  setSelectedContractId(contractId);
+                  setSelectedMilestoneId(milestoneId);
+                  setCurrentScreen('CLIENT_MILESTONE');
+                }}
+                onFileDispute={(contractId) => {
+                  setSelectedContractId(contractId);
+                  setCurrentScreen('CLIENT_DISPUTE');
+                }}
+                onViewJob={(jobId) => {
+                  setSelectedJobId(jobId);
+                  setCurrentScreen('CLIENT_PROPOSALS');
                 }}
               />
             )}
@@ -592,12 +843,59 @@ function InnerApp() {
             )}
 
             {currentScreen === 'CLIENT_SETTINGS' && (
-              <ClientProfileSettingsScreen
+              <ClientSettingsScreen
                 onBack={() => setCurrentScreen('CLIENT_HOME')}
                 onLogout={handleLogout}
+                onNavigateToProfileEdit={() => setCurrentScreen('CLIENT_PROFILE_EDIT')}
+              />
+            )}
+
+            {currentScreen === 'CLIENT_PROFILE_EDIT' && (
+              <ClientProfileEditScreen
+                onBack={() => setCurrentScreen('CLIENT_HOME')}
                 onNavigateToWallet={() => setCurrentScreen('CLIENT_WALLET')}
               />
             )}
+
+            {currentScreen === 'CLIENT_ARTISAN_DIRECTORY' && (
+              <ArtisanDirectoryScreen
+                onBack={() => setCurrentScreen('CLIENT_HOME')}
+                onSelectArtisan={(artisanId) => {
+                  setSelectedArtisanId(artisanId);
+                  setProfileReturnScreen('CLIENT_ARTISAN_DIRECTORY');
+                  setCurrentScreen('CLIENT_ARTISAN_PROFILE');
+                }}
+                onPostJob={(init) => {
+                  setPostJobInitialData(init);
+                  setCurrentScreen('CLIENT_POST_JOB');
+                }}
+              />
+            )}
+
+            {currentScreen === 'CLIENT_DISPUTES_LIST' && (
+              <ClientDisputesListScreen
+                onBack={() => setCurrentScreen('CLIENT_HOME')}
+                onSelectDispute={(disputeId) => {
+                  setSelectedDisputeId(disputeId);
+                  setCurrentScreen('CLIENT_DISPUTE');
+                }}
+              />
+            )}
+
+            {currentScreen === 'CLIENT_REVIEW_HISTORY' && (
+              <ClientReviewHistoryScreen
+                onBack={() => setCurrentScreen('CLIENT_HOME')}
+                onNavigateToContracts={() => setCurrentScreen('CLIENT_CONTRACTS')}
+              />
+            )}
+
+            {currentScreen === 'REFERRALS_REWARDS' && (
+              <ReferralRewardsScreen
+                onBack={() => setCurrentScreen('CLIENT_HOME')}
+                onScanQr={() => setShowQRScanner(true)}
+              />
+            )}
+
 
             {currentScreen === 'CLIENT_SAVED' && (
               <SavedArtisansScreen
@@ -606,9 +904,15 @@ function InnerApp() {
                   setSelectedArtisanId(id);
                   setCurrentScreen('CLIENT_ARTISAN_PROFILE');
                 }}
-                onChat={(id) => {
+                onChat={async (id) => {
                   setSelectedArtisanId(id);
-                  setCurrentScreen('CLIENT_CHAT');
+                  try {
+                    const conv = await ChatService.getOrCreateArtisanConversation(id);
+                    setSelectedConversationId(conv.id);
+                    setCurrentScreen('CLIENT_CHAT_THREAD');
+                  } catch {
+                    setCurrentScreen('CLIENT_CHAT');
+                  }
                 }}
                 onRehire={(id) => {
                   setSelectedArtisanId(id);
@@ -633,71 +937,107 @@ function InnerApp() {
         {/* ========================================================= */}
         {isAuthenticated && role === 'ARTISAN' && (
           <>
-            {currentScreen === 'ARTISAN_COCKPIT' && (
-              <ArtisanCockpitScreen
-                onAcceptLead={(leadId) => {
-                  setSelectedJobId(leadId);
-                  setCurrentScreen('ARTISAN_INCOMING');
-                }}
-                onDeclineLead={() => alert('Lead passed to next available artisan.')}
-                onViewActiveProject={(contractId) => {
-                  if (contractId) setSelectedContractId(contractId);
-                  setCurrentScreen('ARTISAN_ACTIVE');
-                }}
-                onNavigateToWallet={() => setCurrentScreen('ARTISAN_WALLET')}
-                onLaunchMaps={() => alert('Launching Google Maps turn-by-turn navigation')}
-                onCallClient={() => alert('Dialing client phone...')}
-                onSnapPhoto={(milestoneId) => {
-                  if (milestoneId) setSelectedMilestoneId(milestoneId);
-                  setCurrentScreen('ARTISAN_PROOF');
-                }}
-                onAvatarPress={() => setShowAccountMenu(true)}
-                onNotificationPress={() => setCurrentScreen('ARTISAN_NOTIFICATIONS')}
-              />
+            {/* Core Tab 1: Artisan Cockpit */}
+            {visitedArtisanTabs.has('ARTISAN_COCKPIT') && (
+              <View style={[styles.tabContentContainer, { display: currentScreen === 'ARTISAN_COCKPIT' ? 'flex' : 'none' }]}>
+                <ArtisanCockpitScreen
+                  onAcceptLead={(leadId) => {
+                    setSelectedJobId(leadId);
+                    setCurrentScreen('ARTISAN_INCOMING');
+                  }}
+                  onDeclineLead={() => showInfo('Lead Passed', 'Lead rerouted to next available artisan.')}
+                  onViewActiveProject={(contractId) => {
+                    if (contractId) setSelectedContractId(contractId);
+                    setCurrentScreen('ARTISAN_ACTIVE');
+                  }}
+                  onNavigateToWallet={() => setCurrentScreen('ARTISAN_WALLET')}
+                  onViewInvitations={() => setCurrentScreen('ARTISAN_INVITATIONS')}
+                  onLaunchMaps={() => showInfo('Maps Navigation', 'Launching GPS turn-by-turn navigation')}
+                  onCallClient={() => showInfo('Voice Calling', 'Connecting call to client phone...')}
+                  onSnapPhoto={(milestoneId) => {
+                    if (milestoneId) setSelectedMilestoneId(milestoneId);
+                    setCurrentScreen('ARTISAN_PROOF');
+                  }}
+                  onAvatarPress={() => setShowAccountMenu(true)}
+                  onNotificationPress={() => setCurrentScreen('ARTISAN_NOTIFICATIONS')}
+                  onScanQr={() => setShowQRScanner(true)}
+                />
+
+              </View>
             )}
 
-            {currentScreen === 'ARTISAN_ACTIVE' && (
-              <ActiveProjectScreen
-                contractId={selectedContractId}
-                onBack={() => setCurrentScreen('ARTISAN_COCKPIT')}
-                onMarkCompleted={(cId, mId) => {
-                  if (cId) setSelectedContractId(cId);
-                  if (mId) setSelectedMilestoneId(mId);
-                  setCurrentScreen('ARTISAN_PROOF');
-                }}
-                onCallClient={() => alert('Calling client...')}
-                onViewLocation={() => alert('Viewing work site coordinates on Map')}
-                onViewDetails={() => setCurrentScreen('ARTISAN_CONTRACTS')}
-                onOpenDispute={(dId) => {
-                  if (dId) setSelectedDisputeId(dId);
-                  setCurrentScreen('ARTISAN_DISPUTE');
-                }}
-                onOpenMarketplace={() => setCurrentScreen('ARTISAN_MARKETPLACE')}
-              />
+            {/* Core Tab 2: Active Projects */}
+            {visitedArtisanTabs.has('ARTISAN_ACTIVE') && (
+              <View style={[styles.tabContentContainer, { display: currentScreen === 'ARTISAN_ACTIVE' ? 'flex' : 'none' }]}>
+                <ActiveProjectScreen
+                  contractId={selectedContractId}
+                  onBack={() => setCurrentScreen('ARTISAN_COCKPIT')}
+                  onMarkCompleted={(cId, mId) => {
+                    if (cId) setSelectedContractId(cId);
+                    if (mId) setSelectedMilestoneId(mId);
+                    setCurrentScreen('ARTISAN_PROOF');
+                  }}
+                  onCallClient={() => showInfo('Voice Calling', 'Calling client phone...')}
+                  onViewLocation={() => showInfo('Map Coordinates', 'Viewing work site coordinates on map')}
+                  onViewDetails={() => setCurrentScreen('ARTISAN_CONTRACTS')}
+                  onOpenDispute={(dId) => {
+                    if (dId) {
+                      setSelectedDisputeId(dId);
+                      setCurrentScreen('ARTISAN_DISPUTE');
+                    } else {
+                      setCurrentScreen('ARTISAN_DISPUTES_LIST');
+                    }
+                  }}
+                  onOpenMarketplace={() => setCurrentScreen('ARTISAN_MARKETPLACE')}
+                />
+              </View>
             )}
 
-            {currentScreen === 'ARTISAN_CHAT' && (
-              <ArtisanChatScreen
+            {/* Core Tab 3: Messages Inbox */}
+            {visitedArtisanTabs.has('ARTISAN_CHAT') && (
+              <View style={[styles.tabContentContainer, { display: currentScreen === 'ARTISAN_CHAT' ? 'flex' : 'none' }]}>
+                <ChatInboxScreen
+                  userRole="ARTISAN"
+                  onSelectConversation={(convId, name) => {
+                    setSelectedConversationId(convId);
+                    if (name) setSelectedArtisanName(name);
+                    setCurrentScreen('ARTISAN_CHAT_THREAD');
+                  }}
+                  onExploreServices={() => setCurrentScreen('ARTISAN_MARKETPLACE')}
+                />
+              </View>
+            )}
+
+            {currentScreen === 'ARTISAN_CHAT_THREAD' && selectedConversationId && (
+              <ChatThreadScreen
                 conversationId={selectedConversationId}
-                onBack={() => setCurrentScreen('ARTISAN_COCKPIT')}
+                recipientName={selectedArtisanName}
+                recipientRole="CLIENT"
+                onBack={() => setCurrentScreen('ARTISAN_CHAT')}
               />
             )}
 
-            {currentScreen === 'ARTISAN_WALLET' && (
-              <ArtisanWalletScreen
-                onBack={() => setCurrentScreen('ARTISAN_COCKPIT')}
-                onViewProposals={() => setCurrentScreen('ARTISAN_PROPOSALS')}
-              />
+            {/* Core Tab 4: Wallet */}
+            {visitedArtisanTabs.has('ARTISAN_WALLET') && (
+              <View style={[styles.tabContentContainer, { display: currentScreen === 'ARTISAN_WALLET' ? 'flex' : 'none' }]}>
+                <ArtisanWalletScreen
+                  onBack={() => setCurrentScreen('ARTISAN_COCKPIT')}
+                  onViewProposals={() => setCurrentScreen('ARTISAN_PROPOSALS')}
+                />
+              </View>
             )}
 
-            {currentScreen === 'ARTISAN_PROFILE' && (
-              <ArtisanProfileScreen
-                onBack={() => setCurrentScreen('ARTISAN_COCKPIT')}
-                onOpenKyc={() => setCurrentScreen('ARTISAN_KYC')}
-                onOpenPortfolio={() => setCurrentScreen('ARTISAN_PORTFOLIO')}
-                onOpenReviews={() => setCurrentScreen('ARTISAN_REVIEWS')}
-                onOpenSettings={() => setCurrentScreen('ARTISAN_SETTINGS')}
-              />
+            {/* Core Tab 5: Profile */}
+            {visitedArtisanTabs.has('ARTISAN_PROFILE') && (
+              <View style={[styles.tabContentContainer, { display: currentScreen === 'ARTISAN_PROFILE' ? 'flex' : 'none' }]}>
+                <ArtisanProfileScreen
+                  onBack={() => setCurrentScreen('ARTISAN_COCKPIT')}
+                  onOpenKyc={() => setCurrentScreen('ARTISAN_KYC')}
+                  onOpenPortfolio={() => setCurrentScreen('ARTISAN_PORTFOLIO')}
+                  onOpenReviews={() => setCurrentScreen('ARTISAN_REVIEWS')}
+                  onOpenSettings={() => setCurrentScreen('ARTISAN_SETTINGS')}
+                />
+              </View>
             )}
 
             {/* Artisan Sub-screens */}
@@ -821,6 +1161,41 @@ function InnerApp() {
                 }}
               />
             )}
+
+            {currentScreen === 'ARTISAN_INVITATIONS' && (
+              <ArtisanInvitationsScreen
+                onBack={() => setCurrentScreen('ARTISAN_COCKPIT')}
+                onSelectJob={(jobId) => {
+                  setSelectedJobId(jobId);
+                  setCurrentScreen('ARTISAN_BID');
+                }}
+              />
+            )}
+
+            {currentScreen === 'ARTISAN_PEER_NETWORK' && (
+              <ArtisanPeerNetworkScreen
+                onBack={() => setCurrentScreen('ARTISAN_COCKPIT')}
+                onSelectPeer={(_peer) => {}}
+              />
+            )}
+
+            {currentScreen === 'ARTISAN_DISPUTES_LIST' && (
+              <ArtisanDisputesListScreen
+                onBack={() => setCurrentScreen('ARTISAN_ACTIVE')}
+                onOpenDispute={(disputeId) => {
+                  setSelectedDisputeId(disputeId);
+                  setCurrentScreen('ARTISAN_DISPUTE');
+                }}
+              />
+            )}
+
+            {currentScreen === 'REFERRALS_REWARDS' && (
+              <ReferralRewardsScreen
+                onBack={() => setCurrentScreen('ARTISAN_COCKPIT')}
+                onScanQr={() => setShowQRScanner(true)}
+              />
+            )}
+
           </>
         )}
       </View>
@@ -829,257 +1204,19 @@ function InnerApp() {
       {/* STRICT 5-TAB NATIVE BOTTOM NAVIGATION BAR */}
       {/* ========================================================= */}
       {isAuthenticated && (
-        <SafeAreaView
-          style={[styles.bottomBarArea, role === 'ARTISAN' && styles.bottomBarDark]}
-        >
-          <View style={styles.bottomNav}>
-            {role === 'CLIENT' ? (
-              <>
-                {/* 1. Home */}
-                <TouchableOpacity
-                  onPress={() => setCurrentScreen('CLIENT_HOME')}
-                  style={styles.navTab}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.tabIconWrap}>
-                    <Home
-                      size={22}
-                      color={isClientTabActive('CLIENT_HOME') ? colors.icons.primary : colors.icons.secondary}
-                      strokeWidth={1.85}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      isClientTabActive('CLIENT_HOME') && styles.tabLabelActive,
-                    ]}
-                  >
-                    Home
-                  </Text>
-                </TouchableOpacity>
-
-                {/* 2. My Jobs */}
-                <TouchableOpacity
-                  onPress={() => setCurrentScreen('CLIENT_MY_JOBS')}
-                  style={styles.navTab}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.tabIconWrap}>
-                    <ClipboardList
-                      size={22}
-                      color={isClientTabActive('CLIENT_MY_JOBS') ? colors.icons.primary : colors.icons.secondary}
-                      strokeWidth={1.85}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      isClientTabActive('CLIENT_MY_JOBS') && styles.tabLabelActive,
-                    ]}
-                  >
-                    My Jobs
-                  </Text>
-                </TouchableOpacity>
-
-                {/* 3. Oga John AI (Center) */}
-                <TouchableOpacity
-                  onPress={() => setCurrentScreen('CLIENT_OGA_JOHN')}
-                  style={styles.navTab}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.tabIconWrap}>
-                    <Bot
-                      size={22}
-                      color={isClientTabActive('CLIENT_OGA_JOHN') ? colors.icons.primary : colors.icons.secondary}
-                      strokeWidth={1.85}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      isClientTabActive('CLIENT_OGA_JOHN') && styles.tabLabelActive,
-                    ]}
-                  >
-                    Oga John
-                  </Text>
-                </TouchableOpacity>
-
-                {/* 4. Messages (with unread badge '2') */}
-                <TouchableOpacity
-                  onPress={() => setCurrentScreen('CLIENT_CHAT')}
-                  style={styles.navTab}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.badgeWrapper}>
-                    <View style={styles.tabIconWrap}>
-                      <MessageSquare
-                        size={22}
-                        color={isClientTabActive('CLIENT_CHAT') ? colors.icons.primary : colors.icons.secondary}
-                        strokeWidth={1.85}
-                      />
-                    </View>
-                    <View style={styles.navBadge}>
-                      <Text style={styles.navBadgeText}>2</Text>
-                    </View>
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      isClientTabActive('CLIENT_CHAT') && styles.tabLabelActive,
-                    ]}
-                  >
-                    Messages
-                  </Text>
-                </TouchableOpacity>
-
-                {/* 5. Wallet (Smart Escrow Protected) */}
-                <TouchableOpacity
-                  onPress={() => setCurrentScreen('CLIENT_WALLET')}
-                  style={styles.navTab}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.tabIconWrap}>
-                    <ShieldCheck
-                      size={22}
-                      color={isClientTabActive('CLIENT_WALLET') ? colors.icons.primary : colors.icons.secondary}
-                      strokeWidth={1.85}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      isClientTabActive('CLIENT_WALLET') && styles.tabLabelActive,
-                    ]}
-                  >
-                    Wallet
-                  </Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                {/* 1. Radar/Jobs */}
-                <TouchableOpacity
-                  onPress={() => setCurrentScreen('ARTISAN_COCKPIT')}
-                  style={styles.navTab}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.tabIconWrap}>
-                    <Compass
-                      size={22}
-                      color={isArtisanTabActive('ARTISAN_COCKPIT') ? colors.icons.accent : '#9CA3AF'}
-                      strokeWidth={1.85}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabelDark,
-                      isArtisanTabActive('ARTISAN_COCKPIT') && styles.tabLabelActiveDark,
-                    ]}
-                  >
-                    Radar/Jobs
-                  </Text>
-                </TouchableOpacity>
-
-                {/* 2. My Tasks */}
-                <TouchableOpacity
-                  onPress={() => setCurrentScreen('ARTISAN_ACTIVE')}
-                  style={styles.navTab}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.tabIconWrap}>
-                    <Wrench
-                      size={22}
-                      color={isArtisanTabActive('ARTISAN_ACTIVE') ? colors.icons.accent : '#9CA3AF'}
-                      strokeWidth={1.85}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabelDark,
-                      isArtisanTabActive('ARTISAN_ACTIVE') && styles.tabLabelActiveDark,
-                    ]}
-                  >
-                    My Tasks
-                  </Text>
-                </TouchableOpacity>
-
-                {/* 3. Messages (with unread badge '3') */}
-                <TouchableOpacity
-                  onPress={() => setCurrentScreen('ARTISAN_CHAT')}
-                  style={styles.navTab}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.badgeWrapper}>
-                    <View style={styles.tabIconWrap}>
-                      <MessageSquare
-                        size={22}
-                        color={isArtisanTabActive('ARTISAN_CHAT') ? colors.icons.accent : '#9CA3AF'}
-                        strokeWidth={1.85}
-                      />
-                    </View>
-                    <View style={styles.urgentDot}>
-                      <Text style={styles.urgentDotText}>3</Text>
-                    </View>
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabelDark,
-                      isArtisanTabActive('ARTISAN_CHAT') && styles.tabLabelActiveDark,
-                    ]}
-                  >
-                    Messages
-                  </Text>
-                </TouchableOpacity>
-
-                {/* 4. Earnings & Wallet */}
-                <TouchableOpacity
-                  onPress={() => setCurrentScreen('ARTISAN_WALLET')}
-                  style={styles.navTab}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.tabIconWrap}>
-                    <Wallet
-                      size={22}
-                      color={isArtisanTabActive('ARTISAN_WALLET') ? colors.icons.accent : '#9CA3AF'}
-                      strokeWidth={1.85}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabelDark,
-                      isArtisanTabActive('ARTISAN_WALLET') && styles.tabLabelActiveDark,
-                    ]}
-                  >
-                    Earnings
-                  </Text>
-                </TouchableOpacity>
-
-                {/* 5. Profile */}
-                <TouchableOpacity
-                  onPress={() => setCurrentScreen('ARTISAN_PROFILE')}
-                  style={styles.navTab}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.tabIconWrap}>
-                    <UserCheck
-                      size={22}
-                      color={isArtisanTabActive('ARTISAN_PROFILE') ? colors.icons.accent : '#9CA3AF'}
-                      strokeWidth={1.85}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.tabLabelDark,
-                      isArtisanTabActive('ARTISAN_PROFILE') && styles.tabLabelActiveDark,
-                    ]}
-                  >
-                    Profile
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </SafeAreaView>
+        role === 'CLIENT' ? (
+          <ClientBottomBar
+            currentScreen={currentScreen}
+            onTabPress={handleTabPress}
+            unreadCount={totalUnreadChatCount}
+          />
+        ) : (
+          <ArtisanBottomBar
+            currentScreen={currentScreen}
+            onTabPress={handleTabPress}
+            unreadCount={totalUnreadChatCount}
+          />
+        )
       )}
 
       {/* Account Settings Modal */}
@@ -1089,53 +1226,392 @@ function InnerApp() {
           activeOpacity={1}
           onPress={() => setShowAccountMenu(false)}
         >
-          <View style={styles.accountMenuCard}>
-            <BrandLogo variant="full" theme="light" size={32} style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }} />
+          <View style={[styles.accountMenuCard, { maxHeight: '82%', backgroundColor: themeColors.surface, borderColor: themeColors.border, borderWidth: 1 }]}>
+            <BrandLogo variant="mark" theme={isDark ? 'dark' : 'light'} size={32} style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }} />
             <View style={styles.menuHeader}>
-              <View style={styles.menuAvatar}>
-                <Text style={styles.menuAvatarText}>{dynamicInitials}</Text>
-              </View>
+              <UserAvatar
+                avatarUrl={role === 'CLIENT' ? dynamicClientAvatar : user?.artisanProfile?.avatarUrl}
+                name={role === 'CLIENT' ? dynamicClientName : dynamicArtisanName}
+                size={54}
+                role={role === 'CLIENT' ? 'CLIENT' : 'ARTISAN'}
+                showRoleBadge
+                style={{ marginRight: 14 }}
+              />
               <View style={styles.menuMeta}>
-                <Text style={styles.menuUserName}>
+                <Text style={[styles.menuUserName, { color: themeColors.text }]} numberOfLines={1}>
                   {role === 'CLIENT' ? dynamicClientName : dynamicArtisanName}
                 </Text>
-                <Text style={styles.menuUserRole}>
-                  Account: {role === 'CLIENT' ? 'Homeowner Client' : (user?.artisanProfile?.trade || 'Verified Artisan')}
+                <Text style={[styles.menuUserEmail, { color: themeColors.textMuted }]} numberOfLines={1}>
+                  {user?.email || 'Registered User'}
                 </Text>
+                {role === 'CLIENT' && dynamicClientPhone ? (
+                  <Text style={[styles.menuUserPhone, { color: isDark ? themeColors.brand.emerald : themeColors.brand.forest }]} numberOfLines={1}>
+                    📞 {dynamicClientPhone}
+                  </Text>
+                ) : null}
+                <View style={styles.menuBadgeRow}>
+                  <View style={[styles.roleTag, { backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : 'rgba(16, 185, 129, 0.12)' }]}>
+                    <Text style={[styles.roleTagText, { color: isDark ? '#34D399' : '#065F46' }]}>
+                      {role === 'CLIENT' ? 'Homeowner Client' : (user?.artisanProfile?.trade || 'Verified Artisan')}
+                    </Text>
+                  </View>
+                  {user?.isKycVerified && (
+                    <View style={[styles.verifiedTag, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.2)' : '#DCFCE7' }]}>
+                      <Text style={[styles.verifiedTagText, { color: isDark ? '#4ADE80' : '#15803D' }]}>✓ NIN Verified</Text>
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
 
-            <View style={styles.menuDivider} />
+            <View style={[styles.menuDivider, { backgroundColor: themeColors.border }]} />
 
-            <TouchableOpacity
-              style={styles.menuOption}
-              onPress={() => {
-                setShowAccountMenu(false);
-                setCurrentScreen(role === 'CLIENT' ? 'CLIENT_SETTINGS' : 'ARTISAN_SETTINGS');
-              }}
-            >
-              <Settings size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
-              <View style={styles.menuOptionTextWrap}>
-                <Text style={styles.menuOptionTitle}>Account Settings</Text>
-                <Text style={styles.menuOptionSub}>Biometrics, notification & addresses</Text>
-              </View>
-            </TouchableOpacity>
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              {role === 'CLIENT' ? (
+                <>
+                  <Text style={[styles.menuSectionHeader, { color: themeColors.textMuted }]}>ACTIVITY & RECORDS</Text>
 
-            <TouchableOpacity style={styles.menuLogout} onPress={handleLogout}>
-              <LogOut size={20} color="#DC2626" strokeWidth={1.85} style={styles.menuLucideIcon} />
-              <Text style={styles.menuLogoutText}>Log Out to Splash / Auth Flow</Text>
-            </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('CLIENT_CONTRACTS');
+                    }}
+                  >
+                    <FileText size={20} color={isDark ? themeColors.text : colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={[styles.menuOptionTitle, { color: themeColors.text }]}>My Contracts & Escrow</Text>
+                      <Text style={[styles.menuOptionSub, { color: themeColors.textMuted }]}>Funded milestones, status & releases</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('CLIENT_SAVED');
+                    }}
+                  >
+                    <Heart size={20} color={isDark ? themeColors.text : colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={[styles.menuOptionTitle, { color: themeColors.text }]}>Saved Artisans</Text>
+                      <Text style={[styles.menuOptionSub, { color: themeColors.textMuted }]}>Bookmarked experts & repeat hiring</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('CLIENT_DISPUTES_LIST');
+                    }}
+                  >
+                    <ShieldAlert size={20} color={isDark ? themeColors.text : colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={[styles.menuOptionTitle, { color: themeColors.text }]}>Dispute Center</Text>
+                      <Text style={[styles.menuOptionSub, { color: themeColors.textMuted }]}>Active arbitration, claims & evidence</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('CLIENT_REVIEW_HISTORY');
+                    }}
+                  >
+                    <Star size={20} color={isDark ? themeColors.text : colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={[styles.menuOptionTitle, { color: themeColors.text }]}>My Reviews & Ratings</Text>
+                      <Text style={[styles.menuOptionSub, { color: themeColors.textMuted }]}>Feedback history given to artisans</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('CLIENT_ARTISAN_DIRECTORY');
+                    }}
+                  >
+                    <Users size={20} color={isDark ? themeColors.text : colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={[styles.menuOptionTitle, { color: themeColors.text }]}>Find Artisans Directory</Text>
+                      <Text style={[styles.menuOptionSub, { color: themeColors.textMuted }]}>Search verified local pros by trade & radius</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('REFERRALS_REWARDS');
+                    }}
+                  >
+                    <Gift size={20} color="#10B981" strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={[styles.menuOptionTitle, { color: themeColors.text }]}>Rewards & Loyalty Hub</Text>
+                      <Text style={[styles.menuOptionSub, { color: themeColors.textMuted }]}>Invite friends, earn points & fee discounts</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setShowQRScanner(true);
+                    }}
+                  >
+                    <QrCode size={20} color="#10B981" strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={[styles.menuOptionTitle, { color: themeColors.text }]}>Scan QR Code</Text>
+                      <Text style={[styles.menuOptionSub, { color: themeColors.textMuted }]}>Scan artisan card or on-site arrival QR</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <Text style={[styles.menuSectionHeader, { marginTop: spacing.md, color: themeColors.textMuted }]}>PREFERENCES & SECURITY</Text>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('CLIENT_PROFILE_EDIT');
+                    }}
+                  >
+                    <User size={20} color={isDark ? themeColors.text : colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={[styles.menuOptionTitle, { color: themeColors.text }]}>Profile & Saved Addresses</Text>
+                      <Text style={[styles.menuOptionSub, { color: themeColors.textMuted }]}>Avatar, contact details & home locations</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('CLIENT_SETTINGS');
+                    }}
+                  >
+                    <Settings size={20} color={isDark ? themeColors.text : colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={[styles.menuOptionTitle, { color: themeColors.text }]}>App Settings & Security</Text>
+                      <Text style={[styles.menuOptionSub, { color: themeColors.textMuted }]}>Biometrics, PIN, notifications & theme</Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.menuSectionHeader}>ACTIVITY & WORK</Text>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('ARTISAN_CONTRACTS');
+                    }}
+                  >
+                    <FileText size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>My Contracts & Tasks</Text>
+                      <Text style={styles.menuOptionSub}>Active projects, milestones & proof</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('ARTISAN_PROPOSALS');
+                    }}
+                  >
+                    <ClipboardList size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>Proposals & Bids</Text>
+                      <Text style={styles.menuOptionSub}>Track submitted bids & client offers</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('ARTISAN_SAVED');
+                    }}
+                  >
+                    <Heart size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>Saved Jobs</Text>
+                      <Text style={styles.menuOptionSub}>Bookmarked opportunities & leads</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('ARTISAN_INVITATIONS');
+                    }}
+                  >
+                    <Sparkles size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>Direct Job Invitations</Text>
+                      <Text style={styles.menuOptionSub}>Exclusive requests from clients</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('REFERRALS_REWARDS');
+                    }}
+                  >
+                    <Gift size={20} color="#10B981" strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>Rewards, QR & Ranking Boost</Text>
+                      <Text style={styles.menuOptionSub}>Share digital card, earn points & spotlight</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setShowQRScanner(true);
+                    }}
+                  >
+                    <QrCode size={20} color="#10B981" strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>Scan Arrival / Profile QR</Text>
+                      <Text style={styles.menuOptionSub}>Verify presence on-site or scan profile</Text>
+                    </View>
+                  </TouchableOpacity>
+
+
+                  <Text style={[styles.menuSectionHeader, { marginTop: spacing.md }]}>COMMUNITY & REPUTATION</Text>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('ARTISAN_PEER_NETWORK');
+                    }}
+                  >
+                    <Users size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>Artisan Peer Network</Text>
+                      <Text style={styles.menuOptionSub}>Find fellow pros & subcontract tasks</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('ARTISAN_DISPUTES_LIST');
+                    }}
+                  >
+                    <ShieldAlert size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>Dispute Center</Text>
+                      <Text style={styles.menuOptionSub}>Counter-evidence & mutual settlement</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('ARTISAN_REVIEWS');
+                    }}
+                  >
+                    <Star size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>Reviews & Ratings</Text>
+                      <Text style={styles.menuOptionSub}>Public replies & reputation rating</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <Text style={[styles.menuSectionHeader, { marginTop: spacing.md }]}>PROFILE & PREFERENCES</Text>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('ARTISAN_PORTFOLIO');
+                    }}
+                  >
+                    <Wrench size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>Portfolio Showcase</Text>
+                      <Text style={styles.menuOptionSub}>Add & edit verified repair photos</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('ARTISAN_KYC');
+                    }}
+                  >
+                    <ShieldCheck size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>KYC Verification</Text>
+                      <Text style={styles.menuOptionSub}>NIN & facial liveness badge status</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.menuOption}
+                    onPress={() => {
+                      setShowAccountMenu(false);
+                      setCurrentScreen('ARTISAN_SETTINGS');
+                    }}
+                  >
+                    <Settings size={20} color={colors.icons.secondary} strokeWidth={1.85} style={styles.menuLucideIcon} />
+                    <View style={styles.menuOptionTextWrap}>
+                      <Text style={styles.menuOptionTitle}>Artisan Settings</Text>
+                      <Text style={styles.menuOptionSub}>Security PIN, operating radius & alerts</Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <TouchableOpacity style={styles.menuLogout} onPress={handleLogout}>
+                <LogOut size={20} color="#DC2626" strokeWidth={1.85} style={styles.menuLucideIcon} />
+                <Text style={styles.menuLogoutText}>Log Out to Splash / Auth Flow</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Universal In-App Camera QR Code Scanner */}
+      <QRScannerModal
+        visible={showQRScanner}
+        onClose={() => setShowQRScanner(false)}
+        onSelectArtisan={(artisanIdOrSlug) => {
+          setSelectedArtisanId(artisanIdOrSlug);
+          setCurrentScreen('CLIENT_ARTISAN_PROFILE');
+        }}
+        onApplyReferralCode={() => {
+          setCurrentScreen('REFERRALS_REWARDS');
+        }}
+      />
     </View>
   );
 }
 
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <InnerApp />
+      <ThemeProvider>
+        <ToastProvider>
+          <InnerApp />
+        </ToastProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
@@ -1148,10 +1624,13 @@ const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
   },
+  tabContentContainer: {
+    flex: 1,
+  },
   bottomBarArea: {
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
   },
   bottomBarDark: {
     backgroundColor: '#071A11',
@@ -1161,13 +1640,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 8,
+    minHeight: 58,
   },
   navTab: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
+    minHeight: 48,
+    paddingVertical: 2,
+  },
+  aiNavTab: {
+    transform: [{ translateY: -2 }],
+  },
+  aiPillWrap: {
+    width: 38,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  aiPillWrapActive: {
+    backgroundColor: colors.brand.emerald,
+  },
+  aiTabLabel: {
+    color: colors.brand.emeraldDark,
+    fontWeight: '700',
   },
   tabIconWrap: {
     marginBottom: 3,
@@ -1180,11 +1681,11 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 10,
-    color: '#606C38',
+    color: '#4B5563',
     fontWeight: '600',
   },
   tabLabelActive: {
-    color: '#123F32',
+    color: '#0D3528',
     fontWeight: '800',
   },
   tabLabelDark: {
@@ -1201,14 +1702,15 @@ const styles = StyleSheet.create({
   },
   navBadge: {
     position: 'absolute',
-    top: -2,
-    right: -8,
+    top: -3,
+    right: -9,
     backgroundColor: '#EF4444',
-    borderRadius: 8,
-    width: 15,
-    height: 15,
+    borderRadius: 8.5,
+    minWidth: 17,
+    height: 17,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 2,
   },
   navBadgeText: {
     color: '#FFFFFF',
@@ -1274,6 +1776,45 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: colors.text,
   },
+  menuUserEmail: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  menuUserPhone: {
+    fontSize: 11,
+    color: colors.brand.forest,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  menuBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 5,
+  },
+  roleTag: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  roleTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  verifiedTag: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  verifiedTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#15803D',
+  },
   menuUserRole: {
     ...typography.caption,
     color: colors.textMuted,
@@ -1283,6 +1824,15 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginVertical: spacing.md,
+  },
+  menuSectionHeader: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginTop: spacing.xs,
+    marginBottom: 4,
   },
   menuOption: {
     flexDirection: 'row',

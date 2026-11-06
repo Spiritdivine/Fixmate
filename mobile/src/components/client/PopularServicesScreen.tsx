@@ -9,12 +9,28 @@ import {
   TextInput,
   SafeAreaView,
 } from 'react-native';
+import {
+  Search,
+  Zap,
+  Droplets,
+  Hammer,
+  Snowflake,
+  Paintbrush,
+  Layers,
+  Plug,
+  Wrench,
+  Truck,
+  Heart,
+  Star,
+  Check,
+} from 'lucide-react-native';
 import { AppHeader } from '../shared/AppHeader';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { useQuery } from '@tanstack/react-query';
 import { ProfileService } from '../../services/profile.service';
 import { JobService } from '../../services/job.service';
 import { formatCurrency } from '../../lib/formatters';
+import { useToggleSaveArtisan } from '../../hooks';
 
 interface PopularServicesScreenProps {
   onSelectService?: (serviceName: string) => void;
@@ -27,6 +43,7 @@ export const PopularServicesScreen: React.FC<PopularServicesScreenProps> = ({
   onSelectArtisan,
   onBookArtisan,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [savedIds, setSavedIds] = useState<string[]>([]);
 
@@ -40,58 +57,62 @@ export const PopularServicesScreen: React.FC<PopularServicesScreenProps> = ({
     queryFn: () => ProfileService.listArtisans({ minRating: 4.0, limit: 5 }),
   });
 
-  const handleToggleSave = async (id: string) => {
+  const toggleSaveMutation = useToggleSaveArtisan();
+
+  const handleToggleSave = (id: string) => {
     const isSaved = savedIds.includes(id);
     if (isSaved) {
       setSavedIds((prev) => prev.filter((x) => x !== id));
-      try {
-        await ProfileService.unsaveArtisan(id);
-      } catch {
-        setSavedIds((prev) => [...prev, id]);
-      }
     } else {
       setSavedIds((prev) => [...prev, id]);
-      try {
-        await ProfileService.saveArtisan(id);
-      } catch {
-        setSavedIds((prev) => prev.filter((x) => x !== id));
-      }
     }
+
+    toggleSaveMutation.mutate(
+      { artisanId: id, isSaved: !isSaved },
+      {
+        onError: () => {
+          setSavedIds((prev) =>
+            isSaved ? [...prev, id] : prev.filter((x) => x !== id)
+          );
+        },
+      }
+    );
   };
 
-  const getCategoryEmoji = (catName: string): { icon: string; bg: string } => {
+  const getCategoryMeta = (catName: string): { Icon: React.ComponentType<any>; bg: string; color: string } => {
     const lower = catName.toLowerCase();
-    if (lower.includes('electr') || lower.includes('solar')) return { icon: '⚡', bg: '#FEF3C7' };
-    if (lower.includes('plumb') || lower.includes('pipe')) return { icon: '🚰', bg: '#E0F2FE' };
-    if (lower.includes('carpent') || lower.includes('wood')) return { icon: '🪚', bg: '#FFF7ED' };
-    if (lower.includes('ac') || lower.includes('cool') || lower.includes('refrig')) return { icon: '❄️', bg: '#E0F2FE' };
-    if (lower.includes('paint') || lower.includes('pop')) return { icon: '🎨', bg: '#FDF4FF' };
-    if (lower.includes('mason') || lower.includes('tile')) return { icon: '🧱', bg: '#FCE7F3' };
-    if (lower.includes('generator') || lower.includes('power')) return { icon: '🔌', bg: '#FEF9C3' };
-    if (lower.includes('weld') || lower.includes('metal')) return { icon: '👨‍🏭', bg: '#F1F5F9' };
-    if (lower.includes('auto') || lower.includes('mechanic')) return { icon: '🚗', bg: '#FEE2E2' };
-    return { icon: '🔧', bg: '#F0FDF4' };
+    if (lower.includes('electr') || lower.includes('solar')) return { Icon: Zap, bg: '#FEF3C7', color: '#D97706' };
+    if (lower.includes('plumb') || lower.includes('pipe')) return { Icon: Droplets, bg: '#E0F2FE', color: '#0284C7' };
+    if (lower.includes('carpent') || lower.includes('wood')) return { Icon: Hammer, bg: '#FFF7ED', color: '#EA580C' };
+    if (lower.includes('ac') || lower.includes('cool') || lower.includes('refrig')) return { Icon: Snowflake, bg: '#E0F2FE', color: '#0284C7' };
+    if (lower.includes('paint') || lower.includes('pop')) return { Icon: Paintbrush, bg: '#FDF4FF', color: '#A855F7' };
+    if (lower.includes('mason') || lower.includes('tile')) return { Icon: Layers, bg: '#FCE7F3', color: '#DB2777' };
+    if (lower.includes('generator') || lower.includes('power')) return { Icon: Plug, bg: '#FEF9C3', color: '#CA8A04' };
+    if (lower.includes('weld') || lower.includes('metal')) return { Icon: Wrench, bg: '#F1F5F9', color: '#475569' };
+    if (lower.includes('auto') || lower.includes('mechanic')) return { Icon: Truck, bg: '#FEE2E2', color: '#DC2626' };
+    return { Icon: Wrench, bg: '#F0FDF4', color: '#16A34A' };
   };
 
   const popularServices = Array.isArray(dbCategories) && dbCategories.length > 0
     ? dbCategories.map((c: any) => {
-        const { icon, bg } = getCategoryEmoji(c.name);
+        const { Icon, bg, color } = getCategoryMeta(c.name);
         return {
           id: String(c.id),
           name: c.name,
-          icon,
+          Icon,
           bg,
+          color,
         };
       })
     : [
-        { id: '1', name: 'Electrical & Solar', icon: '⚡', bg: '#FEF3C7' },
-        { id: '2', name: 'Plumbing & Pipefitting', icon: '🚰', bg: '#E0F2FE' },
-        { id: '3', name: 'Carpentry & Woodwork', icon: '🪚', bg: '#FFF7ED' },
-        { id: '4', name: 'AC & Refrigeration', icon: '❄️', bg: '#E0F2FE' },
-        { id: '5', name: 'Painting & Wall POP', icon: '🎨', bg: '#FDF4FF' },
-        { id: '6', name: 'Masonry & Tiling', icon: '🧱', bg: '#FCE7F3' },
-        { id: '7', name: 'Generator & Power', icon: '🔌', bg: '#FEF9C3' },
-        { id: '8', name: 'Welding & Metalwork', icon: '👨‍🏭', bg: '#F1F5F9' },
+        { id: '1', name: 'Electrical & Solar', ...getCategoryMeta('Electrical & Solar') },
+        { id: '2', name: 'Plumbing & Pipefitting', ...getCategoryMeta('Plumbing & Pipefitting') },
+        { id: '3', name: 'Carpentry & Woodwork', ...getCategoryMeta('Carpentry & Woodwork') },
+        { id: '4', name: 'AC & Refrigeration', ...getCategoryMeta('AC & Refrigeration') },
+        { id: '5', name: 'Painting & Wall POP', ...getCategoryMeta('Painting & Wall POP') },
+        { id: '6', name: 'Masonry & Tiling', ...getCategoryMeta('Masonry & Tiling') },
+        { id: '7', name: 'Generator & Power', ...getCategoryMeta('Generator & Power') },
+        { id: '8', name: 'Welding & Metalwork', ...getCategoryMeta('Welding & Metalwork') },
       ];
 
   const filteredServices = popularServices.filter((s) =>
@@ -99,7 +120,7 @@ export const PopularServicesScreen: React.FC<PopularServicesScreenProps> = ({
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       <AppHeader location="Lekki Phase 1, Lagos" unreadCount={0} />
 
       <ScrollView
@@ -123,12 +144,12 @@ export const PopularServicesScreen: React.FC<PopularServicesScreenProps> = ({
         </View>
 
         {/* 2. SEARCH INPUT WITH FILTER ICON */}
-        <View style={styles.searchBarContainer}>
-          <Text style={styles.searchIcon}>🔍</Text>
+        <View style={[styles.searchBarContainer, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}>
+          <Search size={18} color={themeColors.textMuted} style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: themeColors.text }]}
             placeholder="Search for a service or artisan..."
-            placeholderTextColor={colors.neutral[400]}
+            placeholderTextColor={themeColors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -136,28 +157,34 @@ export const PopularServicesScreen: React.FC<PopularServicesScreenProps> = ({
 
         {/* 3. POPULAR SERVICES GRID */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Popular Services</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Popular Services</Text>
         </View>
 
         <View style={styles.servicesGrid}>
-          {filteredServices.map((service) => (
-            <TouchableOpacity
-              key={service.id}
-              activeOpacity={0.8}
-              onPress={() => onSelectService?.(service.name.replace('\n', ' '))}
-              style={styles.serviceItem}
-            >
-              <View style={[styles.serviceIconCard, { backgroundColor: service.bg }]}>
-                <Text style={styles.serviceEmoji}>{service.icon}</Text>
-              </View>
-              <Text style={styles.serviceLabel}>{service.name}</Text>
-            </TouchableOpacity>
-          ))}
+          {filteredServices.map((service) => {
+            const ServiceIcon = service.Icon;
+            return (
+              <TouchableOpacity
+                key={service.id}
+                activeOpacity={0.8}
+                onPress={() => onSelectService?.(service.name.replace('\n', ' '))}
+                style={styles.serviceItem}
+              >
+                <View style={[styles.serviceIconCard, {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : service.bg,
+                  borderColor: themeColors.border,
+                }]}>
+                  <ServiceIcon size={24} color={isDark ? '#34D399' : service.color} />
+                </View>
+                <Text style={[styles.serviceLabel, { color: themeColors.text }]}>{service.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* 4. FEATURED ARTISANS */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Top Verified Artisans</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Top Verified Artisans</Text>
         </View>
 
         {Array.isArray(featuredArtisans) && featuredArtisans.length > 0 ? (
@@ -166,24 +193,24 @@ export const PopularServicesScreen: React.FC<PopularServicesScreenProps> = ({
             const name = artisan.businessName || artisan.title || 'Master Artisan';
             const rate = artisan.startingPrice || artisan.hourlyRate || 10000;
             return (
-              <View key={artisan.id} style={styles.featuredCard}>
+              <View key={artisan.id} style={[styles.featuredCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
                 <Image
                   source={{
                     uri: artisan.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500',
                   }}
-                  style={styles.artisanPhoto}
+                  style={[styles.artisanPhoto, { backgroundColor: themeColors.surfaceSubtle }]}
                 />
 
                 <View style={styles.featuredInfo}>
                   <View style={styles.featuredHeaderRow}>
                     <View style={{ flex: 1 }}>
                       <View style={styles.nameVerifiedRow}>
-                        <Text style={styles.artisanName}>{name}</Text>
+                        <Text style={[styles.artisanName, { color: themeColors.text }]}>{name}</Text>
                         <View style={styles.verifiedCheckPill}>
-                          <Text style={styles.verifiedCheckText}>✓</Text>
+                          <Check size={9} strokeWidth={3} color="#FFFFFF" />
                         </View>
                       </View>
-                      <Text style={styles.artisanTrade}>{artisan.trade || 'Professional Specialist'}</Text>
+                      <Text style={[styles.artisanTrade, { color: themeColors.textMuted }]}>{artisan.trade || 'Professional Specialist'}</Text>
                     </View>
 
                     <TouchableOpacity
@@ -191,20 +218,23 @@ export const PopularServicesScreen: React.FC<PopularServicesScreenProps> = ({
                       activeOpacity={0.7}
                       style={styles.heartButton}
                     >
-                      <Text style={[styles.heartIcon, isSaved && styles.heartActive]}>
-                        {isSaved ? '❤️' : '🤍'}
-                      </Text>
+                      <Heart
+                        size={18}
+                        color={isSaved ? '#EF4444' : themeColors.textMuted}
+                        fill={isSaved ? '#EF4444' : 'transparent'}
+                      />
                     </TouchableOpacity>
                   </View>
 
                   <View style={styles.statsRow}>
-                    <Text style={styles.ratingText}>★ {artisan.rating || 5.0}</Text>
-                    <Text style={styles.reviewCount}>({artisan.reviewCount || 0})</Text>
-                    <Text style={styles.distanceDot}>•</Text>
-                    <Text style={styles.distanceText}>Verified Profile</Text>
+                    <Star size={12} color="#F59E0B" fill="#F59E0B" />
+                    <Text style={[styles.ratingText, { marginLeft: 2 }]}>{artisan.rating || 5.0}</Text>
+                    <Text style={[styles.reviewCount, { color: themeColors.textMuted }]}>({artisan.reviewCount || 0})</Text>
+                    <Text style={[styles.distanceDot, { color: themeColors.textMuted }]}>•</Text>
+                    <Text style={[styles.distanceText, { color: themeColors.textMuted }]}>Verified Profile</Text>
                   </View>
 
-                  <Text style={styles.priceText}>From {formatCurrency(rate)}</Text>
+                  <Text style={[styles.priceText, { color: themeColors.text }]}>From {formatCurrency(rate)}</Text>
 
                   <TouchableOpacity
                     activeOpacity={0.85}
@@ -220,8 +250,8 @@ export const PopularServicesScreen: React.FC<PopularServicesScreenProps> = ({
             );
           })
         ) : (
-          <View style={styles.emptyFeaturedCard}>
-            <Text style={styles.emptyFeaturedText}>No featured artisans currently listed.</Text>
+          <View style={[styles.emptyFeaturedCard, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}>
+            <Text style={[styles.emptyFeaturedText, { color: themeColors.textMuted }]}>No featured artisans currently listed.</Text>
           </View>
         )}
       </ScrollView>
@@ -362,7 +392,7 @@ const styles = StyleSheet.create({
   artisanPhoto: {
     width: 105,
     height: 125,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     backgroundColor: '#F3F4F6',
   },
   featuredInfo: {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { JobController } from '../controllers/job.controller.js';
 import { authenticate, requireRoles } from '../middlewares/auth.middleware.js';
+import { optionalAuth } from '../middlewares/optional-auth.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { httpCache } from '../middlewares/http-cache.middleware.js';
 import {
@@ -11,13 +12,15 @@ import {
   respondInvitationSchema,
   jobParamSchema,
   attachmentParamSchema,
+  listJobsQuerySchema,
+  verifyArrivalSchema,
 } from '../validators/job.validator.js';
 
 const router = Router();
 
 // Public Discovery (Cached for optimal client & CDN throughput)
 router.get('/categories', httpCache({ maxAge: 3600, staleWhileRevalidate: 86400 }), JobController.listCategories);
-router.get('/', httpCache({ maxAge: 30, staleWhileRevalidate: 60 }), JobController.list);
+router.get('/', optionalAuth, validate(listJobsQuerySchema), JobController.list);
 
 // Saved Jobs (Bookmarks)
 router.get('/saved', authenticate, requireRoles('ARTISAN'), JobController.getSavedJobs);
@@ -34,8 +37,12 @@ router.delete('/invitations/:id', authenticate, requireRoles('CLIENT'), JobContr
 router.get('/my-jobs', authenticate, requireRoles('CLIENT', 'ADMIN'), JobController.getMyJobs);
 router.post('/', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(createJobSchema), JobController.create);
 
+// On-Site Arrival & QR Check-In Verification
+router.get('/:id/checkin-qr', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(jobParamSchema), JobController.getCheckInToken);
+router.post('/:id/verify-arrival', authenticate, requireRoles('ARTISAN'), validate(verifyArrivalSchema), JobController.verifyArrival);
+
 // Job Detail & Lifecycle
-router.get('/:id', validate(jobParamSchema), JobController.getById);
+router.get('/:id', optionalAuth, validate(jobParamSchema), JobController.getById);
 router.put('/:id', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(updateJobSchema), JobController.update);
 router.patch('/:id', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(updateJobSchema), JobController.update);
 router.patch('/:id/status', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(updateJobStatusSchema), JobController.updateStatus);
@@ -43,3 +50,4 @@ router.delete('/:id', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(jo
 router.delete('/:id/attachments/:attachmentId', authenticate, requireRoles('CLIENT', 'ADMIN'), validate(attachmentParamSchema), JobController.deleteAttachment);
 
 export default router;
+

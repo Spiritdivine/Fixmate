@@ -20,6 +20,7 @@ import { UploadService } from '../../services/upload.service';
 import { EscrowService } from '../../services/escrow.service';
 import { ContractService } from '../../services/contract.service';
 import { queryClient } from '../../lib/query-client';
+import { useToast } from '../shared/ToastContext';
 
 interface SubmitProofScreenProps {
   milestoneId?: string;
@@ -152,19 +153,21 @@ export const SubmitProofScreen: React.FC<SubmitProofScreenProps> = ({
     }
   };
 
+  const { showSuccess, showError, showWarning } = useToast();
+
   const handleSubmit = async () => {
     if (!activeMilestoneId) {
-      Alert.alert('Error', 'No active milestone identified to submit proof for.');
+      showError('Milestone Error', 'No active milestone identified to submit proof for.');
       return;
     }
 
     if (!afterPhotoUri) {
-      Alert.alert('Photo Required', 'Please snap or select an after-completion photo showing the finished work.');
+      showWarning('Photo Required', 'Please snap or select an after-completion photo showing the finished work.');
       return;
     }
 
     if (!description.trim() || description.trim().length < 10) {
-      Alert.alert('Description Required', 'Please provide at least 10 characters describing the completed work and parts installed.');
+      showWarning('Description Required', 'Please provide at least 10 characters describing the completed work and parts installed.');
       return;
     }
 
@@ -197,14 +200,16 @@ export const SubmitProofScreen: React.FC<SubmitProofScreenProps> = ({
       await queryClient.invalidateQueries({ queryKey: ['my-contracts'] });
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        'Proof Submitted',
-        'Your work completion proof has been transmitted to the client for verification and escrow release.',
-        [{ text: 'OK', onPress: onSubmitSuccess }]
+      showSuccess(
+        'Proof Submitted!',
+        'Your work completion proof has been transmitted to the client for verification and escrow release.'
       );
+      if (onSubmitSuccess) {
+        setTimeout(onSubmitSuccess, 1000);
+      }
     } catch (err: any) {
       const errMsg = err?.response?.data?.message || err?.message || 'Could not submit proof. Please check your connection.';
-      Alert.alert('Submission Error', errMsg);
+      showError('Submission Error', errMsg);
     } finally {
       setIsSubmitting(false);
     }

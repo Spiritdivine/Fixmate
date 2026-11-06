@@ -25,6 +25,14 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  VolumeX,
+  Copy,
+  Check,
+  Share2,
+  ThumbsUp,
+  ThumbsDown,
+  Brain,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../../lib/api-client';
@@ -192,7 +200,14 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
   const [sosDispatched, setSosDispatched] = useState(false);
   const [submittingClarification, setSubmittingClarification] = useState(false);
   const [expandedBoms, setExpandedBoms] = useState<Record<string, boolean>>({});
-  const [showAuthModal, setShowAuthModal] = useState<{ open: boolean; artisanId?: string }>({
+  const user = useAuthStore((state) => state.user);
+  const [guestQueriesRemaining, setGuestQueriesRemaining] = useState<number | null>(null);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [messageRatings, setMessageRatings] = useState<Record<string, 'up' | 'down'>>({});
+  const [expandedReasoning, setExpandedReasoning] = useState<Record<string, boolean>>({});
+  const [shareToast, setShareToast] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState<{ open: boolean; artisanId?: string; reason?: 'booking' | 'query_limit' }>({
     open: false,
   });
 
@@ -250,12 +265,96 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
     setAttachedPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Reset trigger state on modal close
+  // Reset trigger state on modal close & cancel ongoing speech
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!isOpen) {
       initializedPromptRef.current = null;
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        setSpeakingMsgId(null);
+      }
     }
   }, [isOpen]);
+
+  const handleCopyResponse = (msgId: string, text: string) => {
+    const cleanText = text.replace(/[*_#`[\]]/g, '').trim();
+    navigator.clipboard.writeText(cleanText);
+    setCopiedMsgId(msgId);
+    setTimeout(() => {
+      setCopiedMsgId((prev) => (prev === msgId ? null : prev));
+    }, 2000);
+  };
+
+  const handleReadAloud = (msgId: string, text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      alert('Speech synthesis is not supported on this browser.');
+      return;
+    }
+
+    if (speakingMsgId === msgId) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*_#`[\]()]/g, '').replace(/https?:\/\/\S+/g, '').trim();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
+    utterance.onend = () => setSpeakingMsgId(null);
+    utterance.onerror = () => setSpeakingMsgId(null);
+    setSpeakingMsgId(msgId);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleShareResponse = async (text: string) => {
+    const cleanText = text.replace(/[*_#`]/g, '').trim();
+    const shareContent = `Artifix Oga John Diagnosis:\n\n${cleanText}\n\nVerified on https://artifixhq.xyz`;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Artifix Fault Diagnosis',
+          text: shareContent,
+        });
+      } catch {
+        // User cancelled share
+      }
+    } else {
+      navigator.clipboard.writeText(shareContent);
+      setShareToast(true);
+      setTimeout(() => setShareToast(false), 2500);
+    }
+  };
+
+  const handleRateResponse = (msgId: string, rating: 'up' | 'down') => {
+    setMessageRatings((prev) => ({
+      ...prev,
+      [msgId]: prev[msgId] === rating ? (null as any) : rating,
+    }));
+  };
+
+  const toggleReasoning = (msgId: string) => {
+    setExpandedReasoning((prev) => ({
+      ...prev,
+      [msgId]: !prev[msgId],
+    }));
+  };
+
+  const handleRegenerateLastTurn = () => {
+    const lastUserTurn = [...messages].reverse().find((m) => m.sender === 'user');
+    if (lastUserTurn?.text) {
+      handleSendMessage(undefined, lastUserTurn.text);
+    }
+  };
 
   // Automated Location Detection on Modal Open
   useEffect(() => {
@@ -436,6 +535,10 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
       setSessionId(sid);
       setGuestAccessToken((diagnosticData as DiagnosticResponse & { guestAccessToken?: string }).guestAccessToken || null);
 
+      if ((diagnosticData as any).guestQuota) {
+        setGuestQueriesRemaining((diagnosticData as any).guestQuota.remaining);
+      }
+
       // Fetch escrow milestone breakdown
       let fetchedEscrowPlan: EscrowPlan | undefined = undefined;
       try {
@@ -472,7 +575,11 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
           })
       );
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
+      const error = err as { response?: { status?: number; data?: { message?: string; errorCode?: string } } };
+      if (error?.response?.data?.errorCode === 'GUEST_QUERY_LIMIT_REACHED' || error?.response?.status === 403) {
+        setShowAuthModal({ open: true, reason: 'query_limit' });
+        setGuestQueriesRemaining(0);
+      }
       const errText =
         error?.response?.data?.message ||
         'Sorry, I encountered an issue analyzing this fault. Please try again or provide more details.';
@@ -492,10 +599,15 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
   };
 
   // User sends follow-up conversational message
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent, overridePrompt?: string) => {
     if (e) e.preventDefault();
-    const query = inputVal.trim();
+    const query = (overridePrompt !== undefined ? overridePrompt : inputVal).trim();
     if ((!query && attachedPhotos.length === 0 && !attachedVoice) || isSending) return;
+
+    if (!user && guestQueriesRemaining === 0) {
+      setShowAuthModal({ open: true, reason: 'query_limit' });
+      return;
+    }
 
     const currentPhotos = [...attachedPhotos];
     const currentVoice = attachedVoice;
@@ -573,6 +685,9 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
         }
 
         const result = res.data.data;
+        if ((result as any).guestQuota) {
+          setGuestQueriesRemaining((result as any).guestQuota.remaining);
+        }
         const hasArtisans = result.matchedArtisans && result.matchedArtisans.length > 0;
 
         setMessages((prev) =>
@@ -592,7 +707,11 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
         await startInitialDiagnosis(query, { photos: currentPhotos, voice: currentVoice });
       }
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
+      const error = err as { response?: { status?: number; data?: { message?: string; errorCode?: string } } };
+      if (error?.response?.data?.errorCode === 'GUEST_QUERY_LIMIT_REACHED' || error?.response?.status === 403) {
+        setShowAuthModal({ open: true, reason: 'query_limit' });
+        setGuestQueriesRemaining(0);
+      }
       setMessages((prev) =>
         prev
           .filter((m) => m.id !== thinkingMsgId)
@@ -956,6 +1075,13 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {!user && guestQueriesRemaining !== null && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-[11px] font-semibold text-emerald-900 shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{guestQueriesRemaining} of 5 free left</span>
+              </div>
+            )}
+
             {messages.length > 0 && (
               <button
                 type="button"
@@ -1325,6 +1451,18 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
                   </div>
                 )}
 
+                {/* Collapsible Reasoning Block */}
+                {expandedReasoning[msg.id] && msg.diagnostic?.session?.probableCause && (
+                  <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl text-xs text-stone-700 space-y-1 animate-in fade-in duration-150">
+                    <span className="font-bold text-[11px] text-stone-900 uppercase tracking-wider block">
+                      Diagnostic Rationale & Analysis:
+                    </span>
+                    <p className="leading-relaxed text-stone-600">
+                      {msg.diagnostic.session.probableCause}
+                    </p>
+                  </div>
+                )}
+
                 {/* Subtle Prompt to Match Specialist if Desired (Only when an issue was diagnosed) */}
                 {msg.diyRecommended && (!msg.matchedArtisans || msg.matchedArtisans.length === 0) && msg.diagnostic?.category && (
                   <div className="pt-2.5 border-t border-stone-200/60 flex flex-col xs:flex-row xs:items-center justify-between gap-2 text-xs text-stone-500">
@@ -1442,6 +1580,115 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* ChatGPT-style Action Toolbar for Assistant Messages (Rendered at the bottom of message) */}
+                {msg.sender === 'assistant' && msg.text && !msg.isThinking && (
+                  <div className="pt-2 flex items-center gap-1 sm:gap-1.5 text-stone-400 select-none border-t border-stone-100 mt-2">
+                    {/* 1. Copy Response */}
+                    <button
+                      type="button"
+                      onClick={() => handleCopyResponse(msg.id, msg.text || '')}
+                      className="p-1.5 rounded-lg hover:bg-stone-100 hover:text-stone-700 transition cursor-pointer"
+                      title={copiedMsgId === msg.id ? "Copied!" : "Copy response"}
+                      aria-label="Copy response"
+                    >
+                      {copiedMsgId === msg.id ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+
+                    {/* 2. Reasoning / Diagnostic Thought Process */}
+                    {msg.diagnostic?.session?.probableCause && (
+                      <button
+                        type="button"
+                        onClick={() => toggleReasoning(msg.id)}
+                        className={`p-1.5 rounded-lg transition cursor-pointer ${
+                          expandedReasoning[msg.id]
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'hover:bg-stone-100 hover:text-stone-700'
+                        }`}
+                        title="View reasoning summary"
+                        aria-label="View reasoning summary"
+                      >
+                        <Brain className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {/* 3. Rate Response: Thumbs Up / Down */}
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => handleRateResponse(msg.id, 'up')}
+                        className={`p-1.5 rounded-lg transition cursor-pointer ${
+                          messageRatings[msg.id] === 'up'
+                            ? 'text-emerald-700 bg-emerald-50'
+                            : 'hover:bg-stone-100 hover:text-stone-700'
+                        }`}
+                        title="Helpful response"
+                        aria-label="Rate response as helpful"
+                      >
+                        <ThumbsUp className={`w-3.5 h-3.5 ${messageRatings[msg.id] === 'up' ? 'fill-current' : ''}`} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRateResponse(msg.id, 'down')}
+                        className={`p-1.5 rounded-lg transition cursor-pointer ${
+                          messageRatings[msg.id] === 'down'
+                            ? 'text-amber-700 bg-amber-50'
+                            : 'hover:bg-stone-100 hover:text-stone-700'
+                        }`}
+                        title="Not helpful response"
+                        aria-label="Rate response as unhelpful"
+                      >
+                        <ThumbsDown className={`w-3.5 h-3.5 ${messageRatings[msg.id] === 'down' ? 'fill-current' : ''}`} />
+                      </button>
+                    </div>
+
+                    {/* 4. Share */}
+                    <button
+                      type="button"
+                      onClick={() => handleShareResponse(msg.text || '')}
+                      className="p-1.5 rounded-lg hover:bg-stone-100 hover:text-stone-700 transition cursor-pointer"
+                      title="Share diagnosis"
+                      aria-label="Share response"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* 5. Read Aloud (Text to Speech) */}
+                    <button
+                      type="button"
+                      onClick={() => handleReadAloud(msg.id, msg.text || '')}
+                      className={`p-1.5 rounded-lg transition cursor-pointer ${
+                        speakingMsgId === msg.id
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'hover:bg-stone-100 hover:text-stone-700'
+                      }`}
+                      title={speakingMsgId === msg.id ? "Stop reading" : "Read aloud"}
+                      aria-label="Read response aloud"
+                    >
+                      {speakingMsgId === msg.id ? (
+                        <VolumeX className="w-3.5 h-3.5 text-emerald-700 animate-pulse" />
+                      ) : (
+                        <Volume2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+
+                    {/* 6. Try Again / Regenerate */}
+                    <button
+                      type="button"
+                      onClick={() => handleRegenerateLastTurn()}
+                      disabled={isSending}
+                      className="p-1.5 rounded-lg hover:bg-stone-100 hover:text-stone-700 disabled:opacity-40 transition cursor-pointer"
+                      title="Try again"
+                      aria-label="Regenerate response"
+                    >
+                      <RotateCcw className={`w-3.5 h-3.5 ${isSending ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* User Avatar */}
@@ -1556,9 +1803,13 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
                   type="text"
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
-                  placeholder="Ask follow-up, describe symptoms, or type 'match me'..."
-                  disabled={isSending}
-                  className="w-full bg-transparent px-2.5 py-1.5 text-xs sm:text-sm text-[#141A16] placeholder-[#8A9A90] focus:outline-none"
+                  placeholder={
+                    !user && guestQueriesRemaining === 0
+                      ? 'Free guest query limit reached (5/5). Please sign in to continue.'
+                      : "Ask follow-up, describe symptoms, or type 'match me'..."
+                  }
+                  disabled={isSending || (!user && guestQueriesRemaining === 0)}
+                  className="w-full bg-transparent px-2.5 py-1.5 text-xs sm:text-sm text-[#141A16] placeholder-[#8A9A90] focus:outline-none disabled:opacity-60"
                 />
 
                 {/* Microphone Button */}
@@ -1591,7 +1842,7 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
           </div>
         </div>
 
-        {/* Soft-Auth Modal Overlay */}
+        {/* Soft-Auth / Guest Limit Modal Overlay */}
         {showAuthModal.open && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
             <div className="w-full max-w-sm sm:max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-stone-200 space-y-4">
@@ -1600,10 +1851,14 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
               </div>
               <div className="text-center space-y-1">
                 <h3 className="font-bold text-base sm:text-lg text-stone-900">
-                  Sign In to Book This Artisan
+                  {showAuthModal.reason === 'query_limit'
+                    ? 'Guest Query Limit Reached (5/5)'
+                    : 'Sign In to Book This Artisan'}
                 </h3>
                 <p className="text-xs text-stone-600 leading-relaxed">
-                  Create an account or sign in to confirm your booking and lock funds safely in Artifix Escrow.
+                  {showAuthModal.reason === 'query_limit'
+                    ? "You've used all 5 free diagnostic queries for this guest session. Create a free account or sign in to keep chatting with Oga John, unlock specialist matches, and preserve your fault diagnosis."
+                    : 'Create an account or sign in to confirm your booking and lock funds safely in Artifix Escrow.'}
                 </p>
               </div>
 
@@ -1625,10 +1880,17 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({
                   onClick={() => setShowAuthModal({ open: false })}
                   className="w-full py-2 text-stone-500 hover:text-stone-800 text-xs font-medium transition cursor-pointer text-center"
                 >
-                  Continue Chatting
+                  {showAuthModal.reason === 'query_limit' ? 'Close' : 'Continue Chatting'}
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Share Toast */}
+        {shareToast && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-60 bg-stone-900 text-white text-xs px-4 py-2 rounded-xl shadow-lg animate-in fade-in">
+            ✓ Diagnostic advice copied to clipboard for sharing!
           </div>
         )}
 

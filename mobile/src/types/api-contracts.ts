@@ -24,6 +24,7 @@ export interface UserSession {
   email: string;
   role: UserRole;
   phone?: string;
+  phoneNumber?: string;
   isKycVerified: boolean;
   avatarUrl?: string;
   clientProfile?: ClientProfileData | null;
@@ -77,43 +78,64 @@ export interface PortfolioItem {
 
 export type JobStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type BudgetType = 'FIXED' | 'HOURLY';
-export type JobUrgency = 'LOW' | 'MEDIUM' | 'HIGH' | 'EMERGENCY';
+export type JobUrgency = 'NORMAL' | 'URGENT' | 'EMERGENCY' | 'LOW' | 'MEDIUM' | 'HIGH';
 
 export interface JobAttachment {
   id: string;
-  url: string;
-  fileType: string;
+  jobId?: string;
+  url?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileSizeBytes?: number;
+  mimeType?: string;
+  fileType?: string;
+  createdAt?: string;
 }
 
 export interface JobRecord {
   id: string;
   clientId: string;
+  categoryId?: number;
+  category?: { id: number; name: string; slug?: string; iconUrl?: string };
   title: string;
   description: string;
   trade: string;
   location: string;
+  state?: string;
+  lgaCity?: string;
+  address?: string;
   latitude?: number;
   longitude?: number;
   budget: number;
+  budgetMin?: number;
+  budgetMax?: number;
   budgetType: BudgetType;
   urgency: JobUrgency;
+  expectedOutcome?: string;
+  materialsProvidedBy?: string;
+  completionProofReq?: string;
+  deadlineDate?: string;
   status: JobStatus;
   proposalsCount?: number;
   attachments?: JobAttachment[];
   client?: {
     id: string;
     email: string;
+    avatarUrl?: string;
     clientProfile?: ClientProfileData;
   };
   createdAt: string;
   updatedAt: string;
 }
 
-export type ProposalStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
+export type ProposalStatus = 'PENDING' | 'SHORTLISTED' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
 
 export interface MilestoneProposal {
+  id?: string;
+  stepOrder?: number;
   title: string;
   amount: number;
+  estimatedDays?: number;
   durationDays?: number;
   dueDate?: string;
 }
@@ -123,7 +145,9 @@ export interface ProposalRecord {
   jobId: string;
   artisanId: string;
   amount: number;
+  bidAmount?: number;
   durationDays: number;
+  estimatedDays?: number;
   coverLetter: string;
   status: ProposalStatus;
   milestones?: MilestoneProposal[];
@@ -135,20 +159,42 @@ export interface ProposalRecord {
   };
   job?: JobRecord;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface JobInvitationRecord {
+  id: string;
+  jobId: string;
+  artisanId: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  createdAt: string;
+  job?: JobRecord;
+  artisan?: {
+    id: string;
+    email: string;
+    avatarUrl?: string;
+    artisanProfile?: ArtisanProfileData;
+  };
 }
 
 export type ContractStatus = 'ACTIVE' | 'COMPLETED' | 'DISPUTED' | 'CANCELLED';
-export type MilestoneStatus = 'PENDING' | 'FUNDED' | 'IN_PROGRESS' | 'SUBMITTED' | 'IN_REVIEW' | 'REVISION_REQUESTED' | 'RELEASED';
+export type MilestoneStatus = 'PENDING' | 'FUNDED' | 'IN_PROGRESS' | 'SUBMITTED' | 'IN_REVIEW' | 'REVISION_REQUESTED' | 'RELEASED' | 'DISPUTED';
 
 export interface MilestoneRecord {
   id: string;
   contractId: string;
+  stepOrder?: number;
   title: string;
+  description?: string;
   amount: number;
+  estimatedDays?: number;
   status: MilestoneStatus;
   dueDate?: string;
   workNotes?: string;
   revisionNotes?: string;
+  proofPhotos?: string[];
+  submittedAt?: string;
+  releasedAt?: string;
   proofAttachments?: Array<{
     url: string;
     fileType: string;
@@ -158,6 +204,7 @@ export interface MilestoneRecord {
 
 export interface ContractRecord {
   id: string;
+  contractCode?: string;
   jobId: string;
   clientId: string;
   artisanId: string;
@@ -166,16 +213,28 @@ export interface ContractRecord {
   status: ContractStatus;
   milestones: MilestoneRecord[];
   disputeId?: string;
+  job?: JobRecord;
   client?: {
     id: string;
     email: string;
+    avatarUrl?: string;
     clientProfile?: ClientProfileData;
   };
   artisan?: {
     id: string;
     email: string;
+    avatarUrl?: string;
+    phoneNumber?: string;
     artisanProfile?: ArtisanProfileData;
+    clientProfile?: ClientProfileData;
   };
+  startedAt?: string;
+  completedAt?: string;
+  smartContractAddr?: string;
+  onChainEscrowId?: string;
+  fundingTxHash?: string;
+  escrowFundedAmount?: number;
+  escrowReleasedAmount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -211,13 +270,22 @@ export interface BankAccountRecord {
   isDefault: boolean;
 }
 
+export interface MessageMetadata {
+  duration?: number;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+}
+
 export interface MessageRecord {
   id: string;
   conversationId: string;
   senderId: string;
-  messageType: 'TEXT' | 'IMAGE' | 'FILE' | 'LOCATION' | 'AUDIO';
-  body: string;
+  messageType: 'TEXT' | 'IMAGE' | 'DOCUMENT' | 'AUDIO' | 'LOCATION' | 'SYSTEM_ALERT' | 'MILESTONE_PROMPT';
+  body?: string;
   attachmentUrl?: string;
+  metadata?: MessageMetadata;
+  isRead?: boolean;
   sender?: {
     id: string;
     email: string;
@@ -229,8 +297,14 @@ export interface MessageRecord {
 export interface ConversationRecord {
   id: string;
   title?: string;
+  jobId?: string;
+  contractId?: string;
+  job?: { id: string; title: string };
+  contract?: { id: string; contractCode: string; status: string };
   participants: Array<{
     userId: string;
+    lastReadAt?: string;
+    isMuted?: boolean;
     user: {
       id: string;
       email: string;
@@ -239,6 +313,7 @@ export interface ConversationRecord {
       artisanProfile?: ArtisanProfileData;
     };
   }>;
+  messages?: MessageRecord[];
   lastMessage?: MessageRecord;
   lastMessageAt?: string;
   unreadCount?: number;

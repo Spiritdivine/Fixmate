@@ -69,7 +69,7 @@ async function runPhase2Tests() {
       if (!testUser) {
         testUser = await prisma.user.create({
           data: {
-            email: `test_client_${Date.now()}@fixmate.test`,
+            email: `test_client_${Date.now()}@artifixhq.xyz`,
             passwordHash: 'hashed_password_placeholder',
             role: 'CLIENT',
             status: 'ACTIVE',

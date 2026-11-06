@@ -456,7 +456,11 @@ export class KotaniService {
         .update(bodyToHash)
         .digest('hex');
 
-      if (hash !== signature && env.NODE_ENV === 'production') {
+      const hashBuf = Buffer.from(hash, 'utf8');
+      const sigBuf = Buffer.from(signature, 'utf8');
+      const isValid = hashBuf.length === sigBuf.length && crypto.timingSafeEqual(hashBuf, sigBuf);
+
+      if (!isValid && env.NODE_ENV === 'production') {
         throw ApiError.forbidden('Invalid Kotani Pay webhook signature');
       }
     }
@@ -464,14 +468,14 @@ export class KotaniService {
     const { event, data } = payload;
     const eventId = data?.id?.toString() || data?.reference || `KOT_EVT_${Date.now()}`;
 
-    // 1. Replay Window Protection (Reject events older than 5 minutes)
+    // 1. Replay Window Protection (Permit legitimate provider retries up to 24 hours while preventing ancient replay attacks)
     const timestamp = payload?.timestamp || data?.timestamp || data?.created_at || payload?.createdAt;
     if (timestamp) {
       const eventTime = new Date(timestamp).getTime();
       if (!isNaN(eventTime)) {
         const ageInSeconds = Math.abs(Date.now() - eventTime) / 1000;
-        if (ageInSeconds > 300 && env.NODE_ENV === 'production') {
-          throw ApiError.badRequest('Webhook event expired (replay window exceeded: > 5 minutes)');
+        if (ageInSeconds > 86400 && env.NODE_ENV === 'production') {
+          throw ApiError.badRequest('Webhook event expired (replay window exceeded: > 24 hours)');
         }
       }
     }

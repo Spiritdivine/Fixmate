@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { colors, radius, spacing, typography, shadows } from '../../theme';
 import { NotificationService } from '../../services/notification.service';
 import { queryClient } from '../../lib/query-client';
+import { useArtisanNotifications } from '../../hooks';
 
 interface NotificationItem {
   id: string;
@@ -57,13 +58,10 @@ export const ArtisanNotificationsScreen: React.FC<ArtisanNotificationsScreenProp
       })
     : [];
 
-  const markAllRead = async () => {
-    try {
-      await NotificationService.markAllAsRead();
-      await queryClient.invalidateQueries({ queryKey: ['artisan-notifications'] });
-    } catch {
-      // Graceful fallback
-    }
+  const { markAsRead, markAllAsRead } = useArtisanNotifications();
+
+  const markAllRead = () => {
+    markAllAsRead();
   };
 
   const filteredItems = items.filter((n) => {
@@ -144,7 +142,10 @@ export const ArtisanNotificationsScreen: React.FC<ArtisanNotificationsScreenProp
           renderItem={({ item }) => (
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => onOpenNotification?.(item.id, item.type, item.targetId)}
+              onPress={() => {
+                if (!item.isRead) markAsRead(item.id);
+                onOpenNotification?.(item.id, item.type, item.targetId);
+              }}
               style={[styles.notifCard, !item.isRead && styles.notifUnread]}
             >
               <View style={styles.topRow}>

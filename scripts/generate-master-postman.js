@@ -99,7 +99,7 @@ const collection = {
             body: {
               mode: "raw",
               raw: JSON.stringify({
-                email: "admin@artisanplatform.com",
+                email: "admin@artifixhq.xyz",
                 password: "Admin@123456"
               }, null, 2)
             },
@@ -651,9 +651,9 @@ const collection = {
               raw: JSON.stringify({
                 documentType: "DRIVERS_LICENSE",
                 documentNumber: "DL-98234710",
-                documentFrontUrl: "https://storage.artisan.ng/kyc/doc_front.jpg",
-                documentBackUrl: "https://storage.artisan.ng/kyc/doc_back.jpg",
-                selfieUrl: "https://storage.artisan.ng/kyc/selfie.jpg"
+                documentFrontUrl: "https://storage.artifixhq.xyz/kyc/doc_front.jpg",
+                documentBackUrl: "https://storage.artifixhq.xyz/kyc/doc_back.jpg",
+                selfieUrl: "https://storage.artifixhq.xyz/selfie.jpg"
               }, null, 2)
             },
             url: "{{baseUrl}}/profiles/kyc"
@@ -1392,7 +1392,7 @@ const collection = {
               mode: "raw",
               raw: JSON.stringify({
                 title: "Calibration Spec Sheet",
-                fileUrl: "https://storage.artisan.ng/evidence/spec_sheet.pdf",
+                fileUrl: "https://storage.artifixhq.xyz/evidence/spec_sheet.pdf",
                 mimeType: "application/pdf"
               }, null, 2)
             },

@@ -102,7 +102,7 @@ export const WelcomeSplashScreen: React.FC<WelcomeSplashScreenProps> = ({
         </TouchableOpacity>
 
         <Text style={styles.termsNotice}>
-          By continuing, you agree to Fixmate's Terms of Service & Escrow Safeguard Rules.
+          By continuing, you agree to Artifix's Terms of Service & Escrow Safeguard Rules.
         </Text>
       </View>
     </SafeAreaView>
@@ -112,7 +112,7 @@ export const WelcomeSplashScreen: React.FC<WelcomeSplashScreenProps> = ({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#0F2E20', // Fixmate Dark Forest Brand Green
+    backgroundColor: '#0F2E20', // Artifix Dark Forest Brand Green
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
   },

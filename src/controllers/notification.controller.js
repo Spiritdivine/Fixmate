@@ -79,6 +79,35 @@ export class NotificationController {
       next(error);
     }
   }
+
+  static async registerMobileToken(req, res, next) {
+    try {
+      const { pushToken, token, platform, deviceId, deviceName } = req.body;
+      const actualToken = pushToken || token;
+      const { ExpoPushService } = await import('../services/expo-push.service.js');
+      const record = await ExpoPushService.registerToken(req.user.id, {
+        token: actualToken,
+        platform,
+        deviceId,
+        deviceName,
+      });
+      res.status(200).json(new ApiResponse(200, record, 'Mobile push token registered successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async unregisterMobileToken(req, res, next) {
+    try {
+      const { pushToken, token } = req.body;
+      const actualToken = pushToken || token;
+      const { ExpoPushService } = await import('../services/expo-push.service.js');
+      await ExpoPushService.unregisterToken(req.user.id, actualToken);
+      res.status(200).json(new ApiResponse(200, null, 'Mobile push token unregistered successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default NotificationController;

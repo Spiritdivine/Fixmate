@@ -53,6 +53,26 @@ export const typography = {
     '2xl': 28,
     '3xl': 32,
   },
+  sizes: {
+    xs: 11,
+    sm: 13,
+    base: 15,
+    md: 17,
+    lg: 20,
+    xl: 24,
+    '2xl': 28,
+    '3xl': 32,
+  },
+
+  // Font family mappings
+  fonts: {
+    regular: undefined as unknown as string,
+    medium: undefined as unknown as string,
+    semiBold: undefined as unknown as string,
+    semibold: undefined as unknown as string,
+    bold: undefined as unknown as string,
+    extraBold: undefined as unknown as string,
+  },
 
   // Line heights
   lineHeight: {
@@ -69,7 +89,7 @@ export const typography = {
     bold: '700' as const,
     extrabold: '800' as const,
   },
-} as const;
+};
 
 export const textStyles = {
   h1: typography.h1,

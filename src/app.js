@@ -13,6 +13,9 @@ import { standardApiLimiter } from './config/rate-limiter.js';
 
 const app = express();
 
+// Trust reverse proxy headers (Render, Cloudflare, AWS ALB) for accurate client IP resolution
+app.set('trust proxy', 1);
+
 // Enable ETag generation for HTTP 304 conditional cache negotiation
 app.set('etag', 'weak');
 

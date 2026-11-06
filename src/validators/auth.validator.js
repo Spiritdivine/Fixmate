@@ -16,6 +16,7 @@ export const registerSchema = z.object({
       .regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid EVM wallet address format')
       .optional(),
     privyAuthToken: z.string().optional(),
+    referralCode: z.string().optional(),
   }),
 });
 
@@ -107,3 +108,37 @@ export const updateAvatarSchema = z.object({
     avatarUrl: z.string().url('Avatar must be a valid URL'),
   }),
 });
+
+export const socialLoginSchema = z.object({
+  body: z.object({
+    provider: z.enum(['GOOGLE', 'APPLE']),
+    idToken: z.string().min(10, 'Valid identity token is required'),
+    role: z.enum(['CLIENT', 'ARTISAN']).optional(),
+  }),
+});
+
+export const switchRoleSchema = z.object({
+  body: z.object({
+    role: z.enum(['CLIENT', 'ARTISAN']),
+  }),
+});
+
+export const setPinSchema = z.object({
+  body: z.object({
+    pin: z.string().regex(/^\d{4}$/, 'Security PIN must be exactly 4 digits'),
+  }),
+});
+
+export const changePinSchema = z.object({
+  body: z.object({
+    currentPin: z.string().optional(),
+    newPin: z.string().regex(/^\d{4}$/, 'New security PIN must be exactly 4 digits'),
+  }),
+});
+
+export const verifyPinSchema = z.object({
+  body: z.object({
+    pin: z.string().regex(/^\d{4}$/, 'Security PIN must be exactly 4 digits'),
+  }),
+});
+

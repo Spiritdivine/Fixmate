@@ -36,7 +36,7 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const inputRefs = useRef<Array<TextInput | null>>([]);
+  const inputRefs = useRef<Array<React.ComponentRef<typeof TextInput> | null>>([]);
   const verifyOtpStore = useAuthStore((s) => s.verifyOtp);
 
   useEffect(() => {
@@ -76,10 +76,11 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({
 
     try {
       const otpCode = otp.join('');
+      const otpPurpose = identifier.includes('@') ? 'EMAIL_VERIFICATION' : 'PHONE_VERIFICATION';
       await verifyOtpStore({
         identifier: identifier.trim(),
         otp: otpCode,
-        purpose: 'PHONE_VERIFICATION',
+        purpose: otpPurpose,
       });
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -106,7 +107,8 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({
     setIsResending(true);
 
     try {
-      await AuthService.resendOtp(identifier.trim(), 'PHONE_VERIFICATION');
+      const otpPurpose = identifier.includes('@') ? 'EMAIL_VERIFICATION' : 'PHONE_VERIFICATION';
+      await AuthService.resendOtp(identifier.trim(), otpPurpose);
       setSuccessMessage('A fresh 6-digit verification code has been dispatched.');
       setSecondsLeft(60);
       setOtp(['', '', '', '', '', '']);

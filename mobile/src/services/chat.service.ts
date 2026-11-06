@@ -1,10 +1,11 @@
 import { apiClient } from '../lib/api-client';
-import { ApiResponse, ConversationRecord, MessageRecord } from '../types/api-contracts';
+import { ApiResponse, ConversationRecord, MessageRecord, MessageMetadata } from '../types/api-contracts';
 
 export interface SendMessagePayload {
-  body: string;
-  messageType?: 'TEXT' | 'IMAGE' | 'FILE' | 'LOCATION' | 'AUDIO';
+  body?: string;
+  messageType?: 'TEXT' | 'IMAGE' | 'DOCUMENT' | 'AUDIO' | 'LOCATION' | 'SYSTEM_ALERT' | 'MILESTONE_PROMPT';
   attachmentUrl?: string;
+  metadata?: MessageMetadata;
 }
 
 /**
@@ -33,18 +34,39 @@ export class ChatService {
     return response.data.data;
   }
 
+  static async markAsRead(conversationId: string): Promise<void> {
+    await apiClient.patch(`/chat/conversations/${conversationId}/read`);
+  }
+
   static async toggleMute(conversationId: string): Promise<void> {
     await apiClient.patch(`/chat/conversations/${conversationId}/mute`);
   }
 
-  static async getOrCreateArtisanConversation(artisanId: string): Promise<ConversationRecord> {
+  static async getOrCreateArtisanConversation(
+    artisanId: string,
+    contextJobId?: string
+  ): Promise<ConversationRecord> {
     const response = await apiClient.post<ApiResponse<ConversationRecord>>(
-      `/chat/conversations/artisan/${artisanId}`
+      `/chat/conversations/artisan/${artisanId}`,
+      { contextJobId }
     );
     return response.data.data;
+  }
+
+  static async editMessage(messageId: string, body: string): Promise<MessageRecord> {
+    const response = await apiClient.patch<ApiResponse<MessageRecord>>(
+      `/chat/messages/${messageId}`,
+      { body }
+    );
+    return response.data.data;
+  }
+
+  static async deleteMessage(messageId: string): Promise<void> {
+    await apiClient.delete(`/chat/messages/${messageId}`);
   }
 
   static async leaveConversation(conversationId: string): Promise<void> {
     await apiClient.delete(`/chat/conversations/${conversationId}`);
   }
 }
+

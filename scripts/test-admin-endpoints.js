@@ -20,13 +20,23 @@ async function runAdminTests() {
   console.log('🛡️ Starting Complete Admin Dashboard API Test Runner...\n');
 
   // 1. Login as Admin
-  const loginRes = await request('/auth/login', {
+  let loginRes = await request('/auth/login', {
     method: 'POST',
     body: {
-      email: 'admin@artisanplatform.com',
+      email: 'admin@artifixhq.xyz',
       password: 'Admin@123456',
     },
-  });
+  }).catch(() => null);
+
+  if (!loginRes?.data?.tokens?.accessToken) {
+    loginRes = await request('/auth/login', {
+      method: 'POST',
+      body: {
+        email: 'admin@artisanplatform.com',
+        password: 'Admin@123456',
+      },
+    });
+  }
   const adminToken = loginRes.data.tokens.accessToken;
   const authHeaders = { Authorization: `Bearer ${adminToken}` };
   console.log('✅ [1] PASS: Admin Authentication & Token Generation');

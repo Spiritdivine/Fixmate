@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/api-client';
-import { ApiResponse, JobRecord, BudgetType, JobUrgency } from '../types/api-contracts';
+import { ApiResponse, JobRecord, BudgetType, JobUrgency, JobInvitationRecord } from '../types/api-contracts';
 
 export interface CreateJobPayload {
   title: string;
@@ -17,12 +17,20 @@ export interface CreateJobPayload {
   budgetMax?: number;
   budgetType?: BudgetType;
   urgency?: JobUrgency;
+  expectedOutcome?: string;
+  materialsProvidedBy?: string;
+  completionProofReq?: string;
+  deadlineDate?: string;
   attachments?: Array<{ fileUrl: string; fileName: string; fileSizeBytes: number; mimeType: string }>;
 }
 
 export interface JobListQuery {
+  categoryId?: number;
   trade?: string;
   status?: string;
+  search?: string;
+  minBudget?: number;
+  maxBudget?: number;
   lat?: number;
   lng?: number;
   radiusKm?: number;
@@ -42,15 +50,23 @@ export class JobService {
   }
 
   static async listJobs(query: JobListQuery = {}): Promise<JobRecord[]> {
-    const response = await apiClient.get<ApiResponse<JobRecord[]>>('/jobs', { params: query });
-    return response.data.data;
+    const response = await apiClient.get<ApiResponse<JobRecord[] | { jobs: JobRecord[] }>>('/jobs', { params: query });
+    const data = response.data.data;
+    if (data && Array.isArray((data as any).jobs)) {
+      return (data as any).jobs;
+    }
+    return Array.isArray(data) ? data : [];
   }
 
   static async getMyJobs(status?: string): Promise<JobRecord[]> {
-    const response = await apiClient.get<ApiResponse<JobRecord[]>>('/jobs/my-jobs', {
+    const response = await apiClient.get<ApiResponse<JobRecord[] | { jobs: JobRecord[] }>>('/jobs/my-jobs', {
       params: status ? { status } : undefined,
     });
-    return response.data.data;
+    const data = response.data.data;
+    if (data && Array.isArray((data as any).jobs)) {
+      return (data as any).jobs;
+    }
+    return Array.isArray(data) ? data : [];
   }
 
   static async getById(id: string): Promise<JobRecord> {
@@ -82,18 +98,22 @@ export class JobService {
       categoryId = 2;
     }
 
-    // Parse state and lgaCity from location string if not explicitly given
+    // Parse state and lgaCity accurately from location string (handling multi-segment Nigerian addresses)
     let state = payload.state;
     let lgaCity = payload.lgaCity;
     if (!state || !lgaCity) {
       const loc = (payload.location || 'Lagos').trim();
-      const parts = loc.split(',').map((p) => p.trim());
-      if (parts.length >= 2) {
+      const parts = loc.split(',').map((p) => p.trim()).filter(Boolean);
+      if (parts.length === 1) {
+        lgaCity = lgaCity || parts[0];
+        state = state || 'Lagos';
+      } else if (parts.length === 2) {
         lgaCity = lgaCity || parts[0];
         state = state || parts[1];
-      } else {
-        lgaCity = lgaCity || loc || 'Lekki';
-        state = state || 'Lagos';
+      } else if (parts.length >= 3) {
+        // e.g. "14 Admiralty Way, Lekki Phase 1, Lagos" -> state is last, LGA/City is second-to-last
+        state = state || parts[parts.length - 1];
+        lgaCity = lgaCity || parts[parts.length - 2];
       }
     }
 
@@ -107,13 +127,18 @@ export class JobService {
       budgetType: payload.budgetType || 'FIXED',
       budgetMin,
       budgetMax,
-      state,
-      lgaCity,
+      state: state || 'Lagos',
+      lgaCity: lgaCity || 'Lagos',
       address: payload.address || payload.location,
     };
 
     if (payload.latitude != null) body.latitude = payload.latitude;
     if (payload.longitude != null) body.longitude = payload.longitude;
+    if (payload.expectedOutcome) body.expectedOutcome = payload.expectedOutcome;
+    if (payload.materialsProvidedBy) body.materialsProvidedBy = payload.materialsProvidedBy;
+    if (payload.completionProofReq) body.completionProofReq = payload.completionProofReq;
+    if (payload.urgency) body.urgency = payload.urgency;
+    if (payload.deadlineDate) body.deadlineDate = payload.deadlineDate;
     if (payload.attachments && payload.attachments.length > 0) {
       body.attachments = payload.attachments;
     }
@@ -123,13 +148,45 @@ export class JobService {
     return ((data as any)?.id ? data : (data as any)?.job) as JobRecord;
   }
 
+  static async update(id: string, payload: Partial<CreateJobPayload>): Promise<JobRecord> {
+    const body: Record<string, unknown> = {};
+    if (payload.title) body.title = payload.title.trim();
+    if (payload.description) body.description = payload.description.trim();
+    if (payload.categoryId) body.categoryId = payload.categoryId;
+    if (payload.budgetMin != null) body.budgetMin = Number(payload.budgetMin);
+    if (payload.budgetMax != null) body.budgetMax = Number(payload.budgetMax);
+    if (payload.budgetType) body.budgetType = payload.budgetType;
+    if (payload.urgency) body.urgency = payload.urgency;
+    if (payload.state) body.state = payload.state;
+    if (payload.lgaCity) body.lgaCity = payload.lgaCity;
+    if (payload.address) body.address = payload.address;
+    if (payload.latitude != null) body.latitude = payload.latitude;
+    if (payload.longitude != null) body.longitude = payload.longitude;
+    if (payload.deadlineDate != null) body.deadlineDate = payload.deadlineDate;
+    if (payload.expectedOutcome != null) body.expectedOutcome = payload.expectedOutcome;
+    if (payload.materialsProvidedBy != null) body.materialsProvidedBy = payload.materialsProvidedBy;
+    if (payload.completionProofReq != null) body.completionProofReq = payload.completionProofReq;
+    if (payload.attachments && payload.attachments.length > 0) {
+      body.attachments = payload.attachments;
+    }
+
+    const response = await apiClient.patch<ApiResponse<JobRecord>>(`/jobs/${id}`, body);
+    return response.data.data;
+  }
+
   static async updateStatus(id: string, status: string): Promise<JobRecord> {
     const response = await apiClient.patch<ApiResponse<JobRecord>>(`/jobs/${id}/status`, { status });
     return response.data.data;
   }
 
-  static async delete(id: string): Promise<void> {
-    await apiClient.delete(`/jobs/${id}`);
+  static async delete(id: string, reason?: string): Promise<void> {
+    await apiClient.delete(`/jobs/${id}`, {
+      data: reason ? { reason } : undefined,
+    });
+  }
+
+  static async deleteAttachment(jobId: string, attachmentId: string): Promise<void> {
+    await apiClient.delete(`/jobs/${jobId}/attachments/${attachmentId}`);
   }
 
   static async getSavedJobs(): Promise<JobRecord[]> {
@@ -148,4 +205,70 @@ export class JobService {
   static async inviteArtisan(jobId: string, artisanId: string, message?: string): Promise<void> {
     await apiClient.post(`/jobs/${jobId}/invite/${artisanId}`, { message });
   }
+
+  static async getMyInvitations(): Promise<JobInvitationRecord[]> {
+    const response = await apiClient.get<ApiResponse<JobInvitationRecord[]>>('/jobs/invitations/my-invitations');
+    return response.data.data;
+  }
+
+  static async respondInvitation(invitationId: string, status: 'ACCEPTED' | 'DECLINED'): Promise<void> {
+    await apiClient.patch(`/jobs/invitations/${invitationId}/respond`, { status });
+  }
+
+  static async cancelInvitation(invitationId: string): Promise<void> {
+    await apiClient.delete(`/jobs/invitations/${invitationId}`);
+  }
+
+  static async getCheckInToken(jobId: string): Promise<{
+    jobId: string;
+    token: string;
+    qrPayload: string;
+    expiresAt: string;
+    location: {
+      latitude: number;
+      longitude: number;
+      address: string;
+    };
+  }> {
+    const response = await apiClient.get<ApiResponse<{
+      jobId: string;
+      token: string;
+      qrPayload: string;
+      expiresAt: string;
+      location: {
+        latitude: number;
+        longitude: number;
+        address: string;
+      };
+    }>>(`/jobs/${jobId}/checkin-qr`);
+    return response.data.data;
+  }
+
+  static async verifyArrival(
+    jobId: string,
+    token: string,
+    coords: { latitude: number; longitude: number }
+  ): Promise<{
+    verified: boolean;
+    jobId: string;
+    distanceMeters: number;
+    verifiedAt: string;
+    pointsAwarded?: number;
+    message?: string;
+  }> {
+    const response = await apiClient.post<ApiResponse<{
+      verified: boolean;
+      jobId: string;
+      distanceMeters: number;
+      verifiedAt: string;
+      pointsAwarded?: number;
+      message?: string;
+    }>>(`/jobs/${jobId}/verify-arrival`, {
+      token,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+    });
+    return response.data.data;
+  }
 }
+

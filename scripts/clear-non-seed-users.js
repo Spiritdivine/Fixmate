@@ -1,10 +1,13 @@
 import prisma from '../src/config/db.js';
 
 const SEED_EMAILS = [
+  'admin@artifixhq.xyz',
   'admin@artisanplatform.com',
+  'client@artifixhq.xyz',
+  'artisan@artifixhq.xyz',
+  'treasury@artifixhq.xyz',
   'client@fixmate.ng',
   'artisan@fixmate.ng',
-  'treasury@artifixhq.xyz',
 ];
 
 async function clearNonSeedUsers() {

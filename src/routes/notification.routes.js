@@ -10,6 +10,10 @@ router.get('/push/vapid-key', NotificationController.getVapidPublicKey);
 router.post('/push/subscribe', authenticate, NotificationController.subscribePush);
 router.post('/push/unsubscribe', authenticate, NotificationController.unsubscribePush);
 
+// Mobile Push Notification token registration (Expo)
+router.post('/register-token', authenticate, NotificationController.registerMobileToken);
+router.post('/unregister-token', authenticate, NotificationController.unregisterMobileToken);
+
 router.get('/', authenticate, validate(notificationQuerySchema), NotificationController.getNotifications);
 router.patch('/read-all', authenticate, NotificationController.markAllAsRead);
 router.patch('/:id/read', authenticate, validate(notificationParamSchema), NotificationController.markAsRead);

@@ -53,6 +53,12 @@ enum JobStatus {
   DISPUTED
 }
 
+enum JobUrgency {
+  NORMAL
+  URGENT
+  EMERGENCY
+}
+
 enum BudgetType {
   FIXED
   MILESTONE_BASED
@@ -75,6 +81,13 @@ enum ContractStatus {
   CANCELLED
   DISPUTED
   REFUNDED
+}
+
+enum ChangeOrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
 }
 
 enum MilestoneStatus {
@@ -131,10 +144,73 @@ enum MessageType {
   TEXT
   IMAGE
   DOCUMENT
+  AUDIO
   LOCATION
   SYSTEM_ALERT
   MILESTONE_PROMPT
 }
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+enum SubcontractStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PeerConnectionStatus {
+  PENDING
+  CONNECTED
+  BLOCKED
+}
+
+enum ReferralStatus {
+  PENDING_QUALIFICATION
+  QUALIFIED
+  REWARD_DISBURSED
+  EXPIRED
+  FLAGGED_FRAUD
+  REVOKED
+}
+
+enum PointTransactionType {
+  REFERRAL_SIGNUP_BONUS_REFERRER
+  REFERRAL_SIGNUP_BONUS_REFEREE
+  JOB_COMPLETION_CLIENT_REWARD
+  JOB_COMPLETION_ARTISAN_REWARD
+  KYC_TIER2_VERIFICATION_BONUS
+  STREAK_BONUS_SEVEN_DAYS
+  ADMIN_ADJUSTMENT_CREDIT
+  ESCROW_FEE_DISCOUNT_BURN
+  DIRECTORY_BOOST_PURCHASE
+  LEAD_UNLOCK_VOUCHER
+  VTU_AIRTIME_DATA_PURCHASE
+  ADMIN_ADJUSTMENT_DEBIT
+  POINT_EXPIRATION_SWEEP
+}
+
+enum PointReservationStatus {
+  PENDING_CHECKOUT
+  COMMITTED
+  RELEASED
+  EXPIRED
+}
+
+enum LoyaltyTier {
+  BRONZE
+  SILVER
+  GOLD
+  DIAMOND
+  ELITE_GUILD
+}
+
 
 // ==============================================================================
 // 1. AUTHENTICATION, USERS & PROFILES
@@ -152,6 +228,9 @@ model User {
   isKycVerified    Boolean       @default(false) @map("is_kyc_verified")
   walletAddress    String?       @map("wallet_address") @db.VarChar(66)
   avatarUrl        String?       @map("avatar_url") @db.Text
+  transactionPinHash String?     @map("transaction_pin_hash") @db.VarChar(255)
+  socialProvider   String?       @map("social_provider") @db.VarChar(50)
+  socialId         String?       @map("social_id") @db.VarChar(255)
   lastLoginAt      DateTime?     @map("last_login_at") @db.Timestamptz
   createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz
@@ -173,6 +252,7 @@ model User {
   jobInvitations   JobInvitation[]         @relation("ArtisanInvitations")
   contractsAsClient Contract[]             @relation("ClientContracts")
   contractsAsArtisan Contract[]            @relation("ArtisanContracts")
+  changeOrdersRequested ContractChangeOrder[] @relation("ArtisanChangeOrders")
 
   // Financial
   bankAccounts     BankAccount[]
@@ -198,13 +278,27 @@ model User {
   messagesSent       Message[]
   notifications      Notification[]
   pushSubscriptions  PushSubscription[]
+  mobileDeviceTokens MobileDeviceToken[]
   auditLogs          AuditLog[]
   settingsUpdated    SystemSetting[]
   aiDiagnosticSessions AiDiagnosticSession[]
 
+  // Referral & Loyalty System
+  referralCode          String?                 @unique @map("referral_code") @db.VarChar(16)
+  referredById          String?                 @map("referred_by_id") @db.Uuid
+  deviceFingerprintHash String?                 @map("device_fingerprint_hash") @db.VarChar(64)
+  registrationIp        String?                 @map("registration_ip") @db.VarChar(45)
+
+  referredBy            User?                   @relation("UserReferralHierarchy", fields: [referredById], references: [id])
+  referralsMadeUsers    User[]                  @relation("UserReferralHierarchy")
+  pointWallet           PointWallet?
+  referralsMade         Referral[]              @relation("ReferrerRel")
+  referralReceived      Referral?               @relation("RefereeRel")
+
   @@index([email])
   @@index([phoneNumber])
   @@index([walletAddress])
+  @@index([referralCode])
   @@map("users")
 }
 
@@ -212,6 +306,7 @@ model RefreshToken {
   id         String   @id @default(uuid()) @db.Uuid
   userId     String   @map("user_id") @db.Uuid
   tokenHash  String   @unique @map("token_hash") @db.VarChar(255)
+  familyId   String?  @map("family_id") @db.VarChar(255)
   deviceInfo String?  @map("device_info") @db.Text
   ipAddress  String?  @map("ip_address") @db.VarChar(45)
   isRevoked  Boolean  @default(false) @map("is_revoked")
@@ -221,6 +316,7 @@ model RefreshToken {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([familyId])
   @@map("refresh_tokens")
 }
 
@@ -257,6 +353,8 @@ model ArtisanProfile {
   ratingAvg          Decimal  @default(0.00) @map("rating_avg") @db.Decimal(3, 2)
   reviewCount        Int      @default(0) @map("review_count")
   completedJobsCount Int      @default(0) @map("completed_jobs_count")
+  isFeatured         Boolean  @default(false) @map("is_featured")
+  featuredExpiresAt  DateTime? @map("featured_expires_at") @db.Timestamptz
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -266,6 +364,10 @@ model ArtisanProfile {
   services           ArtisanService[]
   savedByClients     SavedArtisan[]
   diagnosticMatches  DiagnosticMatch[]
+  sentPeerConnections     ArtisanPeerConnection[] @relation("SentPeerConnections")
+  receivedPeerConnections ArtisanPeerConnection[] @relation("ReceivedPeerConnections")
+  primeSubcontracts       JobSubcontract[]        @relation("PrimeSubcontracts")
+  subcontractAssignments  JobSubcontract[]        @relation("SubArtisanAssignments")
 
   @@index([state, lgaCity])
   @@index([latitude, longitude])
@@ -412,6 +514,7 @@ model Job {
   completionProofReq  String?     @map("completion_proof_req") @db.Text
   deadlineDate    DateTime?       @map("deadline_date") @db.Date
   status          JobStatus       @default(OPEN)
+  urgency         JobUrgency      @default(NORMAL) @map("urgency")
   proposalsCount  Int             @default(0) @map("proposals_count")
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz
@@ -431,6 +534,7 @@ model Job {
   @@index([clientId, status])
   @@index([status, createdAt(sort: Desc)])
   @@index([state, lgaCity])
+  @@index([latitude, longitude])
   @@map("jobs")
 }
 
@@ -572,11 +676,14 @@ model Contract {
   client               User           @relation("ClientContracts", fields: [clientId], references: [id])
   artisan              User           @relation("ArtisanContracts", fields: [artisanId], references: [id])
   milestones           Milestone[]
+  changeOrders         ContractChangeOrder[]
   disputes             Dispute[]
   reviews              Review[]
   transactions         Transaction[]
   conversations        Conversation[]
   repairVerifications  AiRepairVerification[]
+  subcontracts         JobSubcontract[]
+  qualifyingReferrals  Referral[]
 
   @@index([clientId])
   @@index([clientId, status])
@@ -612,6 +719,28 @@ model Milestone {
 
   @@index([contractId, stepOrder])
   @@map("milestones")
+}
+
+model ContractChangeOrder {
+  id                   String            @id @default(uuid()) @db.Uuid
+  contractId           String            @map("contract_id") @db.Uuid
+  artisanId            String            @map("artisan_id") @db.Uuid
+  additionalAmount     Decimal           @default(0.00) @map("additional_amount") @db.Decimal(12, 2)
+  additionalDays       Int               @default(0) @map("additional_days")
+  reason               String            @db.Text
+  evidencePhotos       Json              @default("[]") @map("evidence_photos")
+  status               ChangeOrderStatus @default(PENDING)
+  clientResponseReason String?           @map("client_response_reason") @db.Text
+  resolvedAt           DateTime?         @map("resolved_at") @db.Timestamptz
+  createdAt            DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  contract             Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  artisan              User              @relation("ArtisanChangeOrders", fields: [artisanId], references: [id], onDelete: Restrict)
+
+  @@index([contractId, status])
+  @@index([artisanId])
+  @@map("contract_change_orders")
 }
 
 // ==============================================================================
@@ -891,6 +1020,7 @@ model Message {
   messageType    MessageType  @default(TEXT) @map("message_type")
   body           String?      @db.Text
   attachmentUrl  String?      @map("attachment_url") @db.Text
+  metadata       Json?        @db.JsonB
   isRead         Boolean      @default(false) @map("is_read")
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
 
@@ -937,6 +1067,64 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+model MobileDeviceToken {
+  id         String         @id @default(uuid()) @db.Uuid
+  userId     String         @map("user_id") @db.Uuid
+  token      String         @unique @db.VarChar(255)
+  platform   DevicePlatform @default(ANDROID)
+  deviceId   String?        @map("device_id") @db.VarChar(100)
+  deviceName String?        @map("device_name") @db.VarChar(100)
+  isActive   Boolean        @default(true) @map("is_active")
+  lastSeenAt DateTime       @default(now()) @map("last_seen_at") @db.Timestamptz
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@map("mobile_device_tokens")
+}
+
+model ArtisanPeerConnection {
+  id          String               @id @default(uuid()) @db.Uuid
+  requesterId String               @map("requester_id") @db.Uuid
+  recipientId String               @map("recipient_id") @db.Uuid
+  status      PeerConnectionStatus @default(PENDING)
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  requester   ArtisanProfile       @relation("SentPeerConnections", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipient   ArtisanProfile       @relation("ReceivedPeerConnections", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, recipientId])
+  @@index([recipientId, status])
+  @@map("artisan_peer_connections")
+}
+
+model JobSubcontract {
+  id              String            @id @default(uuid()) @db.Uuid
+  contractId      String            @map("contract_id") @db.Uuid
+  primeArtisanId  String            @map("prime_artisan_id") @db.Uuid
+  subArtisanId    String            @map("sub_artisan_id") @db.Uuid
+  title           String            @db.VarChar(255)
+  scope           String            @db.Text
+  agreedAmount    Decimal           @map("agreed_amount") @db.Decimal(12, 2)
+  status          SubcontractStatus @default(PENDING)
+  completionNotes String?           @map("completion_notes") @db.Text
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  contract        Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  primeArtisan    ArtisanProfile    @relation("PrimeSubcontracts", fields: [primeArtisanId], references: [id], onDelete: Cascade)
+  subArtisan      ArtisanProfile    @relation("SubArtisanAssignments", fields: [subArtisanId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([primeArtisanId])
+  @@index([subArtisanId])
+  @@index([status])
+  @@map("job_subcontracts")
 }
 
 
@@ -1235,4 +1423,120 @@ model MatchSnapshot {
   @@index([diagnosticSessionId])
   @@map("match_snapshots")
 }
+
+// ==============================================================================
+// 12. REFERRAL & LOYALTY POINT SYSTEM
+// ==============================================================================
+
+model Referral {
+  id                    String         @id @default(uuid()) @db.Uuid
+  referrerId            String         @map("referrer_id") @db.Uuid
+  refereeId             String         @unique @map("referee_id") @db.Uuid
+  referralCodeUsed      String         @map("referral_code_used") @db.VarChar(16)
+  status                ReferralStatus @default(PENDING_QUALIFICATION)
+
+  qualifyingContractId  String?        @map("qualifying_contract_id") @db.Uuid
+  qualificationDeadline DateTime       @map("qualification_deadline") @db.Timestamptz
+  qualifiedAt           DateTime?      @map("qualified_at") @db.Timestamptz
+
+  fraudRiskScore        Int            @default(0) @map("fraud_risk_score")
+  fraudFlags            String[]       @default([]) @map("fraud_flags")
+
+  referrerRewardPoints  Int            @default(250) @map("referrer_reward_points")
+  refereeRewardPoints   Int            @default(150) @map("referee_reward_points")
+
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  referrer              User           @relation("ReferrerRel", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee               User           @relation("RefereeRel", fields: [refereeId], references: [id], onDelete: Cascade)
+  qualifyingContract    Contract?      @relation(fields: [qualifyingContractId], references: [id])
+
+  @@index([referrerId, status])
+  @@index([status, qualificationDeadline])
+  @@map("referrals")
+}
+
+model PointWallet {
+  id              String             @id @default(uuid()) @db.Uuid
+  userId          String             @unique @map("user_id") @db.Uuid
+
+  availablePoints Int                @default(0) @map("available_points")
+  lockedPoints    Int                @default(0) @map("locked_points")
+  lifetimeEarned  Int                @default(0) @map("lifetime_earned")
+  lifetimeBurned  Int                @default(0) @map("lifetime_burned")
+
+  tier            LoyaltyTier        @default(BRONZE)
+  tierPoints      Int                @default(0) @map("tier_points")
+  tierExpiresAt   DateTime?          @map("tier_expires_at") @db.Timestamptz
+
+  version         Int                @default(0)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledgerEntries   PointLedgerEntry[]
+  reservations    PointReservation[]
+
+  @@index([tier])
+  @@map("point_wallets")
+}
+
+model PointLedgerEntry {
+  id              String               @id @default(uuid()) @db.Uuid
+  walletId        String               @map("wallet_id") @db.Uuid
+
+  amount          Int
+  balanceBefore   Int                  @map("balance_before")
+  balanceAfter    Int                  @map("balance_after")
+
+  transactionType PointTransactionType @map("transaction_type")
+  idempotencyKey  String               @unique @map("idempotency_key") @db.VarChar(128)
+
+  referenceType   String?              @map("reference_type") @db.VarChar(32)
+  referenceId     String?              @map("reference_id") @db.VarChar(64)
+
+  description     String               @db.VarChar(255)
+  metadata        Json                 @default("{}")
+  expiresAt       DateTime?            @map("expires_at") @db.Timestamptz
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz
+
+  wallet          PointWallet          @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, createdAt(sort: Desc)])
+  @@index([transactionType, createdAt])
+  @@map("point_ledger_entries")
+}
+
+model PointReservation {
+  id             String                 @id @default(uuid()) @db.Uuid
+  walletId       String                 @map("wallet_id") @db.Uuid
+  amount         Int
+  status         PointReservationStatus @default(PENDING_CHECKOUT)
+  orderReference String                 @unique @map("order_reference") @db.VarChar(64)
+  expiresAt      DateTime               @map("expires_at") @db.Timestamptz
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamptz
+
+  wallet         PointWallet            @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, status])
+  @@index([status, expiresAt])
+  @@map("point_reservations")
+}
+
+model ReferralRuleConfiguration {
+  id                   String      @id @default(uuid()) @db.Uuid
+  key                  String      @unique @db.VarChar(64)
+  description          String      @db.VarChar(255)
+  referrerBonus        Int         @map("referrer_bonus")
+  refereeBonus         Int         @map("referee_bonus")
+  minEscrowAmountKobo  BigInt      @map("min_escrow_amount_kobo")
+  expiryDays           Int         @default(60) @map("expiry_days")
+  isActive             Boolean     @default(true) @map("is_active")
+  updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("referral_rule_configurations")
+}
+
 

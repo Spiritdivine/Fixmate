@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { Platform } from 'react-native';
 import { Storage } from './storage';
 import { getBaseApiUrl } from './network-config';
 
@@ -41,6 +42,14 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
+      // Dynamically re-evaluate baseURL if initialized to localhost on a native device
+      if (
+        Platform.OS !== 'web' &&
+        (!config.baseURL || config.baseURL.includes('localhost') || config.baseURL.includes('127.0.0.1'))
+      ) {
+        config.baseURL = getBaseApiUrl();
+      }
+
       const token = await Storage.getItem(ACCESS_TOKEN_KEY);
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;

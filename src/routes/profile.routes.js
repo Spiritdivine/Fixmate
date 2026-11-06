@@ -19,6 +19,8 @@ import {
   updateLocationSchema,
   artisanParamSchema,
   nearbyArtisansQuerySchema,
+  addArtisanSkillSchema,
+  artisanSkillParamSchema,
 } from '../validators/profile.validator.js';
 import { updateAvatarSchema } from '../validators/auth.validator.js';
 import { httpCache } from '../middlewares/http-cache.middleware.js';
@@ -50,6 +52,11 @@ router.patch('/artisan', authenticate, requireRoles('ARTISAN'), validate(updateA
 router.put('/artisan', authenticate, requireRoles('ARTISAN'), validate(updateArtisanProfileSchema), ProfileController.updateArtisan);
 router.patch('/artisan/availability', authenticate, requireRoles('ARTISAN'), validate(updateAvailabilitySchema), ProfileController.toggleAvailability);
 router.patch('/artisan/location', authenticate, requireRoles('ARTISAN'), validate(updateLocationSchema), ProfileController.updateLocation);
+
+// Artisan Skills Management (Granular Tagging)
+router.get('/artisan/skills', authenticate, requireRoles('ARTISAN'), ProfileController.getArtisanSkills);
+router.post('/artisan/skills', authenticate, requireRoles('ARTISAN'), validate(addArtisanSkillSchema), ProfileController.addArtisanSkill);
+router.delete('/artisan/skills/:skillId', authenticate, requireRoles('ARTISAN'), validate(artisanSkillParamSchema), ProfileController.removeArtisanSkill);
 
 // Artisan Portfolios
 router.post('/artisan/portfolio', authenticate, requireRoles('ARTISAN'), validate(portfolioItemSchema), ProfileController.addPortfolio);

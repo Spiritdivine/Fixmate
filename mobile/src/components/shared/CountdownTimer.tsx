@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Clock } from 'lucide-react-native';
 import { colors, radius, typography } from '../../theme';
 
 interface CountdownTimerProps {
@@ -34,7 +35,7 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({
 
   return (
     <View style={styles.pill}>
-      <Text style={styles.icon}>⏳</Text>
+      <Clock size={12} color="#D97706" />
       <Text style={styles.timeText}>
         {formattedTime} {label ? label : ''}
       </Text>

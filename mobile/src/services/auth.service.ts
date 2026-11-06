@@ -18,6 +18,7 @@ export interface RegisterPayload {
   businessName?: string;
   state?: string;
   lgaCity?: string;
+  referralCode?: string;
 }
 
 export type OtpPurpose =
@@ -127,11 +128,94 @@ export class AuthService {
     }
   }
 
-  static async forgotPassword(email: string): Promise<void> {
-    await apiClient.post('/auth/forgot-password', { email });
+  static async forgotPassword(identifier: string): Promise<void> {
+    await apiClient.post('/auth/forgot-password', { identifier });
   }
 
-  static async resetPassword(email: string, token: string, newPassword: string): Promise<void> {
-    await apiClient.post('/auth/reset-password', { email, token, newPassword });
+  static async resetPassword(payload: {
+    identifier: string;
+    otp: string;
+    newPassword: string;
+  }): Promise<void> {
+    await apiClient.post('/auth/reset-password', payload);
+  }
+
+  /**
+   * Native Social Sign-In (Google / Apple)
+   */
+  static async socialLogin(payload: {
+    provider: 'GOOGLE' | 'APPLE';
+    idToken: string;
+    role?: 'CLIENT' | 'ARTISAN';
+  }): Promise<AuthSessionResult & { isNewUser?: boolean }> {
+    const response = await apiClient.post<ApiResponse<AuthTokens & { isNewUser?: boolean }>>(
+      '/auth/social-login',
+      payload
+    );
+    const data = response.data.data;
+
+    const accessToken = data.tokens?.accessToken || data.accessToken || '';
+    const refreshToken = data.tokens?.refreshToken || data.refreshToken || '';
+
+    if (accessToken) {
+      await Storage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    }
+    if (refreshToken) {
+      await Storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
+
+    return {
+      accessToken,
+      refreshToken,
+      user: data.user,
+      isNewUser: data.isNewUser,
+    };
+  }
+
+  /**
+   * Contextual Role Switching (CLIENT <-> ARTISAN)
+   */
+  static async switchRole(role: 'CLIENT' | 'ARTISAN'): Promise<AuthSessionResult> {
+    const response = await apiClient.post<ApiResponse<AuthTokens>>('/auth/switch-role', { role });
+    const data = response.data.data;
+
+    const accessToken = data.tokens?.accessToken || data.accessToken || '';
+    const refreshToken = data.tokens?.refreshToken || data.refreshToken || '';
+
+    if (accessToken) {
+      await Storage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    }
+    if (refreshToken) {
+      await Storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
+
+    return {
+      accessToken,
+      refreshToken,
+      user: data.user,
+    };
+  }
+
+  /**
+   * Set 4-digit Security PIN
+   */
+  static async setTransactionPin(pin: string): Promise<void> {
+    await apiClient.post('/auth/pin/set', { pin });
+  }
+
+  /**
+   * Change 4-digit Security PIN
+   */
+  static async changeTransactionPin(currentPin: string, newPin: string): Promise<void> {
+    await apiClient.post('/auth/pin/change', { currentPin, newPin });
+  }
+
+  /**
+   * Verify 4-digit Security PIN for Step-Up Authorization
+   */
+  static async verifyTransactionPin(pin: string): Promise<{ stepUpTicket: string }> {
+    const response = await apiClient.post<ApiResponse<{ stepUpTicket: string }>>('/auth/pin/verify', { pin });
+    return response.data.data;
   }
 }
+

@@ -7,7 +7,7 @@ export class SafetyShieldService {
   static HAZARD_PATTERNS = [
     {
       type: 'ELECTRICAL_SHOCK',
-      regex: /\b(spark|sparks|sparking|shock|shocked|shocking|electric shock|shock me|burnt smell|burning smell|smoke from switch|smoke from socket|arcing|naked wire|live wire|short circuit|cable burn|burnt cable|meter spark|db box smoking|changeover sparking|light dey shock|current dey bite|current dey shock|wire dey spark|breaker dey trip and smoke|sparking socket|smoking socket)\b/i,
+      regex: /\b(spark|sparks|sparking|shock|shocked|shocking|electric shock|shock me|burnt smell|burning smell|smoke from switch|smoke from socket|arcing|naked wire|live wire|short circuit|cable burn|burnt cable|meter spark|db box smoking|changeover sparking|light dey shock|current dey bite|current dey shock|wire dey spark|breaker dey trip and smoke|sparking socket|smoking socket|water enter socket|water enter db|water in socket|water in db|wet breaker|water dripping on socket|water leaking on socket)\b/i,
       containment: [
         {
           stepNumber: 1,
@@ -63,7 +63,7 @@ export class SafetyShieldService {
     },
     {
       type: 'ACTIVE_FLOODING',
-      regex: /\b(burst pipe|pipe burst|water gushing|ceiling collapsed|ceiling sagging|flooding room|booster pump burst|water spraying everywhere|major pipe rupture|water enter socket|water enter db|pipe don burst|water dey rush|water full parlour|ceiling wan fall)\b/i,
+      regex: /\b(burst pipe|pipe burst|water gushing|ceiling collapsed|ceiling sagging|flooding room|booster pump burst|water spraying everywhere|major pipe rupture|pipe don burst|water dey rush|water full parlour|ceiling wan fall)\b/i,
       containment: [
         {
           stepNumber: 1,

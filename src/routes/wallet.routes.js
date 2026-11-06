@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { WalletController } from '../controllers/wallet.controller.js';
-import { authenticate } from '../middlewares/auth.middleware.js';
+import { authenticate, requireStepUpAuth } from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import {
   simulateDepositSchema,
@@ -24,13 +24,13 @@ router.get('/bank-accounts', authenticate, WalletController.getBanks);
 router.delete('/bank-accounts/:id', authenticate, validate(bankAccountParamSchema), WalletController.deleteBank);
 router.patch('/bank-accounts/:id/default', authenticate, validate(bankAccountParamSchema), WalletController.setDefaultBank);
 
-// Withdrawals & Payout Requests (Aliased for compatibility)
-router.post('/withdraw', authenticate, validate(requestWithdrawalSchema), WalletController.requestWithdrawal);
+// Withdrawals & Payout Requests (Guarded by Step-Up Auth: 4-digit PIN or 2FA OTP)
+router.post('/withdraw', authenticate, requireStepUpAuth, validate(requestWithdrawalSchema), WalletController.requestWithdrawal);
 router.delete('/withdrawals/:id', authenticate, validate(payoutParamSchema), WalletController.cancelWithdrawal);
 router.patch('/withdrawals/:id/cancel', authenticate, validate(payoutParamSchema), WalletController.cancelWithdrawal);
 
 router.get('/payout-requests', authenticate, WalletController.getPayoutRequests);
-router.post('/payout-requests', authenticate, validate(requestWithdrawalSchema), WalletController.requestWithdrawal);
+router.post('/payout-requests', authenticate, requireStepUpAuth, validate(requestWithdrawalSchema), WalletController.requestWithdrawal);
 router.delete('/payout-requests/:id', authenticate, validate(payoutParamSchema), WalletController.cancelWithdrawal);
 router.patch('/payout-requests/:id/cancel', authenticate, validate(payoutParamSchema), WalletController.cancelWithdrawal);
 

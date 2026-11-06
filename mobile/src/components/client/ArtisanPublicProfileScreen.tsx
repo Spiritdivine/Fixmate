@@ -11,11 +11,28 @@ import {
   Alert,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import * as Haptics from 'expo-haptics';
+import {
+  Heart,
+  BadgeCheck,
+  MapPin,
+  Star,
+  MessageSquare,
+  Mail,
+  Zap,
+  Camera,
+  Image as ImageIcon,
+  ChevronLeft,
+} from 'lucide-react-native';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { ProfileService } from '../../services/profile.service';
 import { ReviewService } from '../../services/review.service';
 import { queryClient } from '../../lib/query-client';
+import { JobInvitationModal } from './JobInvitationModal';
+import { SkeletonPlaceholder } from '../shared';
+import { useToast } from '../shared/ToastContext';
+import { useToggleSaveArtisan } from '../../hooks';
 
 interface ArtisanPublicProfileScreenProps {
   artisanId?: string;
@@ -30,8 +47,11 @@ export const ArtisanPublicProfileScreen: React.FC<ArtisanPublicProfileScreenProp
   onChat,
   onRequestQuote,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
+  const { showSuccess, showError } = useToast();
   const [isSaved, setIsSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<'PORTFOLIO' | 'REVIEWS' | 'ABOUT'>('PORTFOLIO');
+  const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
 
   const { data: artisan, isLoading: loadingArtisan } = useQuery({
     queryKey: ['artisan-details', artisanId],
@@ -60,21 +80,27 @@ export const ArtisanPublicProfileScreen: React.FC<ArtisanPublicProfileScreenProp
     })();
   }, [artisanId]);
 
-  const handleToggleSave = async () => {
+  const toggleSaveMutation = useToggleSaveArtisan();
+
+  const handleToggleSave = () => {
     if (!artisanId) return;
     const next = !isSaved;
     setIsSaved(next);
-    try {
-      if (next) {
-        await ProfileService.saveArtisan(artisanId);
-      } else {
-        await ProfileService.unsaveArtisan(artisanId);
-      }
-      await queryClient.invalidateQueries({ queryKey: ['saved-artisans'] });
-    } catch {
-      setIsSaved(!next);
-      Alert.alert('Bookmark', 'Could not update saved artisan status.');
+    if (next) {
+      showSuccess('Artisan Saved', 'Added to your saved artisans directory.');
+    } else {
+      showSuccess('Artisan Removed', 'Removed from your bookmarks.');
     }
+
+    toggleSaveMutation.mutate(
+      { artisanId, artisan: artisan as any, isSaved: next },
+      {
+        onError: () => {
+          setIsSaved(!next);
+          showError('Bookmark Error', 'Could not update saved artisan status.');
+        },
+      }
+    );
   };
 
   const displayName = artisan?.businessName || (artisan as any)?.user?.name || (artisan as any)?.user?.email?.split('@')[0] || 'Verified Artisan';
@@ -92,106 +118,133 @@ export const ArtisanPublicProfileScreen: React.FC<ArtisanPublicProfileScreenProp
   const portfolioItems = artisan?.portfolio || [];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
       {/* Top Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.iconBtnText}>←</Text>
+      <View style={[styles.header, { backgroundColor: themeColors.headerBg, borderBottomColor: themeColors.headerBorder }]}>
+        <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <ChevronLeft size={22} color={themeColors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Artisan Profile</Text>
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>Artisan Profile</Text>
         <TouchableOpacity
           style={styles.iconBtn}
           onPress={handleToggleSave}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={styles.iconBtnText}>{isSaved ? '❤️' : '🤍'}</Text>
+          <Heart size={20} color={isSaved ? '#EF4444' : themeColors.textMuted} fill={isSaved ? '#EF4444' : 'transparent'} />
         </TouchableOpacity>
       </View>
 
       {loadingArtisan ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ marginTop: 12, color: colors.textMuted }}>Loading artisan credentials...</Text>
+        <View style={styles.scrollContent}>
+          {/* Dossier Card Shimmer */}
+          <View style={[styles.dossierCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <View style={styles.avatarRow}>
+              <SkeletonPlaceholder width={56} height={56} borderRadius={28} />
+              <View style={[styles.dossierMeta, { marginLeft: 12 }]}>
+                <SkeletonPlaceholder width={140} height={20} borderRadius={radius.sm} />
+                <SkeletonPlaceholder width={90} height={14} borderRadius={radius.sm} style={{ marginTop: 6 }} />
+                <SkeletonPlaceholder width={110} height={12} borderRadius={radius.sm} style={{ marginTop: 6 }} />
+              </View>
+            </View>
+            <View style={{ marginTop: 16 }}>
+              <SkeletonPlaceholder width="100%" height={14} borderRadius={radius.sm} />
+              <SkeletonPlaceholder width="75%" height={14} borderRadius={radius.sm} style={{ marginTop: 6 }} />
+            </View>
+            <View style={[styles.statsBar, { backgroundColor: themeColors.surfaceSubtle, marginTop: 16 }]}>
+              <View style={styles.statItem}>
+                <SkeletonPlaceholder width={40} height={18} borderRadius={radius.sm} />
+                <SkeletonPlaceholder width={60} height={10} borderRadius={radius.sm} style={{ marginTop: 4 }} />
+              </View>
+              <View style={styles.statItem}>
+                <SkeletonPlaceholder width={40} height={18} borderRadius={radius.sm} />
+                <SkeletonPlaceholder width={60} height={10} borderRadius={radius.sm} style={{ marginTop: 4 }} />
+              </View>
+              <View style={styles.statItem}>
+                <SkeletonPlaceholder width={40} height={18} borderRadius={radius.sm} />
+                <SkeletonPlaceholder width={60} height={10} borderRadius={radius.sm} style={{ marginTop: 4 }} />
+              </View>
+            </View>
+          </View>
+
+          {/* Section Card Shimmer */}
+          <View style={[styles.portfolioCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <SkeletonPlaceholder width={130} height={18} borderRadius={radius.sm} style={{ marginBottom: 12 }} />
+            <SkeletonPlaceholder width="100%" height={14} borderRadius={radius.sm} />
+            <SkeletonPlaceholder width="90%" height={14} borderRadius={radius.sm} style={{ marginTop: 6 }} />
+            <SkeletonPlaceholder width="60%" height={14} borderRadius={radius.sm} style={{ marginTop: 6 }} />
+          </View>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Profile Dossier Hero */}
-          <View style={styles.dossierCard}>
+          <View style={[styles.dossierCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <View style={styles.avatarRow}>
-              <View style={styles.avatar}>
+              <View style={[styles.avatar, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
                 {artisan?.avatarUrl ? (
                   <Image source={{ uri: artisan.avatarUrl }} style={{ width: '100%', height: '100%', borderRadius: 28 }} />
                 ) : (
-                  <Text style={styles.avatarText}>{initials}</Text>
+                  <Text style={[styles.avatarText, isDark && { color: '#34D399' }]}>{initials}</Text>
                 )}
                 {artisan?.isAvailable !== false && <View style={styles.onlineDot} />}
               </View>
               <View style={styles.dossierMeta}>
                 <View style={styles.nameRow}>
-                  <Text style={styles.name}>{displayName}</Text>
+                  <Text style={[styles.name, { color: themeColors.text }]}>{displayName}</Text>
                   {artisan?.isVerified && (
-                    <View style={styles.ninBadge}>
-                      <Text style={styles.ninBadgeText}>✓ NIN Verified</Text>
+                    <View style={[styles.ninBadge, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+                      <BadgeCheck size={12} color={isDark ? '#34D399' : '#15803D'} />
+                      <Text style={[styles.ninBadgeText, isDark && { color: '#34D399' }]}>NIN Verified</Text>
                     </View>
                   )}
                 </View>
-                <Text style={styles.trade}>{tradeName}</Text>
-                <Text style={styles.location}>📍 {(artisan as any)?.location || (artisan as any)?.address || 'Lagos, Nigeria'}</Text>
+                <Text style={[styles.trade, { color: themeColors.textMuted }]}>{tradeName}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                  <MapPin size={12} color={themeColors.textMuted} />
+                  <Text style={[styles.location, { color: themeColors.textMuted, marginTop: 0 }]}>{(artisan as any)?.location || (artisan as any)?.address || 'Lagos, Nigeria'}</Text>
+                </View>
                 {rateVal > 0 && (
-                  <Text style={styles.hourlyRate}>
-                    Base rate: <Text style={styles.rateHighlight}>{formatCurrency(rateVal)} / hr</Text>
+                  <Text style={[styles.hourlyRate, { color: themeColors.textMuted }]}>
+                    Base rate: <Text style={[styles.rateHighlight, isDark && { color: '#34D399' }]}>{formatCurrency(rateVal)} / hr</Text>
                   </Text>
                 )}
               </View>
             </View>
 
             {/* Stats Bar */}
-            <View style={styles.statsBar}>
+            <View style={[styles.statsBar, { backgroundColor: themeColors.surfaceSubtle }]}>
               <View style={styles.statItem}>
-                <Text style={styles.statVal}>{ratingVal.toFixed(1)} ⭐</Text>
-                <Text style={styles.statLbl}>Rating ({reviews.length})</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={[styles.statVal, { color: themeColors.text }]}>{ratingVal.toFixed(1)}</Text>
+                  <Star size={12} color="#F59E0B" fill="#F59E0B" />
+                </View>
+                <Text style={[styles.statLbl, { color: themeColors.textMuted }]}>Rating ({reviews.length})</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, { backgroundColor: themeColors.border }]} />
               <View style={styles.statItem}>
-                <Text style={styles.statVal}>{jobsCount}</Text>
-                <Text style={styles.statLbl}>Jobs Done</Text>
+                <Text style={[styles.statVal, { color: themeColors.text }]}>{jobsCount}</Text>
+                <Text style={[styles.statLbl, { color: themeColors.textMuted }]}>Jobs Done</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, { backgroundColor: themeColors.border }]} />
               <View style={styles.statItem}>
-                <Text style={styles.statVal}>99%</Text>
-                <Text style={styles.statLbl}>On-Time</Text>
+                <Text style={[styles.statVal, { color: themeColors.text }]}>99%</Text>
+                <Text style={[styles.statLbl, { color: themeColors.textMuted }]}>On-Time</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, { backgroundColor: themeColors.border }]} />
               <View style={styles.statItem}>
-                <Text style={styles.statVal}>0</Text>
-                <Text style={styles.statLbl}>Disputes</Text>
+                <Text style={[styles.statVal, { color: themeColors.text }]}>0</Text>
+                <Text style={[styles.statLbl, { color: themeColors.textMuted }]}>Disputes</Text>
               </View>
-            </View>
-          </View>
-
-          {/* Verification & Trust Badges */}
-          <View style={styles.trustBadgesRow}>
-            <View style={styles.trustBadge}>
-              <Text style={styles.trustBadgeIcon}>🛡️</Text>
-              <Text style={styles.trustBadgeText}>Fixmate Escrow Covered</Text>
-            </View>
-            <View style={styles.trustBadge}>
-              <Text style={styles.trustBadgeIcon}>📜</Text>
-              <Text style={styles.trustBadgeText}>Verified Background</Text>
-            </View>
-            <View style={styles.trustBadge}>
-              <Text style={styles.trustBadgeIcon}>⚡</Text>
-              <Text style={styles.trustBadgeText}>Quality Guaranteed</Text>
             </View>
           </View>
 
           {/* Navigation Tabs */}
-          <View style={styles.tabsRow}>
+          <View style={[styles.tabsRow, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}>
             <TouchableOpacity
               style={[styles.tabBtn, activeTab === 'PORTFOLIO' && styles.tabBtnActive]}
               onPress={() => setActiveTab('PORTFOLIO')}
             >
-              <Text style={[styles.tabText, activeTab === 'PORTFOLIO' && styles.tabTextActive]}>
+              <Text style={[styles.tabText, { color: themeColors.textMuted }, activeTab === 'PORTFOLIO' && styles.tabTextActive]}>
                 Portfolio ({portfolioItems.length})
               </Text>
             </TouchableOpacity>
@@ -199,7 +252,7 @@ export const ArtisanPublicProfileScreen: React.FC<ArtisanPublicProfileScreenProp
               style={[styles.tabBtn, activeTab === 'REVIEWS' && styles.tabBtnActive]}
               onPress={() => setActiveTab('REVIEWS')}
             >
-              <Text style={[styles.tabText, activeTab === 'REVIEWS' && styles.tabTextActive]}>
+              <Text style={[styles.tabText, { color: themeColors.textMuted }, activeTab === 'REVIEWS' && styles.tabTextActive]}>
                 Reviews ({reviews.length})
               </Text>
             </TouchableOpacity>
@@ -207,7 +260,7 @@ export const ArtisanPublicProfileScreen: React.FC<ArtisanPublicProfileScreenProp
               style={[styles.tabBtn, activeTab === 'ABOUT' && styles.tabBtnActive]}
               onPress={() => setActiveTab('ABOUT')}
             >
-              <Text style={[styles.tabText, activeTab === 'ABOUT' && styles.tabTextActive]}>
+              <Text style={[styles.tabText, { color: themeColors.textMuted }, activeTab === 'ABOUT' && styles.tabTextActive]}>
                 About & Skills
               </Text>
             </TouchableOpacity>
@@ -218,22 +271,25 @@ export const ArtisanPublicProfileScreen: React.FC<ArtisanPublicProfileScreenProp
             <View style={styles.contentSection}>
               {portfolioItems.length === 0 ? (
                 <View style={{ padding: spacing.lg, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 32, marginBottom: 8 }}>🖼️</Text>
-                  <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center' }}>
+                  <ImageIcon size={32} color={themeColors.textMuted} style={{ marginBottom: 8 }} />
+                  <Text style={{ fontSize: 14, color: themeColors.textMuted, textAlign: 'center' }}>
                     No portfolio projects uploaded by this artisan yet.
                   </Text>
                 </View>
               ) : (
                 portfolioItems.map((item: any, idx: number) => (
-                  <View key={item.id || idx} style={styles.portfolioCard}>
+                  <View key={item.id || idx} style={[styles.portfolioCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
                     {item.imageUrl && (
                       <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: 160, borderRadius: radius.md, marginBottom: 8 }} />
                     )}
                     <View style={styles.portfolioBanner}>
-                      <Text style={styles.portfolioTag}>📸 Verified Project</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Camera size={12} color={isDark ? '#34D399' : colors.primary} />
+                        <Text style={[styles.portfolioTag, isDark && { color: '#34D399' }]}>Verified Project</Text>
+                      </View>
                     </View>
-                    <Text style={styles.portfolioTitle}>{item.title}</Text>
-                    {item.description && <Text style={styles.portfolioDesc}>{item.description}</Text>}
+                    <Text style={[styles.portfolioTitle, { color: themeColors.text }]}>{item.title}</Text>
+                    {item.description && <Text style={[styles.portfolioDesc, { color: themeColors.text }]}>{item.description}</Text>}
                   </View>
                 ))
               )}
@@ -246,22 +302,26 @@ export const ArtisanPublicProfileScreen: React.FC<ArtisanPublicProfileScreenProp
                 <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
               ) : reviews.length === 0 ? (
                 <View style={{ padding: spacing.lg, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 32, marginBottom: 8 }}>⭐</Text>
-                  <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center' }}>
+                  <Star size={32} color={themeColors.textMuted} style={{ marginBottom: 8 }} />
+                  <Text style={{ fontSize: 14, color: themeColors.textMuted, textAlign: 'center' }}>
                     No reviews yet. Be the first client to complete a job and review this artisan!
                   </Text>
                 </View>
               ) : (
                 reviews.map((rev) => (
-                  <View key={rev.id} style={styles.reviewItem}>
+                  <View key={rev.id} style={[styles.reviewItem, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
                     <View style={styles.reviewHeader}>
-                      <Text style={styles.reviewClient}>Verified Client</Text>
-                      <Text style={styles.reviewDate}>
+                      <Text style={[styles.reviewClient, { color: themeColors.text }]}>Verified Client</Text>
+                      <Text style={[styles.reviewDate, { color: themeColors.textMuted }]}>
                         {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : 'Recently'}
                       </Text>
                     </View>
-                    <Text style={styles.reviewRatingStars}>{'⭐'.repeat(Math.min(rev.rating || 5, 5))}</Text>
-                    {rev.comment && <Text style={styles.reviewComment}>"{rev.comment}"</Text>}
+                    <View style={{ flexDirection: 'row', gap: 2, marginVertical: 4 }}>
+                      {Array.from({ length: Math.min(rev.rating || 5, 5) }).map((_, i) => (
+                        <Star key={i} size={11} color="#F59E0B" fill="#F59E0B" />
+                      ))}
+                    </View>
+                    {rev.comment && <Text style={[styles.reviewComment, { color: themeColors.text }]}>"{rev.comment}"</Text>}
                   </View>
                 ))
               )}
@@ -270,21 +330,21 @@ export const ArtisanPublicProfileScreen: React.FC<ArtisanPublicProfileScreenProp
 
           {activeTab === 'ABOUT' && (
             <View style={styles.contentSection}>
-              <View style={styles.aboutCard}>
-                <Text style={styles.aboutTitle}>Biography</Text>
-                <Text style={styles.aboutText}>
+              <View style={[styles.aboutCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+                <Text style={[styles.aboutTitle, { color: themeColors.text }]}>Biography</Text>
+                <Text style={[styles.aboutText, { color: themeColors.text }]}>
                   {artisan?.bio ||
-                    `Specialized ${tradeName} offering high-precision residential and commercial repair services on the Fixmate platform.`}
+                    `Specialized ${tradeName} offering high-precision residential and commercial repair services on the Artifix platform.`}
                 </Text>
 
-                <Text style={[styles.aboutTitle, { marginTop: spacing.md }]}>Skills & Equipment</Text>
+                <Text style={[styles.aboutTitle, { color: themeColors.text, marginTop: spacing.md }]}>Skills & Equipment</Text>
                 <View style={styles.skillPillsWrap}>
                   {(artisan?.skills && artisan.skills.length > 0
                     ? artisan.skills
                     : [tradeName, 'Diagnostic Inspection', 'Site Safety Protocol', 'Zero-Defect Handover']
                   ).map((s: string) => (
-                    <View key={s} style={styles.skillPill}>
-                      <Text style={styles.skillPillText}>{s}</Text>
+                    <View key={s} style={[styles.skillPill, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}>
+                      <Text style={[styles.skillPillText, { color: themeColors.text }]}>{s}</Text>
                     </View>
                   ))}
                 </View>
@@ -295,14 +355,36 @@ export const ArtisanPublicProfileScreen: React.FC<ArtisanPublicProfileScreenProp
       )}
 
       {/* Sticky Bottom Bar */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.chatBtn} onPress={onChat} activeOpacity={0.8}>
-          <Text style={styles.chatBtnText}>💬 Chat</Text>
+      <View style={[styles.bottomBar, { backgroundColor: themeColors.surface, borderTopColor: themeColors.border }]}>
+        <TouchableOpacity style={[styles.chatBtn, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]} onPress={onChat} activeOpacity={0.8}>
+          <MessageSquare size={16} color={themeColors.text} />
+          <Text style={[styles.chatBtnText, { color: themeColors.text }]}>Chat</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.inviteBtn, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: '#10B981' }]}
+          onPress={() => setIsInviteModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Mail size={16} color={isDark ? '#34D399' : colors.primary} />
+          <Text style={[styles.inviteBtnText, isDark && { color: '#34D399' }]}>Invite to Job</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.hireBtn} onPress={() => onRequestQuote?.(tradeName)} activeOpacity={0.8}>
-          <Text style={styles.hireBtnText}>Direct Hire / Get Quote</Text>
+          <Zap size={16} color="#FFFFFF" />
+          <Text style={styles.hireBtnText}>Direct Hire</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Direct Job Invitation Modal */}
+      {artisanId && (
+        <JobInvitationModal
+          visible={isInviteModalVisible}
+          artisanId={artisanId}
+          artisanName={displayName}
+          artisanTrade={tradeName}
+          onClose={() => setIsInviteModalVisible(false)}
+          onCreateNewJob={() => onRequestQuote?.(tradeName)}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -390,6 +472,9 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   ninBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: '#DCFCE7',
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -444,30 +529,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.textMuted,
     marginTop: 2,
-  },
-  trustBadgesRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  trustBadge: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    padding: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  trustBadgeIcon: {
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  trustBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'center',
   },
   tabsRow: {
     flexDirection: 'row',
@@ -659,25 +720,48 @@ const styles = StyleSheet.create({
     ...shadows.lg,
   },
   chatBtn: {
-    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
     backgroundColor: colors.background,
     paddingVertical: 14,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   chatBtnText: {
     ...typography.body,
     fontWeight: 'bold',
     color: colors.text,
   },
+  inviteBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: colors.primaryLight,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inviteBtnText: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.primary,
+  },
   hireBtn: {
-    flex: 2,
+    flex: 1.2,
+    flexDirection: 'row',
+    gap: 6,
     backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: radius.md,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   hireBtnText: {
     ...typography.body,

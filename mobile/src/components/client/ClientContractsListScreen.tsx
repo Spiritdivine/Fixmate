@@ -8,10 +8,25 @@ import {
   SafeAreaView,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { ContractService } from '../../services/contract.service';
+import { SkeletonContractCard } from '../shared';
+import {
+  ArrowLeft,
+  ShieldCheck,
+  Clock,
+  MessageSquare,
+  ChevronRight,
+  FileText,
+  AlertCircle,
+  Wrench,
+  CheckCircle2,
+  Calendar,
+  User,
+} from 'lucide-react-native';
 
 interface ContractItem {
   id: string;
@@ -22,8 +37,10 @@ interface ContractItem {
   totalAmount: number;
   status: 'ACTIVE' | 'REVIEW' | 'COMPLETED';
   milestoneStatus: string;
+  milestoneProgressText?: string;
   startDate: string;
   warrantyStatus?: string;
+  imageUrl?: string | null;
 }
 
 interface ClientContractsListScreenProps {
@@ -37,6 +54,7 @@ export const ClientContractsListScreen: React.FC<ClientContractsListScreenProps>
   onSelectContract,
   onOpenChat,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
   const [tab, setTab] = useState<'ACTIVE' | 'REVIEW' | 'COMPLETED'>('ACTIVE');
   const [contracts, setContracts] = useState<ContractItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -78,9 +96,12 @@ export const ClientContractsListScreen: React.FC<ClientContractsListScreenProps>
             mappedStatus = 'ACTIVE';
           }
 
+          const completedCount = milestones.filter((m: any) => m.status === 'RELEASED').length;
+          const totalMilestones = milestones.length;
+          const milestoneProgressText = `${completedCount}/${totalMilestones} Milestones Released`;
+
           let milestoneSummary = 'No milestones scheduled';
           if (milestones.length > 0) {
-            const completedCount = milestones.filter((m: any) => m.status === 'RELEASED').length;
             const activeMilestone = milestones.find((m: any) => m.status === 'IN_PROGRESS' || m.status === 'SUBMITTED');
             if (activeMilestone) {
               milestoneSummary = `Milestone ${activeMilestone.stepOrder || 1}/${milestones.length}: ${activeMilestone.title} (${activeMilestone.status})`;
@@ -95,6 +116,8 @@ export const ClientContractsListScreen: React.FC<ClientContractsListScreenProps>
             c.artisan?.clientProfile?.firstName ||
             'Assigned Artisan';
 
+          const rawImg = c.job?.attachments?.[0]?.fileUrl || c.job?.attachments?.[0]?.url || c.job?.coverImageUrl || null;
+
           return {
             id: c.id,
             contractCode: c.contractCode || `CTR-${c.id.slice(0, 8).toUpperCase()}`,
@@ -104,8 +127,10 @@ export const ClientContractsListScreen: React.FC<ClientContractsListScreenProps>
             totalAmount: Number(c.totalAmount || 0),
             status: mappedStatus,
             milestoneStatus: milestoneSummary,
+            milestoneProgressText,
             startDate: formatDate(c.createdAt),
             warrantyStatus: isAllCompleted ? 'Warranty Active' : 'Escrow Protected',
+            imageUrl: rawImg,
           };
         });
         setContracts(transformed);
@@ -132,43 +157,55 @@ export const ClientContractsListScreen: React.FC<ClientContractsListScreenProps>
   });
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColors.headerBg, borderBottomColor: themeColors.headerBorder }]}>
         {onBack && (
           <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-            <Text style={styles.backBtnText}>←</Text>
+            <ArrowLeft size={22} color={themeColors.text} strokeWidth={2} />
           </TouchableOpacity>
         )}
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Contracts & Agreements</Text>
-          <Text style={styles.headerSubtitle}>Legally binding smart escrow contracts</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>Contracts & Agreements</Text>
+          <Text style={[styles.headerSubtitle, { color: themeColors.textMuted }]}>Legally binding smart escrow contracts</Text>
         </View>
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabsWrap}>
+      <View style={[styles.tabsWrap, { backgroundColor: themeColors.headerBg, borderBottomColor: themeColors.headerBorder }]}>
         <TouchableOpacity
-          style={[styles.tabBtn, tab === 'ACTIVE' && styles.tabBtnActive]}
+          style={[
+            styles.tabBtn,
+            { backgroundColor: themeColors.surfaceSubtle },
+            tab === 'ACTIVE' && [styles.tabBtnActive, isDark && { backgroundColor: themeColors.primary }],
+          ]}
           onPress={() => setTab('ACTIVE')}
         >
-          <Text style={[styles.tabText, tab === 'ACTIVE' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: themeColors.textMuted }, tab === 'ACTIVE' && styles.tabTextActive]}>
             Active ({contracts.filter((c) => c.status === 'ACTIVE').length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tabBtn, tab === 'REVIEW' && styles.tabBtnActive]}
+          style={[
+            styles.tabBtn,
+            { backgroundColor: themeColors.surfaceSubtle },
+            tab === 'REVIEW' && [styles.tabBtnActive, isDark && { backgroundColor: themeColors.primary }],
+          ]}
           onPress={() => setTab('REVIEW')}
         >
-          <Text style={[styles.tabText, tab === 'REVIEW' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: themeColors.textMuted }, tab === 'REVIEW' && styles.tabTextActive]}>
             Under Review ({contracts.filter((c) => c.status === 'REVIEW').length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tabBtn, tab === 'COMPLETED' && styles.tabBtnActive]}
+          style={[
+            styles.tabBtn,
+            { backgroundColor: themeColors.surfaceSubtle },
+            tab === 'COMPLETED' && [styles.tabBtnActive, isDark && { backgroundColor: themeColors.primary }],
+          ]}
           onPress={() => setTab('COMPLETED')}
         >
-          <Text style={[styles.tabText, tab === 'COMPLETED' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: themeColors.textMuted }, tab === 'COMPLETED' && styles.tabTextActive]}>
             Archived ({contracts.filter((c) => c.status === 'COMPLETED').length})
           </Text>
         </TouchableOpacity>
@@ -176,15 +213,16 @@ export const ClientContractsListScreen: React.FC<ClientContractsListScreenProps>
 
       {/* Content */}
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Fetching contracts...</Text>
+        <View style={styles.listContent}>
+          <SkeletonContractCard />
+          <SkeletonContractCard />
+          <SkeletonContractCard />
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Could not load contracts</Text>
-          <Text style={styles.errorSub}>{error}</Text>
+          <AlertCircle size={36} color="#DC2626" strokeWidth={1.75} style={{ marginBottom: 10 }} />
+          <Text style={[styles.errorTitle, { color: themeColors.text }]}>Could not load contracts</Text>
+          <Text style={[styles.errorSub, { color: themeColors.textMuted }]}>{error}</Text>
           <TouchableOpacity onPress={() => loadContracts()} style={styles.retryBtn}>
             <Text style={styles.retryBtnText}>Retry</Text>
           </TouchableOpacity>
@@ -199,21 +237,21 @@ export const ClientContractsListScreen: React.FC<ClientContractsListScreenProps>
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => loadContracts(true)}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
+              tintColor={isDark ? themeColors.primary : colors.primary}
+              colors={[isDark ? themeColors.primary : colors.primary]}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📜</Text>
-              <Text style={styles.emptyTitle}>
+              <FileText size={38} color={themeColors.textMuted} strokeWidth={1.5} style={{ marginBottom: 12 }} />
+              <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
                 {tab === 'ACTIVE'
                   ? 'No Active Contracts'
                   : tab === 'REVIEW'
                   ? 'No Milestones Pending Review'
                   : 'No Archived Contracts'}
               </Text>
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptySub, { color: themeColors.textMuted }]}>
                 {tab === 'ACTIVE'
                   ? 'When you accept an artisan proposal, a legally binding contract with smart escrow custody will be created here.'
                   : tab === 'REVIEW'
@@ -223,79 +261,93 @@ export const ClientContractsListScreen: React.FC<ClientContractsListScreenProps>
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.contractCode}>{item.contractCode}</Text>
-                  <Text style={styles.title}>{item.title}</Text>
+            <TouchableOpacity
+              style={[
+                styles.card,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                },
+              ]}
+              activeOpacity={0.92}
+              onPress={() => onSelectContract?.(item.id)}
+            >
+              <View style={styles.cardRow}>
+                {/* Left: Defect/Job Image */}
+                <View style={[styles.imageCol, { backgroundColor: themeColors.surfaceSubtle }]}>
+                  <Image
+                    source={{
+                      uri: item.imageUrl || 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=400&q=80',
+                    }}
+                    style={styles.contractImage}
+                    resizeMode="cover"
+                  />
                 </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    item.status === 'ACTIVE'
-                      ? styles.statusActive
-                      : item.status === 'REVIEW'
-                      ? styles.statusReview
-                      : styles.statusCompleted,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusBadgeText,
-                      item.status === 'ACTIVE'
-                        ? styles.statusActiveText
-                        : item.status === 'REVIEW'
-                        ? styles.statusReviewText
-                        : styles.statusCompletedText,
-                    ]}
-                  >
-                    {item.status}
+
+                {/* Right: Content Information */}
+                <View style={styles.contentCol}>
+                  {/* Top: Status Badge (Contract number removed) */}
+                  <View style={styles.topRow}>
+                    <View style={[styles.statusPill, isDark && { backgroundColor: 'rgba(52, 211, 153, 0.15)' }]}>
+                      <View style={styles.statusDot} />
+                      <Text style={[styles.statusText, isDark && { color: '#34D399' }]}>{item.status}</Text>
+                    </View>
+                  </View>
+
+                  {/* Title */}
+                  <Text style={[styles.titleText, { color: themeColors.text }]} numberOfLines={1}>
+                    {item.title}
                   </Text>
+
+                  {/* Contractor Name & Total Escrow (Contractor title removed) */}
+                  <View style={styles.contractorEscrowRow}>
+                    <View style={{ flex: 1, paddingRight: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <User size={12} color={themeColors.textMuted} style={{ marginRight: 4 }} />
+                        <Text style={[styles.contractorName, { color: themeColors.text }]} numberOfLines={1}>
+                          {item.artisanName}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[styles.metaLabel, { color: themeColors.textMuted }]}>Total Escrow</Text>
+                      <Text style={[styles.totalEscrowAmount, isDark && { color: '#34D399' }]}>
+                        {formatCurrency(item.totalAmount)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Milestone Status Bar (Milestone status title removed) */}
+                  <View style={[styles.milestoneBar, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}>
+                    <View style={[styles.milestoneIconWrap, isDark && { backgroundColor: 'rgba(52, 211, 153, 0.15)' }]}>
+                      <Clock size={14} color={isDark ? '#34D399' : '#0D472D'} strokeWidth={2.4} />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                      <Text style={[styles.milestoneBarValue, { color: themeColors.text }]}>
+                        {item.milestoneProgressText || item.milestoneStatus}
+                      </Text>
+                    </View>
+                    <ChevronRight size={15} color={themeColors.textMuted} strokeWidth={2} />
+                  </View>
+
+                  {/* Footer: Date & Details Button */}
+                  <View style={styles.cardFooter}>
+                    <View style={styles.dateWrap}>
+                      <Calendar size={12} color={themeColors.textMuted} strokeWidth={2} style={{ marginRight: 4 }} />
+                      <Text style={[styles.dateLabel, { color: themeColors.textMuted }]}>Started {item.startDate}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.detailsBtn}
+                      activeOpacity={0.85}
+                      onPress={() => onSelectContract?.(item.id)}
+                    >
+                      <Text style={styles.detailsBtnText}>View Contract Details</Text>
+                      <ChevronRight size={13} color="#FFFFFF" strokeWidth={2.4} style={{ marginLeft: 2 }} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-
-              {/* Artisan & Amount */}
-              <View style={styles.metaRow}>
-                <View style={styles.artisanCol}>
-                  <Text style={styles.metaLabel}>Contractor</Text>
-                  <Text style={styles.metaVal}>{item.artisanName} ({item.trade})</Text>
-                </View>
-                <View style={styles.amountCol}>
-                  <Text style={styles.metaLabel}>Total Escrow</Text>
-                  <Text style={styles.amountVal}>{formatCurrency(item.totalAmount)}</Text>
-                </View>
-              </View>
-
-              {/* Milestone status indicator */}
-              <View style={styles.milestoneBox}>
-                <Text style={styles.milestoneBoxLabel}>Milestone Status</Text>
-                <Text style={styles.milestoneBoxVal}>🔹 {item.milestoneStatus}</Text>
-              </View>
-
-              {/* Warranty Badge */}
-              {item.warrantyStatus && (
-                <View style={styles.warrantyRow}>
-                  <Text style={styles.warrantyText}>🛡️ {item.warrantyStatus}</Text>
-                  <Text style={styles.dateText}>Started {item.startDate}</Text>
-                </View>
-              )}
-
-              {/* Card Actions */}
-              <View style={styles.actionsRow}>
-                <TouchableOpacity
-                  style={styles.chatActionBtn}
-                  onPress={() => onOpenChat?.(item.artisanName)}
-                >
-                  <Text style={styles.chatActionText}>💬 Chat</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.detailsActionBtn}
-                  onPress={() => onSelectContract?.(item.id)}
-                >
-                  <Text style={styles.detailsActionText}>View Milestones & Proof ›</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            </TouchableOpacity>
           )}
         />
       )}
@@ -429,161 +481,164 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#E5E7EB',
     ...shadows.sm,
   },
-  cardHeader: {
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  imageCol: {
+    width: 104,
+    height: 140,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#F3F4F6',
+  },
+  contractImage: {
+    width: '100%',
+    height: '100%',
+  },
+  escrowOverlay: {
+    position: 'absolute',
+    bottom: 6,
+    left: 5,
+    right: 5,
+    backgroundColor: 'rgba(10, 58, 42, 0.92)',
+    borderRadius: 16,
+    paddingVertical: 3.5,
+    paddingHorizontal: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  escrowOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  contentCol: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: 'space-between',
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  contractCode: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4B5563',
+    letterSpacing: 0.3,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+    marginRight: 4,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#065F46',
+    textTransform: 'uppercase',
+  },
+  titleText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  contractorEscrowRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.sm,
-    gap: 8,
-  },
-  contractCode: {
-    ...typography.caption,
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 10,
-    letterSpacing: 0.5,
-  },
-  title: {
-    ...typography.body,
-    fontWeight: '700',
-    color: colors.text,
-    marginTop: 2,
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-  },
-  statusActive: {
-    backgroundColor: colors.primaryLight,
-  },
-  statusReview: {
-    backgroundColor: '#FEF3C7',
-  },
-  statusCompleted: {
-    backgroundColor: '#E5E7EB',
-  },
-  statusBadgeText: {
-    ...typography.caption,
-    fontWeight: '700',
-    fontSize: 10,
-  },
-  statusActiveText: {
-    color: colors.primary,
-  },
-  statusReviewText: {
-    color: '#B45309',
-  },
-  statusCompletedText: {
-    color: colors.textMuted,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-    marginVertical: spacing.xs,
-  },
-  artisanCol: {
-    flex: 1,
-  },
-  amountCol: {
-    alignItems: 'flex-end',
+    marginBottom: 6,
   },
   metaLabel: {
-    ...typography.caption,
-    color: colors.textMuted,
     fontSize: 10,
+    color: '#6B7280',
+    marginBottom: 1,
   },
-  metaVal: {
-    ...typography.caption,
+  contractorName: {
+    fontSize: 12.5,
     fontWeight: '700',
-    color: colors.text,
-    marginTop: 2,
+    color: '#111827',
   },
-  amountVal: {
-    ...typography.body,
+  totalEscrowAmount: {
+    fontSize: 17,
     fontWeight: '800',
-    color: colors.primary,
-    marginTop: 2,
+    color: '#0D472D',
   },
-  milestoneBox: {
-    backgroundColor: colors.background,
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    marginVertical: spacing.xs,
+  milestoneBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    marginBottom: 6,
   },
-  milestoneBoxLabel: {
-    ...typography.caption,
-    fontSize: 10,
-    color: colors.textMuted,
-    marginBottom: 2,
+  milestoneIconWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#E6F4EA',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  milestoneBoxVal: {
-    ...typography.caption,
-    fontWeight: '600',
-    color: colors.text,
+  milestoneBarLabel: {
+    fontSize: 9,
+    color: '#6B7280',
   },
-  warrantyRow: {
+  milestoneBarValue: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.xs,
-    paddingTop: spacing.xs,
+    paddingTop: 2,
   },
-  warrantyText: {
-    ...typography.caption,
-    color: colors.primary,
-    fontWeight: '600',
-    fontSize: 10,
-  },
-  dateText: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontSize: 10,
-  },
-  actionsRow: {
+  dateWrap: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-  },
-  chatActionBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  chatActionText: {
-    ...typography.caption,
-    fontWeight: '600',
-    color: colors.text,
+  dateLabel: {
+    fontSize: 10,
+    color: '#6B7280',
   },
-  detailsActionBtn: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: radius.md,
+  detailsBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#0D472D',
+    paddingVertical: 5.5,
+    paddingHorizontal: 10,
+    borderRadius: 16,
   },
-  detailsActionText: {
-    ...typography.caption,
+  detailsBtnText: {
+    fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
   },

@@ -1,6 +1,7 @@
 import prisma from '../config/db.js';
 import { ApiResponse } from '../utils/api-response.js';
 import { ApiError } from '../utils/api-error.js';
+import { getIO } from '../sockets/socket.server.js';
 
 export class ChatController {
   static async getConversations(req, res, next) {
@@ -33,7 +34,34 @@ export class ChatController {
         orderBy: { lastMessageAt: 'desc' },
       });
 
-      res.status(200).json(new ApiResponse(200, conversations, 'Conversations fetched'));
+      if (conversations.length === 0) {
+        return res.status(200).json(new ApiResponse(200, [], 'Conversations fetched'));
+      }
+
+      // Single SQL batch query to compute unread counts for all conversations at once (Eliminating N+1 queries)
+      const convIds = conversations.map((c) => c.id);
+      const unreadCountsRaw = await prisma.$queryRaw`
+        SELECT m.conversation_id, COUNT(m.id)::int AS unread_count
+        FROM messages m
+        INNER JOIN conversation_participants cp 
+          ON cp.conversation_id = m.conversation_id 
+          AND cp.user_id = ${req.user.id}::uuid
+        WHERE m.conversation_id = ANY(${convIds}::uuid[])
+          AND m.sender_id != ${req.user.id}::uuid
+          AND (cp.last_read_at IS NULL OR m.created_at > cp.last_read_at)
+        GROUP BY m.conversation_id
+      `;
+
+      const unreadCountMap = new Map(
+        unreadCountsRaw.map((row) => [row.conversation_id, Number(row.unread_count)])
+      );
+
+      const enriched = conversations.map((conv) => ({
+        ...conv,
+        unreadCount: unreadCountMap.get(conv.id) || 0,
+      }));
+
+      res.status(200).json(new ApiResponse(200, enriched, 'Conversations fetched'));
     } catch (error) {
       next(error);
     }
@@ -69,6 +97,20 @@ export class ChatController {
         data: { lastReadAt: new Date() },
       });
 
+      await prisma.message.updateMany({
+        where: { conversationId, senderId: { not: req.user.id }, isRead: false },
+        data: { isRead: true },
+      });
+
+      try {
+        const io = getIO();
+        io.to(`conversation:${conversationId}`).emit('messages_read', {
+          conversationId,
+          readerId: req.user.id,
+          readAt: new Date(),
+        });
+      } catch {}
+
       res.status(200).json(new ApiResponse(200, messages, 'Messages fetched'));
     } catch (error) {
       next(error);
@@ -78,7 +120,7 @@ export class ChatController {
   static async sendMessage(req, res, next) {
     try {
       const { conversationId } = req.params;
-      const { body, messageType = 'TEXT', attachmentUrl } = req.body;
+      const { body, messageType = 'TEXT', attachmentUrl, metadata } = req.body;
 
       const isParticipant = await prisma.conversationParticipant.findUnique({
         where: {
@@ -99,6 +141,7 @@ export class ChatController {
             messageType,
             body,
             attachmentUrl,
+            metadata: metadata || null,
           },
           include: {
             sender: { select: { id: true, email: true, avatarUrl: true } },
@@ -113,7 +156,41 @@ export class ChatController {
         return msg;
       });
 
+      // Real-time broadcast to room
+      try {
+        const io = getIO();
+        io.to(`conversation:${conversationId}`).emit('new_message', message);
+      } catch {}
+
       res.status(201).json(new ApiResponse(201, message, 'Message sent'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async markAsRead(req, res, next) {
+    try {
+      const { id } = req.params;
+      await prisma.conversationParticipant.updateMany({
+        where: { conversationId: id, userId: req.user.id },
+        data: { lastReadAt: new Date() },
+      });
+
+      await prisma.message.updateMany({
+        where: { conversationId: id, senderId: { not: req.user.id }, isRead: false },
+        data: { isRead: true },
+      });
+
+      try {
+        const io = getIO();
+        io.to(`conversation:${id}`).emit('messages_read', {
+          conversationId: id,
+          readerId: req.user.id,
+          readAt: new Date(),
+        });
+      } catch {}
+
+      res.status(200).json(new ApiResponse(200, null, 'Conversation marked as read'));
     } catch (error) {
       next(error);
     }
@@ -216,6 +293,9 @@ export class ChatController {
         throw ApiError.notFound('Artisan account not found');
       }
 
+      const { contextJobId, jobId } = req.body || {};
+      const refJobId = contextJobId || jobId;
+
       let conversation = await prisma.conversation.findFirst({
         where: {
           AND: [
@@ -242,6 +322,7 @@ export class ChatController {
             take: 1,
           },
         },
+        orderBy: { lastMessageAt: 'desc' },
       });
 
       if (!conversation) {
@@ -273,6 +354,53 @@ export class ChatController {
             },
           },
         });
+      }
+
+      // If routed from a job post, attach a non-duplicating context tag
+      if (refJobId) {
+        try {
+          const job = await prisma.job.findUnique({
+            where: { id: refJobId },
+            select: { id: true, title: true },
+          });
+
+          if (job) {
+            const lastMsg = conversation.messages?.[0];
+            const contextNotice = `Regarding Job Request: "${job.title}"`;
+            const alreadyTagged = lastMsg && lastMsg.body && lastMsg.body.includes(job.title);
+
+            if (!alreadyTagged) {
+              const systemMsg = await prisma.message.create({
+                data: {
+                  conversationId: conversation.id,
+                  senderId: currentUserId,
+                  messageType: 'SYSTEM_ALERT',
+                  body: contextNotice,
+                  metadata: {
+                    jobId: job.id,
+                    jobTitle: job.title,
+                    type: 'JOB_CONTEXT_HEADER',
+                  },
+                },
+                include: {
+                  sender: { select: { id: true, email: true, avatarUrl: true } },
+                },
+              });
+
+              await prisma.conversation.update({
+                where: { id: conversation.id },
+                data: { lastMessageAt: new Date() },
+              });
+
+              try {
+                const io = getIO();
+                io.to(`conversation:${conversation.id}`).emit('new_message', systemMsg);
+              } catch {}
+            }
+          }
+        } catch (jobErr) {
+          console.warn('[ChatController] Context job lookup warning:', jobErr.message);
+        }
       }
 
       res.status(200).json(new ApiResponse(200, conversation, 'Artisan conversation retrieved successfully'));

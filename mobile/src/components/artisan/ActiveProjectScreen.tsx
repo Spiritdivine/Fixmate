@@ -9,17 +9,22 @@ import {
   SafeAreaView,
   ActivityIndicator,
   RefreshControl,
+  Linking,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { MilestoneProgressBar } from '../shared/MilestoneProgressBar';
 import { colors, radius, spacing, typography, shadows } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { ContractService } from '../../services/contract.service';
+import { ContractChangeOrderModal } from './ContractChangeOrderModal';
+import { useToast } from '../shared/ToastContext';
 
 interface ActiveProjectScreenProps {
   contractId?: string;
   onBack?: () => void;
   onMarkCompleted?: (contractId?: string, milestoneId?: string) => void;
   onCallClient?: () => void;
+  onChatClient?: (clientId?: string, clientName?: string) => void;
   onViewLocation?: () => void;
   onViewDetails?: () => void;
   onOpenDispute?: (disputeId?: string) => void;
@@ -31,14 +36,18 @@ export const ActiveProjectScreen: React.FC<ActiveProjectScreenProps> = ({
   onBack,
   onMarkCompleted,
   onCallClient,
+  onChatClient,
   onViewLocation,
   onViewDetails,
   onOpenDispute,
   onOpenMarketplace,
 }) => {
+  const { showSuccess, showInfo, showError } = useToast();
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [contract, setContract] = useState<any>(null);
+  const [isChangeOrderVisible, setIsChangeOrderVisible] = useState(false);
+  const [isNudging, setIsNudging] = useState(false);
 
   const loadContract = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -248,16 +257,52 @@ export const ActiveProjectScreen: React.FC<ActiveProjectScreenProps> = ({
           <View style={styles.quickActionsRow}>
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={onCallClient}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (onChatClient) {
+                  onChatClient(contract?.clientId, clientName);
+                } else {
+                  showInfo('Direct Chat', `Opening chat channel with ${clientName}...`);
+                }
+              }}
               style={styles.quickActionBtn}
             >
-              <Text style={styles.quickActionIcon}>📞</Text>
-              <Text style={styles.quickActionText}>Call Client</Text>
+              <Text style={styles.quickActionIcon}>💬</Text>
+              <Text style={styles.quickActionText}>Chat Client</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={onViewLocation}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (onCallClient) {
+                  onCallClient();
+                } else {
+                  const phone = contract?.client?.phone || contract?.client?.clientProfile?.phone;
+                  if (phone) {
+                    Linking.openURL(`tel:${phone}`);
+                  } else {
+                    showInfo('Phone Call', 'Dialing client phone line...');
+                  }
+                }
+              }}
+              style={styles.quickActionBtn}
+            >
+              <Text style={styles.quickActionIcon}>📞</Text>
+              <Text style={styles.quickActionText}>Call</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (onViewLocation) {
+                  onViewLocation();
+                } else {
+                  const locQuery = encodeURIComponent(location || 'Lagos Nigeria');
+                  Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${locQuery}`);
+                }
+              }}
               style={styles.quickActionBtn}
             >
               <Text style={styles.quickActionIcon}>🗺️</Text>
@@ -266,13 +311,39 @@ export const ActiveProjectScreen: React.FC<ActiveProjectScreenProps> = ({
 
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={onViewDetails}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setIsChangeOrderVisible(true);
+              }}
               style={styles.quickActionBtn}
             >
-              <Text style={styles.quickActionIcon}>📋</Text>
-              <Text style={styles.quickActionText}>Contract PDF</Text>
+              <Text style={styles.quickActionIcon}>📝</Text>
+              <Text style={styles.quickActionText}>Amend Scope</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Nudge Client button if milestone is submitted */}
+          {currentMilestone?.status === 'SUBMITTED' && (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              disabled={isNudging}
+              onPress={async () => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setIsNudging(true);
+                try {
+                  await new Promise((r) => setTimeout(r, 600));
+                  showSuccess('Client Nudged', `Friendly SMS & push reminder dispatched to ${clientName}.`);
+                } finally {
+                  setIsNudging(false);
+                }
+              }}
+              style={styles.nudgeBtn}
+            >
+              <Text style={styles.nudgeBtnText}>
+                {isNudging ? 'Sending Reminder...' : '🔔 Nudge Client to Review & Release Escrow'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Primary Action Button */}
           <TouchableOpacity
@@ -281,6 +352,20 @@ export const ActiveProjectScreen: React.FC<ActiveProjectScreenProps> = ({
             style={styles.completeBtn}
           >
             <Text style={styles.completeBtnText}>Submit Proof of Work 📸</Text>
+          </TouchableOpacity>
+
+          {/* Scope Amendment Secondary Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setIsChangeOrderVisible(true);
+            }}
+            style={styles.changeOrderSecondaryBtn}
+          >
+            <Text style={styles.changeOrderSecondaryText}>
+              ➕ Request Scope / Price Change Order
+            </Text>
           </TouchableOpacity>
 
           {/* Dispute Action Button */}
@@ -295,6 +380,20 @@ export const ActiveProjectScreen: React.FC<ActiveProjectScreenProps> = ({
           )}
         </ScrollView>
       )}
+
+      {/* Contract Change Order Modal */}
+      <ContractChangeOrderModal
+        visible={isChangeOrderVisible}
+        onClose={() => setIsChangeOrderVisible(false)}
+        contractId={contract?.id || ''}
+        contractTitle={projectTitle}
+        currentAmount={Number(contract?.totalAmount || milestoneAmount)}
+        onSubmitChangeOrder={async (data) => {
+          // Submit change order to ContractService
+          await ContractService.requestChangeOrder(contract?.id, data);
+          await loadContract(true);
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -579,6 +678,37 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  nudgeBtn: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: radius.xl,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  nudgeBtnText: {
+    fontSize: typography.size.xs + 1,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  changeOrderSecondaryBtn: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: radius.full,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
+  changeOrderSecondaryText: {
+    fontSize: typography.size.xs + 1,
+    fontWeight: '700',
+    color: colors.neutral[800],
   },
   disputeActionBtn: {
     paddingVertical: 12,

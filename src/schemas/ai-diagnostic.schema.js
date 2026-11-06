@@ -38,6 +38,9 @@ export const DiagnosticResponseSchema = z.object({
   conversationalReply: z.string().min(10).max(4000).default('Here is the diagnostic assessment of the fault.'),
   diagnosticTitle: z.string().min(3).max(255).default('Property Maintenance Diagnostic'),
   probableCause: z.string().min(5).max(1000).default('Component wear or physical failure requiring inspection.'),
+  userIntent: z.enum(['GREETING', 'DIAGNOSTIC_CONSULTATION', 'ARTISAN_HIRE_REQUESTED', 'OUT_OF_SCOPE']).default('DIAGNOSTIC_CONSULTATION'),
+  bomRequested: z.coerce.boolean().default(false),
+  shouldMatchArtisans: z.coerce.boolean().default(false),
   categorySlug: z
     .string()
     .min(2)

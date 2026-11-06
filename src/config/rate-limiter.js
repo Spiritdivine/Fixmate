@@ -1,6 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
-import { redis } from './redis.js';
+import { redis, cacheStore } from './redis.js';
 
 /**
  * Creates a distributed RedisStore if Redis is available, or defaults to in-memory store
@@ -9,7 +9,12 @@ const getStore = (prefix) => {
   if (redis) {
     try {
       return new RedisStore({
-        sendCommand: (...args) => redis.call(...args),
+        sendCommand: async (...args) => {
+          if (!cacheStore.isRedisActive() || redis.status !== 'ready') {
+            throw new Error('REDIS_OFFLINE');
+          }
+          return redis.call(...args);
+        },
         prefix: `artisan:rl:${prefix}:`,
       });
     } catch (err) {
@@ -27,7 +32,13 @@ export const standardApiLimiter = rateLimit({
   max: 300, // Limit each IP to 300 requests per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
+  passOnStoreError: true, // Allow traffic if Redis temporarily disconnects instead of returning 500
   store: getStore('std'),
+  skip: (req) => {
+    // Exempt payment provider webhooks (Paystack / Kotani) from general rate limiting
+    const url = req.originalUrl || req.url || '';
+    return url.includes('/payments/webhook') || url.includes('/payments/webhooks/');
+  },
   message: {
     success: false,
     statusCode: 429,
@@ -43,6 +54,7 @@ export const authRateLimiter = rateLimit({
   max: 20, // Limit each IP to 20 auth attempts per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
+  passOnStoreError: true,
   store: getStore('auth'),
   message: {
     success: false,
@@ -59,6 +71,7 @@ export const financialRateLimiter = rateLimit({
   max: 30, // 30 financial operations per 5 minutes
   standardHeaders: true,
   legacyHeaders: false,
+  passOnStoreError: true,
   store: getStore('fin'),
   message: {
     success: false,
@@ -75,6 +88,7 @@ export const aiDiagnosticLimiter = rateLimit({
   max: 30, // 30 diagnostics per hour per IP
   standardHeaders: true,
   legacyHeaders: false,
+  passOnStoreError: true,
   store: getStore('ai_diag'),
   message: {
     success: false,

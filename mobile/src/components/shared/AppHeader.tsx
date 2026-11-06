@@ -1,16 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { MapPin, Bell, Shield, ChevronRight } from 'lucide-react-native';
+import { MapPin, Bell, Shield, ChevronRight, QrCode } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { BrandLogo } from './BrandLogo';
-import { colors, spacing, radius, typography } from '../../theme';
+import { UserAvatar } from './UserAvatar';
+import { colors, spacing, radius, typography, touchTargets } from '../../theme';
 
 interface AppHeaderProps {
   location?: string;
   unreadCount?: number;
   userAvatarUrl?: string;
+  userName?: string;
   onLocationPress?: () => void;
   onNotificationPress?: () => void;
   onAvatarPress?: () => void;
+  onScanPress?: () => void;
   theme?: 'light' | 'dark'; // Dark theme for artisan header
 }
 
@@ -18,35 +22,71 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   location = 'Lekki Phase 1, Lagos',
   unreadCount = 3,
   userAvatarUrl,
+  userName = 'Client',
   onLocationPress,
   onNotificationPress,
   onAvatarPress,
+  onScanPress,
   theme = 'light',
 }) => {
   const isDark = theme === 'dark';
+
+  const initials = (userName || 'Client')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'CL';
+
+  const handleAvatar = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onAvatarPress?.();
+  };
+
+  const handleLocation = () => {
+    Haptics.selectionAsync().catch(() => {});
+    onLocationPress?.();
+  };
+
+  const handleNotification = () => {
+    Haptics.selectionAsync().catch(() => {});
+    onNotificationPress?.();
+  };
+
+  const handleScan = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onScanPress?.();
+  };
 
   return (
     <View style={[styles.container, isDark ? styles.containerDark : styles.containerLight]}>
       {/* Left: Avatar & Logo */}
       <View style={styles.leftSection}>
-        <TouchableOpacity onPress={onAvatarPress} activeOpacity={0.8} style={styles.avatarButton}>
-          {userAvatarUrl ? (
-            <Image source={{ uri: userAvatarUrl }} style={styles.avatarImage} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarInitial}>M</Text>
-            </View>
-          )}
+        <TouchableOpacity
+          onPress={handleAvatar}
+          activeOpacity={0.8}
+          hitSlop={touchTargets.hitSlop}
+          style={styles.avatarButton}
+        >
+          <UserAvatar
+            avatarUrl={userAvatarUrl}
+            name={userName}
+            size={36}
+            backgroundColor={isDark ? 'rgba(52, 211, 153, 0.2)' : '#ECFDF5'}
+            textColor={isDark ? '#34D399' : '#1A4731'}
+          />
         </TouchableOpacity>
 
-        {/* Fixmate Main Brand Logo from brand-assets/png */}
-        <BrandLogo variant="lockup" theme={isDark ? 'dark' : 'light'} size={28} />
+        {/* Clean Brand Monogram Icon Mark (Without Fixmate text title) */}
+        <BrandLogo variant="mark" theme={isDark ? 'dark' : 'light'} size={28} />
       </View>
 
       {/* Middle/Location Pill */}
       <TouchableOpacity
-        onPress={onLocationPress}
+        onPress={handleLocation}
         activeOpacity={0.8}
+        hitSlop={touchTargets.hitSlop}
         style={[styles.locationPill, isDark ? styles.locationPillDark : styles.locationPillLight]}
       >
         <MapPin
@@ -67,26 +107,46 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         />
       </TouchableOpacity>
 
-      {/* Right: Notifications */}
-      <TouchableOpacity
-        onPress={onNotificationPress}
-        activeOpacity={0.8}
-        style={[styles.bellButton, isDark && styles.bellButtonDark]}
-      >
-        <Bell
-          size={18}
-          color={isDark ? '#F3F4F6' : colors.icons.primary}
-          strokeWidth={1.85}
-        />
-        {unreadCount > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{unreadCount}</Text>
-          </View>
+      {/* Right: Actions */}
+      <View style={styles.rightSection}>
+        {onScanPress && (
+          <TouchableOpacity
+            onPress={handleScan}
+            activeOpacity={0.8}
+            hitSlop={touchTargets.hitSlop}
+            style={[styles.bellButton, isDark && styles.bellButtonDark, { marginRight: 6 }]}
+          >
+            <QrCode
+              size={18}
+              color={isDark ? '#F3F4F6' : colors.icons.primary}
+              strokeWidth={1.85}
+            />
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleNotification}
+          activeOpacity={0.8}
+          hitSlop={touchTargets.hitSlop}
+          style={[styles.bellButton, isDark && styles.bellButtonDark]}
+        >
+          <Bell
+            size={18}
+            color={isDark ? '#F3F4F6' : colors.icons.primary}
+            strokeWidth={1.85}
+          />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -98,6 +158,8 @@ const styles = StyleSheet.create({
   },
   containerLight: {
     backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   containerDark: {
     backgroundColor: colors.brand.forest,
@@ -195,6 +257,10 @@ const styles = StyleSheet.create({
   },
   locationChevronDark: {
     color: '#D1FAE5',
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   bellButton: {
     width: 38,

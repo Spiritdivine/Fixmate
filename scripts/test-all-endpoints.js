@@ -51,13 +51,23 @@ async function runTests() {
 
   // 2. Admin Login
   await test('Admin Login (POST /auth/login)', async () => {
-    const res = await request('/auth/login', {
+    let res = await request('/auth/login', {
       method: 'POST',
       body: {
-        email: 'admin@artisanplatform.com',
+        email: 'admin@artifixhq.xyz',
         password: 'Admin@123456',
       },
-    });
+    }).catch(() => null);
+
+    if (!res?.data?.tokens?.accessToken) {
+      res = await request('/auth/login', {
+        method: 'POST',
+        body: {
+          email: 'admin@artisanplatform.com',
+          password: 'Admin@123456',
+        },
+      });
+    }
     adminToken = res.data.tokens.accessToken;
     if (!adminToken) throw new Error('No admin token returned');
   });
@@ -320,9 +330,9 @@ async function runTests() {
       body: {
         documentType: 'DRIVERS_LICENSE',
         documentNumber: 'DL-98234710',
-        documentFrontUrl: 'https://storage.artisan.ng/kyc/doc_front.jpg',
-        documentBackUrl: 'https://storage.artisan.ng/kyc/doc_back.jpg',
-        selfieUrl: 'https://storage.artisan.ng/kyc/selfie.jpg',
+        documentFrontUrl: 'https://storage.artifixhq.xyz/kyc/doc_front.jpg',
+        documentBackUrl: 'https://storage.artifixhq.xyz/kyc/doc_back.jpg',
+        selfieUrl: 'https://storage.artifixhq.xyz/selfie.jpg',
       },
     });
     kycId = res.data.id;
@@ -362,7 +372,7 @@ async function runTests() {
         skillIds: [1],
         attachments: [
           {
-            fileUrl: 'https://storage.artisan.ng/jobs/roof_layout.pdf',
+            fileUrl: 'https://storage.artifixhq.xyz/jobs/roof_layout.pdf',
             fileName: 'roof_layout.pdf',
             fileSizeBytes: 2048576,
             mimeType: 'application/pdf',
@@ -734,7 +744,7 @@ async function runTests() {
       token: artisanToken,
       body: {
         title: 'Manufacturer Spec Sheet',
-        fileUrl: 'https://storage.artisan.ng/evidence/spec_sheet.pdf',
+        fileUrl: 'https://storage.artifixhq.xyz/evidence/spec_sheet.pdf',
         mimeType: 'application/pdf',
       },
     });

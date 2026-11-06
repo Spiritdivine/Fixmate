@@ -13,6 +13,7 @@ import { ProfileService } from '../../services/profile.service';
 import { useAuthStore } from '../../stores/authStore';
 import * as Haptics from 'expo-haptics';
 import { ShieldCheck, CheckCircle2, Lock, ArrowRight, ArrowLeft } from 'lucide-react-native';
+import { useTheme } from '../../theme';
 
 interface ClientOnboardingScreenProps {
   onComplete: () => void;
@@ -21,6 +22,7 @@ interface ClientOnboardingScreenProps {
 export const ClientOnboardingScreen: React.FC<ClientOnboardingScreenProps> = ({
   onComplete,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
 
@@ -79,21 +81,21 @@ export const ClientOnboardingScreen: React.FC<ClientOnboardingScreenProps> = ({
   const cities = ['Lekki Phase 1', 'Victoria Island', 'Ikoyi', 'Ikeja GRA', 'Surulere', 'Yaba'];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
       {/* Top Header matching web ClientOrientation */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColors.headerBg, borderBottomColor: themeColors.headerBorder }]}>
         <View style={styles.brandRow}>
           <View style={styles.avatarMark}>
             <Text style={styles.avatarMarkText}>A</Text>
           </View>
           <View>
-            <Text style={styles.brandTitle}>Artifix</Text>
-            <Text style={styles.brandSub}>CLIENT ORIENTATION</Text>
+            <Text style={[styles.brandTitle, { color: themeColors.text }]}>Artifix</Text>
+            <Text style={[styles.brandSub, isDark && { color: '#34D399' }]}>CLIENT ORIENTATION</Text>
           </View>
         </View>
 
         <TouchableOpacity onPress={onComplete} activeOpacity={0.7}>
-          <Text style={styles.skipText}>Skip to dashboard →</Text>
+          <Text style={[styles.skipText, { color: themeColors.textMuted }]}>Skip to dashboard →</Text>
         </TouchableOpacity>
       </View>
 
@@ -101,18 +103,18 @@ export const ClientOnboardingScreen: React.FC<ClientOnboardingScreenProps> = ({
         {/* Progress Indicator */}
         <View style={styles.progressContainer}>
           <View style={styles.progressHeader}>
-            <Text style={styles.stepCount}>STEP {currentStep} OF 3</Text>
-            <Text style={styles.stepName}>
+            <Text style={[styles.stepCount, { color: themeColors.textMuted }]}>STEP {currentStep} OF 3</Text>
+            <Text style={[styles.stepName, { color: isDark ? '#34D399' : '#065F46' }]}>
               {currentStep === 1 && 'Profile Details'}
               {currentStep === 2 && 'Escrow Guarantee'}
               {currentStep === 3 && 'Get Started'}
             </Text>
           </View>
-          <View style={styles.progressBarTrack}>
+          <View style={[styles.progressBarTrack, { backgroundColor: themeColors.surfaceSubtle }]}>
             <View
               style={[
                 styles.progressBarFill,
-                { width: `${(currentStep / 3) * 100}%` },
+                { width: `${(currentStep / 3) * 100}%`, backgroundColor: themeColors.primary },
               ]}
             />
           </View>
@@ -127,10 +129,10 @@ export const ClientOnboardingScreen: React.FC<ClientOnboardingScreenProps> = ({
 
         {/* STEP 1: CLIENT PROFILE */}
         {currentStep === 1 && (
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Tell us about yourself</Text>
-              <Text style={styles.cardSub}>
+              <Text style={[styles.cardTitle, { color: themeColors.text }]}>Tell us about yourself</Text>
+              <Text style={[styles.cardSub, { color: themeColors.textMuted }]}>
                 This helps verified artisans know who they are working with when bidding on your repair jobs.
               </Text>
             </View>
@@ -154,16 +156,26 @@ export const ClientOnboardingScreen: React.FC<ClientOnboardingScreenProps> = ({
               </View>
             </View>
 
-            <Text style={styles.fieldLabel}>Primary District / City</Text>
+            <Text style={[styles.fieldLabel, { color: themeColors.text }]}>Primary District / City</Text>
             <View style={styles.chipsRow}>
               {cities.map((c) => (
                 <TouchableOpacity
                   key={c}
-                  style={[styles.chip, city === c && styles.chipActive]}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border },
+                    city === c && [styles.chipActive, { backgroundColor: isDark ? '#064E3B' : '#ECFDF5', borderColor: themeColors.primary }],
+                  ]}
                   onPress={() => setCity(c)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.chipText, city === c && styles.chipTextActive]}>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      { color: themeColors.text },
+                      city === c && [styles.chipTextActive, { color: isDark ? '#34D399' : '#065F46' }],
+                    ]}
+                  >
                     📍 {c}
                   </Text>
                 </TouchableOpacity>
@@ -178,15 +190,19 @@ export const ClientOnboardingScreen: React.FC<ClientOnboardingScreenProps> = ({
             />
 
             <TouchableOpacity
-              style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
+              style={[
+                styles.submitButton,
+                isDark && { backgroundColor: '#10B981' },
+                isSubmitting && styles.buttonDisabled,
+              ]}
               onPress={handleNext}
               disabled={isSubmitting}
               activeOpacity={0.85}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#153e2d" />
+                <ActivityIndicator size="small" color={isDark ? '#FFFFFF' : '#153e2d'} />
               ) : (
-                <Text style={styles.submitButtonText}>Continue to Escrow Tour →</Text>
+                <Text style={[styles.submitButtonText, isDark && { color: '#FFFFFF' }]}>Continue to Escrow Tour →</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -194,84 +210,90 @@ export const ClientOnboardingScreen: React.FC<ClientOnboardingScreenProps> = ({
 
         {/* STEP 2: ESCROW GUARANTEE */}
         {currentStep === 2 && (
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <View style={styles.cardHeader}>
-              <View style={styles.shieldBadge}>
-                <ShieldCheck size={16} color="#059669" />
-                <Text style={styles.shieldBadgeText}>PEACE OF MIND</Text>
+              <View style={[styles.shieldBadge, isDark && { backgroundColor: '#064E3B' }]}>
+                <ShieldCheck size={16} color={isDark ? '#34D399' : '#059669'} />
+                <Text style={[styles.shieldBadgeText, isDark && { color: '#34D399' }]}>PEACE OF MIND</Text>
               </View>
-              <Text style={styles.cardTitle}>How Fixmate Escrow Protects You</Text>
-              <Text style={styles.cardSub}>
+              <Text style={[styles.cardTitle, { color: themeColors.text }]}>How Artifix Escrow Protects You</Text>
+              <Text style={[styles.cardSub, { color: themeColors.textMuted }]}>
                 Your repair funds stay locked in an independent vault until you personally inspect and sign off on the work.
               </Text>
             </View>
 
-            <View style={styles.featureItem}>
-              <View style={styles.featureIconWrap}>
-                <Text style={styles.featureNumber}>1</Text>
+            <View style={[styles.featureItem, { backgroundColor: themeColors.surfaceSubtle }]}>
+              <View style={[styles.featureIconWrap, { backgroundColor: themeColors.surface }]}>
+                <Text style={[styles.featureNumber, { color: themeColors.text }]}>1</Text>
               </View>
               <View style={styles.featureContent}>
-                <Text style={styles.featureHeading}>Agree on Milestones</Text>
-                <Text style={styles.featureBody}>
+                <Text style={[styles.featureHeading, { color: themeColors.text }]}>Agree on Milestones</Text>
+                <Text style={[styles.featureBody, { color: themeColors.textMuted }]}>
                   The artisan divides the quote into transparent parts and labor milestones.
                 </Text>
               </View>
             </View>
 
-            <View style={styles.featureItem}>
-              <View style={styles.featureIconWrap}>
-                <Lock size={16} color="#0E3524" />
+            <View style={[styles.featureItem, { backgroundColor: themeColors.surfaceSubtle }]}>
+              <View style={[styles.featureIconWrap, { backgroundColor: themeColors.surface }]}>
+                <Lock size={16} color={isDark ? '#34D399' : '#0E3524'} />
               </View>
               <View style={styles.featureContent}>
-                <Text style={styles.featureHeading}>Fund Neutral Vault</Text>
-                <Text style={styles.featureBody}>
+                <Text style={[styles.featureHeading, { color: themeColors.text }]}>Fund Neutral Vault</Text>
+                <Text style={[styles.featureBody, { color: themeColors.textMuted }]}>
                   Deposit with Paystack or card. The artisan cannot withdraw until authorized.
                 </Text>
               </View>
             </View>
 
-            <View style={styles.featureItem}>
-              <View style={styles.featureIconWrap}>
-                <CheckCircle2 size={16} color="#059669" />
+            <View style={[styles.featureItem, { backgroundColor: themeColors.surfaceSubtle }]}>
+              <View style={[styles.featureIconWrap, { backgroundColor: themeColors.surface }]}>
+                <CheckCircle2 size={16} color={isDark ? '#34D399' : '#059669'} />
               </View>
               <View style={styles.featureContent}>
-                <Text style={styles.featureHeading}>Inspect & Approve Release</Text>
-                <Text style={styles.featureBody}>
+                <Text style={[styles.featureHeading, { color: themeColors.text }]}>Inspect & Approve Release</Text>
+                <Text style={[styles.featureBody, { color: themeColors.textMuted }]}>
                   View Before/After proof photos. One tap releases instant funds to the artisan.
                 </Text>
               </View>
             </View>
 
             <TouchableOpacity
-              style={styles.submitButton}
+              style={[
+                styles.submitButton,
+                isDark && { backgroundColor: '#10B981' },
+              ]}
               onPress={handleNext}
               activeOpacity={0.85}
             >
-              <Text style={styles.submitButtonText}>Got it, Finish Setup →</Text>
+              <Text style={[styles.submitButtonText, isDark && { color: '#FFFFFF' }]}>Got it, Finish Setup →</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* STEP 3: GET STARTED */}
         {currentStep === 3 && (
-          <View style={styles.card}>
-            <View style={styles.successIconCircle}>
-              <CheckCircle2 size={36} color="#059669" />
+          <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <View style={[styles.successIconCircle, isDark && { backgroundColor: '#064E3B' }]}>
+              <CheckCircle2 size={36} color={isDark ? '#34D399' : '#059669'} />
             </View>
 
-            <Text style={[styles.cardTitle, { textAlign: 'center', marginTop: 12 }]}>
+            <Text style={[styles.cardTitle, { color: themeColors.text, textAlign: 'center', marginTop: 12 }]}>
               You&apos;re All Set, {firstName || 'Chief'}!
             </Text>
-            <Text style={[styles.cardSub, { textAlign: 'center', marginBottom: 24 }]}>
+            <Text style={[styles.cardSub, { color: themeColors.textMuted, textAlign: 'center', marginBottom: 24 }]}>
               Your client profile is active. You can now use AI to diagnose broken items or post jobs to get competitive artisan bids in minutes.
             </Text>
 
             <TouchableOpacity
-              style={styles.submitButton}
+              style={[
+                styles.submitButton,
+                isDark && { backgroundColor: '#10B981' },
+              ]}
               onPress={onComplete}
               activeOpacity={0.85}
             >
-              <Text style={styles.submitButtonText}>Go to My Dashboard</Text>
+              <Text style={[styles.submitButtonText, isDark && { color: '#FFFFFF' }]}>Go to My Dashboard</Text>
             </TouchableOpacity>
           </View>
         )}

@@ -12,12 +12,24 @@ import {
   ScrollView,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import {
+  ChevronLeft,
+  BadgeCheck,
+  Phone,
+  MessageSquare,
+  ShieldCheck,
+  Play,
+  Camera,
+  Mic,
+  Send,
+} from 'lucide-react-native';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { ChatService } from '../../services/chat.service';
 import { socketManager } from '../../lib/socket-manager';
 import { queryClient } from '../../lib/query-client';
 import { MessageRecord } from '../../types/api-contracts';
 import { useAuthStore } from '../../stores/authStore';
+import { UserAvatar } from '../shared/UserAvatar';
 
 interface MessageItem {
   id: string;
@@ -43,6 +55,7 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
   onCall,
   onOpenMilestoneReview,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
   const { user } = useAuthStore();
   const [inputText, setInputText] = useState('');
   const [localMessages, setLocalMessages] = useState<MessageItem[]>([]);
@@ -71,6 +84,7 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
     : otherParticipant?.artisanProfile?.businessName ||
       otherParticipant?.businessName ||
       artisanName;
+  const resolvedArtisanAvatar = otherParticipant?.user?.avatarUrl || otherParticipant?.avatarUrl || otherParticipant?.artisanProfile?.avatarUrl;
 
   const { data: remoteMessages } = useQuery({
     queryKey: ['chat-messages', targetConversationId],
@@ -111,7 +125,7 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
       return {
         id: m.id,
         sender: (isClient ? 'client' : 'artisan') as 'client' | 'artisan',
-        text: m.body,
+        text: m.body || '',
         timestamp: m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
         type: (m.messageType === 'AUDIO' ? 'voice' : 'text') as 'voice' | 'text',
       };
@@ -150,24 +164,30 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColors.headerBg, borderBottomColor: themeColors.headerBorder }]}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.backBtnText}>←</Text>
+          <ChevronLeft size={22} color={themeColors.text} />
         </TouchableOpacity>
         <View style={styles.artisanHead}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{artisanInitials}</Text>
-            <View style={styles.onlineBadge} />
-          </View>
+          <UserAvatar
+            avatarUrl={resolvedArtisanAvatar}
+            name={resolvedArtisanName}
+            size={36}
+            role="ARTISAN"
+            style={{ marginRight: 8 }}
+          />
           <View style={styles.nameMeta}>
-            <Text style={styles.artisanName}>{resolvedArtisanName}</Text>
-            <Text style={styles.artisanSub}>⚡ Verified Artisan</Text>
+            <Text style={[styles.artisanName, { color: themeColors.text }]}>{resolvedArtisanName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <BadgeCheck size={12} color={themeColors.primary} />
+              <Text style={[styles.artisanSub, { color: themeColors.primary, marginTop: 0 }]}>Verified Artisan</Text>
+            </View>
           </View>
         </View>
-        <TouchableOpacity style={styles.callBtn} onPress={onCall} activeOpacity={0.7}>
-          <Text style={styles.callBtnText}>📞</Text>
+        <TouchableOpacity style={[styles.callBtn, { backgroundColor: themeColors.surfaceSubtle }]} onPress={onCall} activeOpacity={0.7}>
+          <Phone size={18} color={themeColors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -176,7 +196,7 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.threadsScroll}
+          style={[styles.threadsScroll, { backgroundColor: themeColors.surface, borderBottomColor: themeColors.border }]}
           contentContainerStyle={styles.threadsScrollContent}
         >
           {conversationsList.map((c: any) => {
@@ -186,12 +206,25 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
             return (
               <TouchableOpacity
                 key={c.id}
-                style={[styles.threadPill, isSel && styles.threadPillActive]}
+                style={[
+                  styles.threadPill,
+                  { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border },
+                  isSel && { backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : colors.primaryLight, borderColor: themeColors.primary },
+                ]}
                 onPress={() => setActiveConversationId(c.id)}
               >
-                <Text style={[styles.threadPillText, isSel && styles.threadPillTextActive]}>
-                  💬 {pName}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <MessageSquare size={13} color={isSel ? themeColors.primary : themeColors.textMuted} />
+                  <Text
+                    style={[
+                      styles.threadPillText,
+                      { color: themeColors.textMuted },
+                      isSel && { color: themeColors.primary, fontWeight: '700' },
+                    ]}
+                  >
+                    {pName}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -199,14 +232,25 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
       )}
 
       {/* Pinned Live Status & Milestone Shortcut Bar */}
-      <View style={styles.pinnedBanner}>
+      <View
+        style={[
+          styles.pinnedBanner,
+          isDark && {
+            backgroundColor: 'rgba(52, 211, 153, 0.12)',
+            borderBottomColor: 'rgba(52, 211, 153, 0.25)',
+          },
+        ]}
+      >
         <View style={styles.bannerLeft}>
-          <Text style={styles.bannerTitle}>🛡️ Fixmate Escrow Protected</Text>
-          <Text style={styles.bannerSubtitle}>Direct encrypted workspace dialogue</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <ShieldCheck size={14} color={isDark ? '#34D399' : '#10B981'} />
+            <Text style={[styles.bannerTitle, isDark && { color: '#34D399' }]}>Artifix Escrow Protected</Text>
+          </View>
+          <Text style={[styles.bannerSubtitle, { color: themeColors.textMuted }]}>Direct encrypted workspace dialogue</Text>
         </View>
         {onOpenMilestoneReview && (
           <TouchableOpacity
-            style={styles.milestoneReviewBtn}
+            style={[styles.milestoneReviewBtn, { backgroundColor: themeColors.primary }]}
             onPress={onOpenMilestoneReview}
             activeOpacity={0.8}
           >
@@ -226,11 +270,11 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
           contentContainerStyle={[styles.messageList, displayMessages.length === 0 && { flex: 1, justifyContent: 'center' }]}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
-              <Text style={{ fontSize: 36, marginBottom: 8 }}>💬</Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+              <MessageSquare size={36} color={themeColors.textMuted} style={{ marginBottom: 8 }} />
+              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text, marginBottom: 4 }}>
                 No messages yet
               </Text>
-              <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
+              <Text style={{ fontSize: 13, color: themeColors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
                 Discuss project specifications, arrival times, and site instructions with your artisan here.
               </Text>
             </View>
@@ -238,8 +282,8 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
           renderItem={({ item }) => {
             if (item.sender === 'system') {
               return (
-                <View style={styles.systemMsgWrap}>
-                  <Text style={styles.systemMsgText}>{item.text}</Text>
+                <View style={[styles.systemMsgWrap, isDark && { backgroundColor: themeColors.surfaceSubtle }]}>
+                  <Text style={[styles.systemMsgText, { color: themeColors.textMuted }]}>{item.text}</Text>
                 </View>
               );
             }
@@ -253,34 +297,36 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
                 ]}
               >
                 {!isClient && (
-                  <View style={styles.miniAvatar}>
-                    <Text style={styles.miniAvatarText}>{artisanInitials}</Text>
+                  <View style={[styles.miniAvatar, isDark && { backgroundColor: 'rgba(52, 211, 153, 0.2)' }]}>
+                    <Text style={[styles.miniAvatarText, isDark && { color: '#34D399' }]}>{artisanInitials}</Text>
                   </View>
                 )}
                 <View
                   style={[
                     styles.msgBubble,
-                    isClient ? styles.msgBubbleClient : styles.msgBubbleArtisan,
+                    isClient
+                      ? [styles.msgBubbleClient, isDark && { backgroundColor: '#065F46' }]
+                      : [styles.msgBubbleArtisan, { backgroundColor: themeColors.surface, borderColor: themeColors.border }],
                   ]}
                 >
                   {item.type === 'voice' ? (
                     <View style={styles.voiceNoteWrap}>
-                      <Text style={styles.voiceIcon}>▶️</Text>
+                      <Play size={14} color={isClient ? '#FFFFFF' : themeColors.text} fill={isClient ? '#FFFFFF' : themeColors.text} />
                       <View style={styles.waveformPlaceholder}>
-                        <View style={[styles.waveBar, { height: 12 }]} />
-                        <View style={[styles.waveBar, { height: 20 }]} />
-                        <View style={[styles.waveBar, { height: 16 }]} />
-                        <View style={[styles.waveBar, { height: 24 }]} />
-                        <View style={[styles.waveBar, { height: 14 }]} />
-                        <View style={[styles.waveBar, { height: 18 }]} />
+                        <View style={[styles.waveBar, { height: 12, backgroundColor: isDark ? '#34D399' : colors.primary }]} />
+                        <View style={[styles.waveBar, { height: 20, backgroundColor: isDark ? '#34D399' : colors.primary }]} />
+                        <View style={[styles.waveBar, { height: 16, backgroundColor: isDark ? '#34D399' : colors.primary }]} />
+                        <View style={[styles.waveBar, { height: 24, backgroundColor: isDark ? '#34D399' : colors.primary }]} />
+                        <View style={[styles.waveBar, { height: 14, backgroundColor: isDark ? '#34D399' : colors.primary }]} />
+                        <View style={[styles.waveBar, { height: 18, backgroundColor: isDark ? '#34D399' : colors.primary }]} />
                       </View>
-                      <Text style={styles.voiceDuration}>{item.duration}</Text>
+                      <Text style={[styles.voiceDuration, { color: isClient ? 'rgba(255,255,255,0.85)' : themeColors.textMuted }]}>{item.duration}</Text>
                     </View>
                   ) : (
                     <Text
                       style={[
                         styles.msgText,
-                        isClient ? styles.msgTextClient : styles.msgTextArtisan,
+                        isClient ? styles.msgTextClient : [styles.msgTextArtisan, { color: themeColors.text }],
                       ]}
                     >
                       {item.text}
@@ -289,7 +335,7 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
                   <Text
                     style={[
                       styles.timestampText,
-                      isClient ? styles.timestampClient : styles.timestampArtisan,
+                      isClient ? styles.timestampClient : [styles.timestampArtisan, { color: themeColors.textMuted }],
                     ]}
                   >
                     {item.timestamp}
@@ -301,27 +347,38 @@ export const ClientChatScreen: React.FC<ClientChatScreenProps> = ({
         />
 
         {/* Input Bar */}
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { backgroundColor: themeColors.surface, borderTopColor: themeColors.border }]}>
           <TouchableOpacity style={styles.attachBtn} activeOpacity={0.7}>
-            <Text style={styles.attachIcon}>📷</Text>
+            <Camera size={20} color={themeColors.textMuted} />
           </TouchableOpacity>
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: themeColors.inputBg,
+                borderColor: themeColors.inputBorder,
+                color: themeColors.text,
+              },
+            ]}
             placeholder="Type a message or instruction..."
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={themeColors.textMuted}
             value={inputText}
             onChangeText={setInputText}
           />
           <TouchableOpacity style={styles.micBtn} activeOpacity={0.7}>
-            <Text style={styles.micIcon}>🎙️</Text>
+            <Mic size={20} color={themeColors.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+            style={[
+              styles.sendBtn,
+              { backgroundColor: themeColors.primary },
+              !inputText.trim() && [styles.sendBtnDisabled, isDark && { backgroundColor: themeColors.border }],
+            ]}
             onPress={handleSend}
             disabled={!inputText.trim()}
             activeOpacity={0.8}
           >
-            <Text style={styles.sendIcon}>➤</Text>
+            <Send size={16} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

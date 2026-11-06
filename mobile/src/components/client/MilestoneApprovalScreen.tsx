@@ -14,14 +14,29 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
+import {
+  Camera,
+  Receipt,
+  ChevronUp,
+  ChevronDown,
+  AlertTriangle,
+  CheckCircle2,
+  ShieldCheck,
+  Lock,
+  ChevronLeft,
+  X,
+  RefreshCw,
+} from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { SlideToReleaseButton } from '../shared/SlideToReleaseButton';
 import { MilestoneProgressBar } from '../shared/MilestoneProgressBar';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { SkeletonPlaceholder } from '../shared';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { EscrowService } from '../../services/escrow.service';
 import { ContractService } from '../../services/contract.service';
 import { AiService } from '../../services/ai.service';
+import { useToast } from '../shared/ToastContext';
 
 interface MilestoneApprovalScreenProps {
   contractId?: string;
@@ -38,6 +53,8 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
   onRaiseDispute,
   onReleaseSuccess,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
+  const { showSuccess, showError, showWarning } = useToast();
   const [loading, setLoading] = useState<boolean>(!!contractId);
   const [contractData, setContractData] = useState<any>(null);
   const [releasing, setReleasing] = useState<boolean>(false);
@@ -111,22 +128,24 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
 
   const handleRelease = async () => {
     if (!milestoneId) {
-      Alert.alert('Selection Error', 'No active milestone selected for approval.');
+      showError('Selection Error', 'No active milestone selected for approval.');
       return;
     }
 
     try {
       setReleasing(true);
       await EscrowService.approveRelease(milestoneId);
-      Alert.alert(
-        'Funds Released! 🎉',
-        `${formatCurrency(milestoneAmount)} has been safely transferred from escrow to the artisan's wallet. Thank you for using Fixmate!`,
-        [{ text: 'Great', onPress: () => onReleaseSuccess?.(contractId, contractData?.artisanId) }]
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showSuccess(
+        'Funds Released Successfully',
+        `${formatCurrency(milestoneAmount)} has been safely transferred from escrow to the artisan's wallet.`
       );
+      onReleaseSuccess?.(contractId, contractData?.artisanId);
     } catch (err: unknown) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const apiErr = err as { response?: { data?: { message?: string } }; message?: string };
       const errorMsg = apiErr.response?.data?.message || apiErr.message || 'Could not release escrow funds';
-      Alert.alert('Release Error', errorMsg);
+      showError('Release Error', errorMsg);
     } finally {
       setReleasing(false);
     }
@@ -140,8 +159,9 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
       setGeneratedOtp(res.otpCode);
       setOtpExpiry(res.expiresAt);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showSuccess('Verification PIN Ready', `Confirmation code generated: ${res.otpCode}`);
     } catch (err: any) {
-      Alert.alert('PIN Generation Failed', err?.response?.data?.message || err?.message || 'Could not generate verification PIN');
+      showError('PIN Generation Failed', err?.response?.data?.message || err?.message || 'Could not generate verification PIN');
     } finally {
       setIsGeneratingOtp(false);
     }
@@ -150,7 +170,7 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
   const handleVerifyOtp = async () => {
     if (!milestoneId) return;
     if (!otpInput || otpInput.trim().length !== 6) {
-      Alert.alert('Invalid Code', 'Please enter a valid 6-digit verification PIN.');
+      showWarning('Invalid Code', 'Please enter a valid 6-digit verification PIN.');
       return;
     }
     try {
@@ -158,14 +178,14 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
       await AiService.verifyNonVisualOtp(milestoneId, otpInput.trim());
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setShowOtpModal(false);
-      Alert.alert(
-        'Milestone Verified & Released! 🎉',
-        'Non-visual physical test passed. Escrow funds transferred to the artisan.',
-        [{ text: 'Great', onPress: () => onReleaseSuccess?.(contractId, contractData?.artisanId) }]
+      showSuccess(
+        'Milestone Verified & Released',
+        'Non-visual physical test passed. Escrow funds transferred to the artisan.'
       );
+      onReleaseSuccess?.(contractId, contractData?.artisanId);
     } catch (err: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Verification Failed', err?.response?.data?.message || err?.message || 'Invalid or expired confirmation PIN.');
+      showError('Verification Failed', err?.response?.data?.message || err?.message || 'Invalid or expired confirmation PIN.');
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -175,7 +195,7 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
     if (!milestoneId) return;
     const amt = parseFloat(invoiceAmountInput);
     if (!amt || amt <= 0) {
-      Alert.alert('Amount Required', 'Please enter the total from the merchant counter invoice.');
+      showWarning('Amount Required', 'Please enter the total from the merchant counter invoice.');
       return;
     }
     try {
@@ -183,53 +203,101 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
       const res = await AiService.evaluateInvoiceVariance(milestoneId, amt);
       setVarianceResult(res);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      showSuccess('Audit Complete', 'Counter invoice evaluated against historical regional prices.');
     } catch (err: any) {
-      Alert.alert('Audit Error', err?.response?.data?.message || err?.message || 'Could not evaluate invoice variance.');
+      showError('Audit Error', err?.response?.data?.message || err?.message || 'Could not evaluate invoice variance.');
     } finally {
       setIsEvaluatingVariance(false);
     }
   };
 
   const handleDispute = () => {
-    Alert.alert(
-      'Raise Dispute',
-      'Are you sure you want to flag this milestone? An arbiter will review the before/after evidence and freeze escrow release.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Proceed', style: 'destructive', onPress: () => onRaiseDispute?.(contractId, milestoneId) },
-      ]
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    showWarning(
+      'Dispute Flagged',
+      'Milestone flagged. Escrow payout is paused while our arbitration team reviews before/after evidence.'
     );
+    onRaiseDispute?.(contractId, milestoneId);
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Top Navigation */}
-      <View style={styles.navBar}>
-        <TouchableOpacity onPress={onBack} activeOpacity={0.7} style={styles.backButton}>
-          <Text style={styles.backChevron}>←</Text>
+      <View style={[styles.navBar, { borderBottomColor: themeColors.border }]}>
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onBack?.();
+          }}
+          activeOpacity={0.7}
+          style={styles.backButton}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <ChevronLeft size={22} color={themeColors.text} />
         </TouchableOpacity>
 
         <View style={styles.titleContainer}>
-          <Text style={styles.screenTitle}>
+          <Text style={[styles.screenTitle, { color: themeColors.text }]}>
             Milestone {stepNumber} of {totalSteps}
           </Text>
-          <Text style={styles.screenSubtitle} numberOfLines={1}>
+          <Text style={[styles.screenSubtitle, { color: themeColors.textMuted }]} numberOfLines={1}>
             {milestoneTitle}
           </Text>
         </View>
 
-        <View style={styles.statusPill}>
+        <View style={[styles.statusPill, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
           <View style={styles.statusDot} />
-          <Text style={styles.statusText}>
+          <Text style={[styles.statusText, isDark && { color: '#34D399' }]}>
             {activeMilestone?.status === 'RELEASED' ? 'Released' : 'Review'}
           </Text>
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.brand.forest} />
-          <Text style={styles.loadingText}>Loading milestone evidence...</Text>
+        <View style={styles.scrollContent}>
+          {/* Milestone Step Progress Shimmer */}
+          <View style={[styles.cardContainer, { backgroundColor: themeColors.surface, borderColor: themeColors.border, paddingVertical: 14 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <SkeletonPlaceholder width={80} height={14} borderRadius={radius.full} />
+              <SkeletonPlaceholder width={80} height={14} borderRadius={radius.full} />
+              <SkeletonPlaceholder width={80} height={14} borderRadius={radius.full} />
+            </View>
+            <View style={{ marginTop: 10 }}>
+              <SkeletonPlaceholder width="100%" height={6} borderRadius={radius.full} />
+            </View>
+          </View>
+
+          {/* Photo Proof Shimmer */}
+          <View style={[styles.cardContainer, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <SkeletonPlaceholder width={180} height={18} borderRadius={radius.sm} />
+            <SkeletonPlaceholder width={140} height={12} borderRadius={radius.sm} style={{ marginTop: 4, marginBottom: 14 }} />
+            <View style={styles.photosGrid}>
+              <SkeletonPlaceholder width="48%" height={120} borderRadius={radius.lg} />
+              <SkeletonPlaceholder width="48%" height={120} borderRadius={radius.lg} />
+            </View>
+            <View style={{ marginTop: 14 }}>
+              <SkeletonPlaceholder width="100%" height={40} borderRadius={radius.md} />
+            </View>
+          </View>
+
+          {/* Amount Card Shimmer */}
+          <View style={[styles.amountCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <SkeletonPlaceholder width={44} height={44} borderRadius={22} />
+            <View style={{ flex: 1 }}>
+              <SkeletonPlaceholder width={120} height={12} borderRadius={radius.sm} />
+              <SkeletonPlaceholder width={140} height={24} borderRadius={radius.sm} style={{ marginTop: 4 }} />
+            </View>
+            <SkeletonPlaceholder width={80} height={20} borderRadius={radius.full} />
+          </View>
+
+          {/* Platform Guarantee Shimmer */}
+          <View style={[styles.guaranteeCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <SkeletonPlaceholder width={36} height={36} borderRadius={18} />
+            <View style={{ flex: 1 }}>
+              <SkeletonPlaceholder width={140} height={14} borderRadius={radius.sm} />
+              <SkeletonPlaceholder width="90%" height={11} borderRadius={radius.sm} style={{ marginTop: 4 }} />
+            </View>
+          </View>
         </View>
       ) : (
         <ScrollView
@@ -241,43 +309,43 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
           <MilestoneProgressBar steps={steps} currentStep={currentStep} />
 
           {/* Before & After Photos Card Container */}
-          <View style={styles.cardContainer}>
-            <Text style={styles.sectionTitle}>Before & After Proof of Work</Text>
-            <Text style={styles.sectionSubtitle}>Photos submitted on-site by verified artisan</Text>
+          <View style={[styles.cardContainer, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Before & After Proof of Work</Text>
+            <Text style={[styles.sectionSubtitle, { color: themeColors.textMuted }]}>Photos submitted on-site by verified artisan</Text>
 
             {/* Side-by-Side Photos */}
             {beforePhoto?.url || afterPhoto?.url ? (
               <View style={styles.photosGrid}>
                 {beforePhoto?.url && (
-                  <TouchableOpacity activeOpacity={0.9} style={styles.photoCard}>
+                  <TouchableOpacity activeOpacity={0.9} style={[styles.photoCard, { borderColor: themeColors.border }]}>
                     <Image
                       source={{ uri: beforePhoto.url }}
                       style={styles.photoImage}
                     />
-                    <View style={styles.photoMeta}>
-                      <Text style={styles.photoLabel}>Before (Initial State)</Text>
-                      <Text style={styles.photoDate}>Site Inspection</Text>
+                    <View style={[styles.photoMeta, { backgroundColor: themeColors.surfaceSubtle }]}>
+                      <Text style={[styles.photoLabel, { color: themeColors.text }]}>Before (Initial State)</Text>
+                      <Text style={[styles.photoDate, { color: themeColors.textMuted }]}>Site Inspection</Text>
                     </View>
                   </TouchableOpacity>
                 )}
 
                 {afterPhoto?.url && (
-                  <TouchableOpacity activeOpacity={0.9} style={styles.photoCard}>
+                  <TouchableOpacity activeOpacity={0.9} style={[styles.photoCard, { borderColor: themeColors.border }]}>
                     <Image
                       source={{ uri: afterPhoto.url }}
                       style={styles.photoImage}
                     />
-                    <View style={styles.photoMeta}>
-                      <Text style={styles.photoLabel}>After (Completed Work)</Text>
-                      <Text style={styles.photoDate}>Submitted Proof</Text>
+                    <View style={[styles.photoMeta, { backgroundColor: themeColors.surfaceSubtle }]}>
+                      <Text style={[styles.photoLabel, { color: themeColors.text }]}>After (Completed Work)</Text>
+                      <Text style={[styles.photoDate, { color: themeColors.textMuted }]}>Submitted Proof</Text>
                     </View>
                   </TouchableOpacity>
                 )}
               </View>
             ) : (
-              <View style={[styles.notesBox, { alignItems: 'center', paddingVertical: 18, marginTop: 8 }]}>
-                <Text style={{ fontSize: 24, marginBottom: 4 }}>📸</Text>
-                <Text style={{ fontSize: 13, color: colors.neutral[600], fontWeight: '500', textAlign: 'center' }}>
+              <View style={[styles.notesBox, { backgroundColor: themeColors.surfaceSubtle, alignItems: 'center', paddingVertical: 18, marginTop: 8 }]}>
+                <Camera size={24} color={themeColors.textMuted} style={{ marginBottom: 4 }} />
+                <Text style={{ fontSize: 13, color: themeColors.textMuted, fontWeight: '500', textAlign: 'center' }}>
                   No photo attachments uploaded for this milestone yet.
                 </Text>
               </View>
@@ -285,54 +353,74 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
 
             {/* Work Notes */}
             {activeMilestone?.workNotes && (
-              <View style={styles.notesBox}>
-                <Text style={styles.notesLabel}>Artisan Work Notes:</Text>
-                <Text style={styles.notesBody}>"{activeMilestone.workNotes}"</Text>
+              <View style={[styles.notesBox, { backgroundColor: themeColors.surfaceSubtle }]}>
+                <Text style={[styles.notesLabel, { color: themeColors.textMuted }]}>Artisan Work Notes:</Text>
+                <Text style={[styles.notesBody, { color: themeColors.text }]}>"{activeMilestone.workNotes}"</Text>
               </View>
             )}
 
             {/* Non-Visual Verification Banner */}
-            <View style={styles.nonVisualBanner}>
+            <View style={[styles.nonVisualBanner, {
+              backgroundColor: isDark ? 'rgba(2, 132, 199, 0.15)' : '#F0F9FF',
+              borderColor: isDark ? 'rgba(2, 132, 199, 0.3)' : '#BAE6FD',
+            }]}>
               <View style={styles.nonVisualTextCol}>
-                <Text style={styles.nonVisualTitle}>Hidden or Non-Visual Repair?</Text>
-                <Text style={styles.nonVisualSubtitle}>
+                <Text style={[styles.nonVisualTitle, isDark && { color: '#38BDF8' }]}>Hidden or Non-Visual Repair?</Text>
+                <Text style={[styles.nonVisualSubtitle, isDark && { color: '#7DD3FC' }]}>
                   For conduit wiring, pipes, or pressure tests that can't be checked by photos.
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setShowOtpModal(true);
                   if (!generatedOtp) handleGenerateOtp();
                 }}
                 style={styles.otpLaunchBtn}
                 activeOpacity={0.8}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.otpLaunchBtnText}>🔑 6-Digit PIN</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Lock size={12} color="#FFFFFF" />
+                  <Text style={styles.otpLaunchBtnText}>6-Digit PIN</Text>
+                </View>
               </TouchableOpacity>
             </View>
 
             {/* Materials Counter-Invoice Audit Accordion */}
             <TouchableOpacity
-              onPress={() => setShowVarianceCard(!showVarianceCard)}
-              style={styles.varianceToggle}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowVarianceCard(!showVarianceCard);
+              }}
+              style={[styles.varianceToggle, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}
               activeOpacity={0.8}
             >
               <View style={styles.varianceToggleLeft}>
-                <Text style={styles.varianceToggleEmoji}>🧾</Text>
-                <View>
-                  <Text style={styles.varianceToggleTitle}>Materials Counter-Invoice Audit</Text>
-                  <Text style={styles.varianceToggleSub}>Check merchant pricing against market BOM</Text>
+                <Receipt size={18} color={themeColors.primary} />
+                <View style={{ marginLeft: 8 }}>
+                  <Text style={[styles.varianceToggleTitle, { color: themeColors.text }]}>Materials Counter-Invoice Audit</Text>
+                  <Text style={[styles.varianceToggleSub, { color: themeColors.textMuted }]}>Check merchant pricing against market BOM</Text>
                 </View>
               </View>
-              <Text style={styles.varianceToggleArrow}>{showVarianceCard ? '▲' : '▼'}</Text>
+              {showVarianceCard ? (
+                <ChevronUp size={16} color={themeColors.textMuted} />
+              ) : (
+                <ChevronDown size={16} color={themeColors.textMuted} />
+              )}
             </TouchableOpacity>
 
             {showVarianceCard && (
-              <View style={styles.varianceAuditBox}>
-                <Text style={styles.varianceInputLabel}>Merchant Invoice Total (NGN)</Text>
+              <View style={[styles.varianceAuditBox, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}>
+                <Text style={[styles.varianceInputLabel, { color: themeColors.text }]}>Merchant Invoice Total (NGN)</Text>
                 <View style={styles.varianceInputRow}>
                   <TextInput
-                    style={styles.varianceTextInput}
+                    style={[styles.varianceTextInput, {
+                      backgroundColor: themeColors.inputBg,
+                      borderColor: themeColors.inputBorder,
+                      color: themeColors.text,
+                    }]}
+                    placeholderTextColor={themeColors.textMuted}
                     value={invoiceAmountInput}
                     onChangeText={setInvoiceAmountInput}
                     placeholder="e.g. 45000"
@@ -358,22 +446,31 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
                       varianceResult.isFlagged
                         ? styles.varianceFlaggedCard
                         : styles.varianceApprovedCard,
+                      isDark && varianceResult.isFlagged && { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' },
+                      isDark && !varianceResult.isFlagged && { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.3)' },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.varianceResultTitle,
-                        varianceResult.isFlagged
-                          ? styles.varianceFlaggedText
-                          : styles.varianceApprovedText,
-                      ]}
-                    >
-                      {varianceResult.isFlagged
-                        ? `⚠️ Caution: ${varianceResult.variancePercent ?? 0}% Above Market BOM`
-                        : `✅ Verified: Within ${varianceResult.variancePercent ?? 0}% Market Tolerance`}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {varianceResult.isFlagged ? (
+                        <AlertTriangle size={15} color="#DC2626" strokeWidth={2} />
+                      ) : (
+                        <CheckCircle2 size={15} color="#10B981" strokeWidth={2} />
+                      )}
+                      <Text
+                        style={[
+                          styles.varianceResultTitle,
+                          varianceResult.isFlagged
+                            ? styles.varianceFlaggedText
+                            : [styles.varianceApprovedText, isDark && { color: '#34D399' }],
+                        ]}
+                      >
+                        {varianceResult.isFlagged
+                          ? `Caution: ${varianceResult.variancePercent ?? 0}% Above Market BOM`
+                          : `Verified: Within ${varianceResult.variancePercent ?? 0}% Market Tolerance`}
+                      </Text>
+                    </View>
                     {varianceResult.recommendation && (
-                      <Text style={styles.varianceRecText}>
+                      <Text style={[styles.varianceRecText, { color: themeColors.textMuted }]}>
                         {varianceResult.recommendation}
                       </Text>
                     )}
@@ -384,30 +481,33 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
           </View>
 
           {/* Milestone Amount Card */}
-          <View style={styles.amountCard}>
-            <View style={styles.shieldIconBox}>
-              <Text style={styles.shieldEmoji}>🛡️</Text>
+          <View style={[styles.amountCard, {
+            backgroundColor: isDark ? themeColors.surface : '#F0FDF4',
+            borderColor: isDark ? themeColors.border : '#BBF7D0',
+          }]}>
+            <View style={[styles.shieldIconBox, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+              <ShieldCheck size={20} color="#10B981" strokeWidth={2} />
             </View>
 
             <View style={styles.amountTextContainer}>
-              <Text style={styles.amountLabel}>Milestone Release Amount</Text>
-              <Text style={styles.amountValue}>{formatCurrency(milestoneAmount)}</Text>
+              <Text style={[styles.amountLabel, { color: themeColors.textMuted }]}>Milestone Release Amount</Text>
+              <Text style={[styles.amountValue, isDark && { color: '#34D399' }]}>{formatCurrency(milestoneAmount)}</Text>
             </View>
 
-            <View style={styles.escrowPill}>
-              <Text style={styles.escrowCheck}>✓</Text>
-              <Text style={styles.escrowPillText}>In Monad Escrow</Text>
+            <View style={[styles.escrowPill, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+              <CheckCircle2 size={12} color="#10B981" strokeWidth={2.2} style={{ marginRight: 4 }} />
+              <Text style={[styles.escrowPillText, isDark && { color: '#34D399' }]}>In Artifix Escrow</Text>
             </View>
           </View>
 
           {/* Platform Guarantee Card */}
-          <View style={styles.guaranteeCard}>
-            <View style={styles.lockIconBox}>
-              <Text style={styles.lockEmoji}>🔒</Text>
+          <View style={[styles.guaranteeCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <View style={[styles.lockIconBox, { backgroundColor: themeColors.surfaceSubtle }]}>
+              <Lock size={18} color={themeColors.primary} strokeWidth={2} />
             </View>
             <View style={styles.guaranteeTextContainer}>
-              <Text style={styles.guaranteeTitle}>Smart Escrow Guarantee</Text>
-              <Text style={styles.guaranteeSubtitle}>
+              <Text style={[styles.guaranteeTitle, { color: themeColors.text }]}>Smart Escrow Guarantee</Text>
+              <Text style={[styles.guaranteeSubtitle, { color: themeColors.textMuted }]}>
                 Only slide to release when you have inspected the worksite and are satisfied with the deliverable.
               </Text>
             </View>
@@ -416,7 +516,7 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
       )}
 
       {/* Sticky Bottom Actions */}
-      <View style={styles.stickyActions}>
+      <View style={[styles.stickyActions, { backgroundColor: themeColors.surface, borderTopColor: themeColors.border }]}>
         <SlideToReleaseButton
           label={releasing ? 'Authorizing Release...' : 'Slide to Release Funds to Artisan  >>>'}
           onRelease={handleRelease}
@@ -425,9 +525,9 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
         <TouchableOpacity
           activeOpacity={0.75}
           onPress={handleDispute}
-          style={styles.disputeButton}
+          style={[styles.disputeButton, isDark && { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}
         >
-          <Text style={styles.disputeWarningIcon}>⚠️</Text>
+          <AlertTriangle size={16} color="#DC2626" />
           <Text style={styles.disputeButtonText}>Raise Issue / Request Correction</Text>
         </TouchableOpacity>
       </View>
@@ -443,28 +543,41 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalBackdrop}
         >
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { backgroundColor: themeColors.surface }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Non-Visual Handshake PIN</Text>
-              <TouchableOpacity onPress={() => setShowOtpModal(false)}>
-                <Text style={styles.closeBtn}>✕</Text>
+              <Text style={[styles.modalTitle, { color: themeColors.text }]}>Non-Visual Handshake PIN</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowOtpModal(false);
+                }}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.closeBtnTouchable}
+              >
+                <X size={18} color={themeColors.textMuted} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalTabRow}>
+            <View style={[styles.modalTabRow, { backgroundColor: themeColors.surfaceSubtle }]}>
               <TouchableOpacity
-                onPress={() => setOtpTab('ENTER_PIN')}
-                style={[styles.modalTab, otpTab === 'ENTER_PIN' && styles.modalTabActive]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setOtpTab('ENTER_PIN');
+                }}
+                style={[styles.modalTab, otpTab === 'ENTER_PIN' && [styles.modalTabActive, { backgroundColor: themeColors.surface }]]}
               >
-                <Text style={[styles.modalTabText, otpTab === 'ENTER_PIN' && styles.modalTabTextActive]}>
+                <Text style={[styles.modalTabText, otpTab === 'ENTER_PIN' ? [styles.modalTabTextActive, { color: themeColors.text }] : { color: themeColors.textMuted }]}>
                   Verify Artisan PIN
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => setOtpTab('MY_PIN')}
-                style={[styles.modalTab, otpTab === 'MY_PIN' && styles.modalTabActive]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setOtpTab('MY_PIN');
+                }}
+                style={[styles.modalTab, otpTab === 'MY_PIN' && [styles.modalTabActive, { backgroundColor: themeColors.surface }]]}
               >
-                <Text style={[styles.modalTabText, otpTab === 'MY_PIN' && styles.modalTabTextActive]}>
+                <Text style={[styles.modalTabText, otpTab === 'MY_PIN' ? [styles.modalTabTextActive, { color: themeColors.text }] : { color: themeColors.textMuted }]}>
                   My Client PIN
                 </Text>
               </TouchableOpacity>
@@ -472,11 +585,16 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
 
             {otpTab === 'ENTER_PIN' ? (
               <View style={styles.tabContent}>
-                <Text style={styles.tabDescription}>
+                <Text style={[styles.tabDescription, { color: themeColors.textMuted }]}>
                   Enter the 6-digit confirmation PIN provided by the artisan after you test and verify the repair in person.
                 </Text>
                 <TextInput
-                  style={styles.pinInput}
+                  style={[styles.pinInput, {
+                    backgroundColor: themeColors.inputBg,
+                    borderColor: isDark ? '#10B981' : colors.brand.forest,
+                    color: isDark ? '#34D399' : colors.brand.forest,
+                  }]}
+                  placeholderTextColor={themeColors.textMuted}
                   value={otpInput}
                   onChangeText={setOtpInput}
                   placeholder="000000"
@@ -497,25 +615,26 @@ export const MilestoneApprovalScreen: React.FC<MilestoneApprovalScreenProps> = (
               </View>
             ) : (
               <View style={styles.tabContent}>
-                <Text style={styles.tabDescription}>
+                <Text style={[styles.tabDescription, { color: themeColors.textMuted }]}>
                   Share this 6-digit PIN with the artisan only after you physically confirm the repair is fully operational.
                 </Text>
                 {isGeneratingOtp ? (
                   <ActivityIndicator size="large" color={colors.brand.forest} style={{ marginVertical: 20 }} />
                 ) : (
-                  <View style={styles.generatedPinBox}>
-                    <Text style={styles.generatedPinText}>{generatedOtp || '------'}</Text>
+                  <View style={[styles.generatedPinBox, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.12)', borderColor: '#059669' }]}>
+                    <Text style={[styles.generatedPinText, isDark && { color: '#34D399' }]}>{generatedOtp || '------'}</Text>
                     {otpExpiry && (
-                      <Text style={styles.pinExpiryText}>Valid for 15 minutes</Text>
+                      <Text style={[styles.pinExpiryText, isDark && { color: '#34D399' }]}>Valid for 15 minutes</Text>
                     )}
                   </View>
                 )}
                 <TouchableOpacity
                   onPress={handleGenerateOtp}
                   disabled={isGeneratingOtp}
-                  style={styles.pinRegenBtn}
+                  style={[styles.pinRegenBtn, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]}
                 >
-                  <Text style={styles.pinRegenBtnText}>🔄 Generate New PIN</Text>
+                  <RefreshCw size={13} color={themeColors.text} />
+                  <Text style={[styles.pinRegenBtnText, { color: themeColors.text }]}>Generate New PIN</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -541,8 +660,8 @@ const styles = StyleSheet.create({
     borderColor: '#F3F4F6',
   },
   backButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -632,7 +751,7 @@ const styles = StyleSheet.create({
   },
   photoCard: {
     flex: 1,
-    borderRadius: radius.lg,
+    borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -658,7 +777,7 @@ const styles = StyleSheet.create({
   },
   notesBox: {
     backgroundColor: '#F9FAFB',
-    borderRadius: radius.md,
+    borderRadius: 6,
     padding: 10,
     marginTop: 12,
   },
@@ -780,7 +899,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
+    minHeight: 48,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: '#FEE2E2',
@@ -823,8 +943,10 @@ const styles = StyleSheet.create({
   },
   otpLaunchBtn: {
     backgroundColor: '#0284C7',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    minHeight: 40,
+    justifyContent: 'center',
     borderRadius: radius.md,
   },
   otpLaunchBtnText: {
@@ -870,7 +992,7 @@ const styles = StyleSheet.create({
   },
   varianceAuditBox: {
     backgroundColor: '#F9FAFB',
-    borderRadius: radius.lg,
+    borderRadius: 6,
     padding: 12,
     marginTop: 6,
     borderWidth: 1,
@@ -891,7 +1013,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    borderRadius: radius.md,
+    borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: typography.size.sm,
@@ -899,8 +1021,9 @@ const styles = StyleSheet.create({
   },
   auditActionBtn: {
     backgroundColor: colors.brand.forest,
-    borderRadius: radius.md,
-    paddingHorizontal: 14,
+    borderRadius: 6,
+    paddingHorizontal: 16,
+    minHeight: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -910,7 +1033,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   varianceResultCard: {
-    borderRadius: radius.md,
+    borderRadius: 6,
     padding: 10,
     marginTop: 10,
     borderWidth: 1,
@@ -964,6 +1087,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.neutral[900],
   },
+  closeBtnTouchable: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   closeBtn: {
     fontSize: 18,
     color: colors.neutral[400],
@@ -978,8 +1107,10 @@ const styles = StyleSheet.create({
   },
   modalTab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    minHeight: 40,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: radius.sm,
   },
   modalTabActive: {
@@ -1021,7 +1152,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.forest,
     borderRadius: radius.full,
     paddingVertical: 14,
+    minHeight: 48,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   pinSubmitBtnText: {
     color: '#FFFFFF',
@@ -1054,7 +1187,9 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderRadius: radius.full,
     paddingVertical: 12,
+    minHeight: 48,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#F9FAFB',
   },
   pinRegenBtnText: {

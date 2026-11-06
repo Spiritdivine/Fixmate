@@ -19,7 +19,7 @@ async function runOutageAndResilienceSuite() {
 
   const sensitivePayload = {
     userMessage: 'Call me on 08023456789 or +2348098765432 regarding my leaking pipe.',
-    clientEmail: 'customer.test@fixmate.ng',
+    clientEmail: 'customer.test@artifixhq.xyz',
     securityContext: {
       geminiKey: 'AIzaSyD_Test_Gemini_Key_9876543210123456',
       openaiKey: 'sk-abcdef1234567890abcdef1234567890',

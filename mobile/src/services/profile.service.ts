@@ -60,6 +60,13 @@ export class ProfileService {
     return response.data.data;
   }
 
+  static async updateAvatar(avatarUrl: string): Promise<{ id: string; email: string; avatarUrl: string }> {
+    const response = await apiClient.patch<ApiResponse<{ id: string; email: string; avatarUrl: string }>>('/profiles/avatar', {
+      avatarUrl,
+    });
+    return response.data.data;
+  }
+
   static async updateArtisan(payload: Partial<ArtisanProfileData>): Promise<ArtisanProfileData> {
     const response = await apiClient.patch<ApiResponse<ArtisanProfileData>>('/profiles/artisan', payload);
     return response.data.data;
@@ -79,6 +86,11 @@ export class ProfileService {
 
   static async addPortfolio(item: Omit<PortfolioItem, 'id'>): Promise<PortfolioItem> {
     const response = await apiClient.post<ApiResponse<PortfolioItem>>('/profiles/artisan/portfolio', item);
+    return response.data.data;
+  }
+
+  static async updatePortfolio(id: string, item: Partial<PortfolioItem>): Promise<PortfolioItem> {
+    const response = await apiClient.patch<ApiResponse<PortfolioItem>>(`/profiles/artisan/portfolio/${id}`, item);
     return response.data.data;
   }
 
@@ -102,5 +114,19 @@ export class ProfileService {
 
   static async unsaveArtisan(id: string): Promise<void> {
     await apiClient.delete(`/profiles/artisans/${id}/save`);
+  }
+
+  static async getArtisanSkills(): Promise<any[]> {
+    const response = await apiClient.get<ApiResponse<any[]>>('/profiles/artisan/skills');
+    return response.data.data;
+  }
+
+  static async addArtisanSkill(skillId: number): Promise<any> {
+    const response = await apiClient.post<ApiResponse<any>>('/profiles/artisan/skills', { skillId });
+    return response.data.data;
+  }
+
+  static async removeArtisanSkill(skillId: number): Promise<void> {
+    await apiClient.delete(`/profiles/artisan/skills/${skillId}`);
   }
 }

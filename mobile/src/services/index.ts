@@ -11,3 +11,4 @@ export * from './ai.service';
 export * from './dispute.service';
 export * from './notification.service';
 export * from './review.service';
+export * from './peer.service';

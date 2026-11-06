@@ -13,10 +13,13 @@ import {
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { ChevronLeft, BadgeCheck, Landmark, ChevronRight } from 'lucide-react-native';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { useAuthStore } from '../../stores/authStore';
 import { ProfileService } from '../../services/profile.service';
 import { WalletService } from '../../services/wallet.service';
+import { useToast } from '../shared/ToastContext';
+import { UserAvatar } from '../shared/UserAvatar';
 
 interface ClientProfileSettingsScreenProps {
   onBack?: () => void;
@@ -29,7 +32,9 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
   onLogout,
   onNavigateToWallet,
 }) => {
+  const { showSuccess, showError, showWarning } = useToast();
   const { user, logout, updateUser } = useAuthStore();
+  const { colors: dynamicColors, isDark } = useTheme();
   const [useBiometrics, setUseBiometrics] = useState(true);
   const [escrowOtp, setEscrowOtp] = useState(true);
   const [pushNotifs, setPushNotifs] = useState(true);
@@ -38,7 +43,7 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
   // Live profile form state
   const [firstName, setFirstName] = useState(user?.clientProfile?.firstName || '');
   const [lastName, setLastName] = useState(user?.clientProfile?.lastName || '');
-  const [phone, setPhone] = useState(user?.phone || user?.clientProfile?.phone || '');
+  const [phone, setPhone] = useState(user?.phoneNumber || user?.phone || user?.clientProfile?.phone || '');
   const [state, setState] = useState(user?.clientProfile?.state || 'Lagos');
   const [city, setCity] = useState(user?.clientProfile?.city || '');
   const [address, setAddress] = useState(user?.clientProfile?.address || '');
@@ -52,7 +57,7 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
 
   const handleSaveProfile = async () => {
     if (!firstName.trim()) {
-      Alert.alert('First Name Required', 'Please provide your first name.');
+      showWarning('First Name Required', 'Please provide your first name.');
       return;
     }
 
@@ -69,6 +74,7 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
 
       updateUser({
         phone: phone.trim(),
+        phoneNumber: phone.trim(),
         clientProfile: {
           ...(user?.clientProfile || {}),
           ...updated,
@@ -82,10 +88,10 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
       });
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Profile Saved', 'Your client details and service location have been updated.');
+      showSuccess('Profile Saved', 'Your client details and service location have been updated.');
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { message?: string } }; message?: string };
-      Alert.alert('Update Failed', apiErr?.response?.data?.message || apiErr?.message || 'Failed to update profile.');
+      showError('Update Failed', apiErr?.response?.data?.message || apiErr?.message || 'Failed to update profile.');
     } finally {
       setIsSaving(false);
     }
@@ -93,9 +99,9 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
 
   const clientName = firstName
     ? `${firstName} ${lastName}`.trim()
-    : user?.email ? user.email.split('@')[0] : 'Fixmate Client';
+    : user?.email ? user.email.split('@')[0] : 'Valued Client';
 
-  const clientContact = phone || user?.email || 'Registered User';
+  const clientContact = phone || user?.phoneNumber || user?.email || 'Registered User';
   const initials = clientName
     .split(' ')
     .map((n) => n[0])
@@ -113,67 +119,92 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: dynamicColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: dynamicColors.headerBg, borderBottomColor: dynamicColors.headerBorder }]}>
         {onBack && (
           <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-            <Text style={styles.backBtnText}>←</Text>
+            <ChevronLeft size={22} color={dynamicColors.text} />
           </TouchableOpacity>
         )}
-        <Text style={styles.headerTitle}>Account Settings</Text>
+        <Text style={[styles.headerTitle, { color: dynamicColors.text }]}>Account Settings</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* User Dossier */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+        <View style={[styles.profileCard, { backgroundColor: dynamicColors.surface, borderColor: dynamicColors.border }]}>
+          <UserAvatar
+            url={user?.avatarUrl || user?.clientProfile?.avatarUrl}
+            name={clientName}
+            size={56}
+            style={{ marginRight: spacing.md }}
+          />
           <View style={styles.profileMeta}>
-            <Text style={styles.profileName}>{clientName}</Text>
-            <Text style={styles.profileContact}>{clientContact}</Text>
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>
-                {user?.isKycVerified ? '✓ Verified Identity' : '✓ Active Client Account'}
+            <Text style={[styles.profileName, { color: dynamicColors.text }]}>{clientName}</Text>
+            <Text style={[styles.profileContact, { color: dynamicColors.textMuted }]}>{clientContact}</Text>
+            <View style={[styles.verifiedBadge, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+              <BadgeCheck size={12} color={isDark ? '#34D399' : '#15803D'} />
+              <Text style={[styles.verifiedText, isDark && { color: '#34D399' }]}>
+                {user?.isKycVerified ? 'Verified Identity' : 'Active Client Account'}
               </Text>
             </View>
           </View>
         </View>
 
         {/* Live Personal Details Form */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Personal & Contact Details</Text>
+        <View style={[styles.sectionCard, { backgroundColor: dynamicColors.surface, borderColor: dynamicColors.border }]}>
+          <Text style={[styles.sectionTitle, { color: dynamicColors.text }]}>Personal & Contact Details</Text>
 
           <View style={styles.rowInputs}>
             <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>FIRST NAME</Text>
+              <Text style={[styles.inputLabel, { color: dynamicColors.textMuted }]}>FIRST NAME</Text>
               <TextInput
-                style={styles.textInput}
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: dynamicColors.inputBg,
+                    borderColor: dynamicColors.inputBorder,
+                    color: dynamicColors.text,
+                  },
+                ]}
                 placeholder="First name"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={dynamicColors.textMuted}
                 value={firstName}
                 onChangeText={setFirstName}
               />
             </View>
             <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>LAST NAME</Text>
+              <Text style={[styles.inputLabel, { color: dynamicColors.textMuted }]}>LAST NAME</Text>
               <TextInput
-                style={styles.textInput}
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: dynamicColors.inputBg,
+                    borderColor: dynamicColors.inputBorder,
+                    color: dynamicColors.text,
+                  },
+                ]}
                 placeholder="Last name"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={dynamicColors.textMuted}
                 value={lastName}
                 onChangeText={setLastName}
               />
             </View>
           </View>
 
-          <Text style={styles.inputLabel}>PHONE NUMBER (FOR ARTISAN DISPATCH)</Text>
+          <Text style={[styles.inputLabel, { color: dynamicColors.textMuted }]}>PHONE NUMBER (FOR ARTISAN DISPATCH)</Text>
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: dynamicColors.inputBg,
+                borderColor: dynamicColors.inputBorder,
+                color: dynamicColors.text,
+              },
+            ]}
             placeholder="e.g. 08012345678"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={dynamicColors.textMuted}
             keyboardType="phone-pad"
             value={phone}
             onChangeText={setPhone}
@@ -181,43 +212,64 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
         </View>
 
         {/* Primary Service Location & Address */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Primary Service Location</Text>
+        <View style={[styles.sectionCard, { backgroundColor: dynamicColors.surface, borderColor: dynamicColors.border }]}>
+          <Text style={[styles.sectionTitle, { color: dynamicColors.text }]}>Primary Service Location</Text>
 
           <View style={styles.rowInputs}>
             <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>STATE</Text>
+              <Text style={[styles.inputLabel, { color: dynamicColors.textMuted }]}>STATE</Text>
               <TextInput
-                style={styles.textInput}
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: dynamicColors.inputBg,
+                    borderColor: dynamicColors.inputBorder,
+                    color: dynamicColors.text,
+                  },
+                ]}
                 placeholder="e.g. Lagos"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={dynamicColors.textMuted}
                 value={state}
                 onChangeText={setState}
               />
             </View>
             <View style={styles.halfInput}>
-              <Text style={styles.inputLabel}>CITY / LGA</Text>
+              <Text style={[styles.inputLabel, { color: dynamicColors.textMuted }]}>CITY / LGA</Text>
               <TextInput
-                style={styles.textInput}
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: dynamicColors.inputBg,
+                    borderColor: dynamicColors.inputBorder,
+                    color: dynamicColors.text,
+                  },
+                ]}
                 placeholder="e.g. Lekki / Ikeja"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={dynamicColors.textMuted}
                 value={city}
                 onChangeText={setCity}
               />
             </View>
           </View>
 
-          <Text style={styles.inputLabel}>STREET ADDRESS</Text>
+          <Text style={[styles.inputLabel, { color: dynamicColors.textMuted }]}>STREET ADDRESS</Text>
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: dynamicColors.inputBg,
+                borderColor: dynamicColors.inputBorder,
+                color: dynamicColors.text,
+              },
+            ]}
             placeholder="e.g. 15 Admiralty Way, Lekki Phase 1"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={dynamicColors.textMuted}
             value={address}
             onChangeText={setAddress}
           />
 
           <TouchableOpacity
-            style={[styles.saveBtn, isSaving && { opacity: 0.6 }]}
+            style={[styles.saveBtn, { backgroundColor: dynamicColors.primary }, isSaving && { opacity: 0.6 }]}
             onPress={handleSaveProfile}
             disabled={isSaving}
             activeOpacity={0.8}
@@ -231,43 +283,44 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
         </View>
 
         {/* Security & Escrow Safeguards */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Security & Escrow Authorization</Text>
+        <View style={[styles.sectionCard, { backgroundColor: dynamicColors.surface, borderColor: dynamicColors.border }]}>
+          <Text style={[styles.sectionTitle, { color: dynamicColors.text }]}>Security & Escrow Authorization</Text>
 
           <View style={styles.settingRow}>
             <View style={styles.settingMeta}>
-              <Text style={styles.settingTitle}>FaceID / Biometric Login</Text>
-              <Text style={styles.settingDesc}>Use biometric sensor to unlock Fixmate wallet</Text>
+              <Text style={[styles.settingTitle, { color: dynamicColors.text }]}>FaceID / Biometric Login</Text>
+              <Text style={[styles.settingDesc, { color: dynamicColors.textMuted }]}>Use biometric sensor to unlock Artifix wallet</Text>
             </View>
             <Switch
               value={useBiometrics}
               onValueChange={setUseBiometrics}
-              trackColor={{ false: '#E5E7EB', true: colors.primary }}
+              trackColor={{ false: isDark ? '#374151' : '#E5E7EB', true: dynamicColors.primary }}
             />
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: dynamicColors.border }]} />
 
           <View style={styles.settingRow}>
             <View style={styles.settingMeta}>
-              <Text style={styles.settingTitle}>Require OTP for Escrow Releases</Text>
-              <Text style={styles.settingDesc}>Extra SMS security code before funds disburse</Text>
+              <Text style={[styles.settingTitle, { color: dynamicColors.text }]}>Require OTP for Escrow Releases</Text>
+              <Text style={[styles.settingDesc, { color: dynamicColors.textMuted }]}>Extra SMS security code before funds disburse</Text>
             </View>
             <Switch
               value={escrowOtp}
               onValueChange={setEscrowOtp}
-              trackColor={{ false: '#E5E7EB', true: colors.primary }}
+              trackColor={{ false: isDark ? '#374151' : '#E5E7EB', true: dynamicColors.primary }}
             />
           </View>
         </View>
 
         {/* Linked Bank Accounts */}
-        <View style={styles.sectionCard}>
+        <View style={[styles.sectionCard, { backgroundColor: dynamicColors.surface, borderColor: dynamicColors.border }]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Linked Bank Accounts</Text>
+            <Text style={[styles.sectionTitle, { color: dynamicColors.text }]}>Linked Bank Accounts</Text>
             {onNavigateToWallet && (
-              <TouchableOpacity onPress={onNavigateToWallet}>
-                <Text style={styles.sectionAction}>Manage in Wallet ›</Text>
+              <TouchableOpacity onPress={onNavigateToWallet} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <Text style={[styles.sectionAction, { color: dynamicColors.primary }]}>Manage in Wallet</Text>
+                <ChevronRight size={13} color={dynamicColors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -275,19 +328,19 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
           {savedBanks && savedBanks.length > 0 ? (
             savedBanks.map((b: any, idx: number) => (
               <React.Fragment key={b.id || idx}>
-                {idx > 0 && <View style={styles.divider} />}
+                {idx > 0 && <View style={[styles.divider, { backgroundColor: dynamicColors.border }]} />}
                 <View style={styles.bankItem}>
-                  <Text style={styles.cardIcon}>🏦</Text>
+                  <Landmark size={20} color={dynamicColors.textMuted} style={{ marginRight: spacing.sm }} />
                   <View style={styles.bankItemMeta}>
-                    <Text style={styles.bankItemName}>{b.bankName} •••• {b.accountNumber.slice(-4)}</Text>
-                    <Text style={styles.bankItemSub}>{b.accountName} • Verified NUBAN</Text>
+                    <Text style={[styles.bankItemName, { color: dynamicColors.text }]}>{b.bankName} •••• {b.accountNumber.slice(-4)}</Text>
+                    <Text style={[styles.bankItemSub, { color: dynamicColors.textMuted }]}>{b.accountName} • Verified NUBAN</Text>
                   </View>
                 </View>
               </React.Fragment>
             ))
           ) : (
-            <View style={styles.emptyBankNotice}>
-              <Text style={styles.emptyBankText}>
+            <View style={[styles.emptyBankNotice, { backgroundColor: dynamicColors.surfaceSubtle, borderColor: dynamicColors.border }]}>
+              <Text style={[styles.emptyBankText, { color: dynamicColors.textMuted }]}>
                 No payout bank accounts linked yet. Link an account in your Wallet to receive instant NIP refunds.
               </Text>
             </View>
@@ -295,35 +348,39 @@ export const ClientProfileSettingsScreen: React.FC<ClientProfileSettingsScreenPr
         </View>
 
         {/* Preferences */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>App Preferences</Text>
+        <View style={[styles.sectionCard, { backgroundColor: dynamicColors.surface, borderColor: dynamicColors.border }]}>
+          <Text style={[styles.sectionTitle, { color: dynamicColors.text }]}>App Preferences</Text>
           <View style={styles.settingRow}>
             <View style={styles.settingMeta}>
-              <Text style={styles.settingTitle}>Push Notifications</Text>
-              <Text style={styles.settingDesc}>Get instant notifications when artisan bids</Text>
+              <Text style={[styles.settingTitle, { color: dynamicColors.text }]}>Push Notifications</Text>
+              <Text style={[styles.settingDesc, { color: dynamicColors.textMuted }]}>Get instant notifications when artisan bids</Text>
             </View>
             <Switch
               value={pushNotifs}
               onValueChange={setPushNotifs}
-              trackColor={{ false: '#E5E7EB', true: colors.primary }}
+              trackColor={{ false: isDark ? '#374151' : '#E5E7EB', true: dynamicColors.primary }}
             />
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: dynamicColors.border }]} />
           <View style={styles.settingRow}>
             <View style={styles.settingMeta}>
-              <Text style={styles.settingTitle}>Oga John AI Cost Predictor</Text>
-              <Text style={styles.settingDesc}>Auto analyze uploaded damage photos</Text>
+              <Text style={[styles.settingTitle, { color: dynamicColors.text }]}>Oga John AI Cost Predictor</Text>
+              <Text style={[styles.settingDesc, { color: dynamicColors.textMuted }]}>Auto analyze uploaded damage photos</Text>
             </View>
             <Switch
               value={aiSuggestions}
               onValueChange={setAiSuggestions}
-              trackColor={{ false: '#E5E7EB', true: colors.primary }}
+              trackColor={{ false: isDark ? '#374151' : '#E5E7EB', true: dynamicColors.primary }}
             />
           </View>
         </View>
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogoutPress} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={[styles.logoutBtn, isDark && { backgroundColor: 'rgba(220, 38, 38, 0.15)', borderWidth: 1, borderColor: 'rgba(220, 38, 38, 0.3)' }]}
+          onPress={handleLogoutPress}
+          activeOpacity={0.8}
+        >
           <Text style={styles.logoutBtnText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -400,6 +457,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: '#DCFCE7',
     paddingHorizontal: 6,
     paddingVertical: 2,

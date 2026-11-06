@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Fingerprint,
 } from 'lucide-react';
+import { SeoHead } from '../../components/seo/SeoHead';
 
 export const PrivacyPolicyPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState('scope');
@@ -39,6 +40,12 @@ export const PrivacyPolicyPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FAF7F0] text-[#141A16] font-sans antialiased selection:bg-[#123E2A] selection:text-white pb-24">
+      <SeoHead
+        title="Privacy Policy & NDPA Data Protection | Artifix Nigeria"
+        description="Review how Artifix protects personal, financial, and biometric data in accordance with the Nigeria Data Protection Act (NDPA)."
+        canonical="https://artifixhq.xyz/privacy"
+        ogType="website"
+      />
       {/* ============================================================ */}
       {/* 1. EDITORIAL HEADER & METADATA                               */}
       {/* ============================================================ */}
@@ -128,10 +135,10 @@ export const PrivacyPolicyPage: React.FC = () => {
               </p>
               <div className="pt-2 text-xs font-semibold">
                 <a
-                  href="mailto:dpo@artifix.ng"
+                  href="mailto:dpo@artifixhq.xyz"
                   className="inline-flex items-center gap-1.5 text-white hover:text-emerald-200 transition-colors"
                 >
-                  <span>dpo@artifix.ng</span>
+                  <span>dpo@artifixhq.xyz</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </a>
               </div>
@@ -301,7 +308,7 @@ export const PrivacyPolicyPage: React.FC = () => {
                 Users retain full rights under Nigerian law to access, rectify, port, or request erasure of their personal information. Financial ledger records must be retained for 6 years in accordance with Central Bank of Nigeria financial recordkeeping laws, after which they are permanently anonymized.
               </p>
               <p className="text-sm sm:text-[15px] text-stone-700 leading-relaxed">
-                To request an export of your data docket or invoke account erasure, submit a request directly to our Data Protection Officer at <a href="mailto:dpo@artifix.ng" className="text-[#123E2A] font-semibold underline">dpo@artifix.ng</a>.
+                To request an export of your data docket or invoke account erasure, submit a request directly to our Data Protection Officer at <a href="mailto:dpo@artifixhq.xyz" className="text-[#123E2A] font-semibold underline">dpo@artifixhq.xyz</a>.
               </p>
             </article>
 

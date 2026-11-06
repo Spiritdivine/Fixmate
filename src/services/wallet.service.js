@@ -243,32 +243,6 @@ export class WalletService {
       });
     }
 
-    // 1. Tiered KYC Daily Withdrawal Limits (Rolling 24 Hours)
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const past24hPayouts = await prisma.payoutRequest.findMany({
-      where: {
-        userId,
-        status: { in: ['PENDING', 'PROCESSING', 'COMPLETED'] },
-        createdAt: { gte: twentyFourHoursAgo },
-      },
-      select: { amount: true },
-    });
-
-    const totalWithdrawn24h = past24hPayouts.reduce((acc, p) => acc + Number(p.amount), 0);
-    const maxDailyLimit = user.isKycVerified ? 1_000_000 : 50_000;
-
-    if (totalWithdrawn24h + requestedAmountNum > maxDailyLimit) {
-      if (!user.isKycVerified) {
-        throw ApiError.badRequest(
-          `Daily withdrawal limit of ₦50,000 exceeded (24h total: ₦${totalWithdrawn24h.toLocaleString()}). Please complete KYC verification in your profile to unlock ₦1,000,000 daily limits.`
-        );
-      } else {
-        throw ApiError.badRequest(
-          `Daily withdrawal limit of ₦1,000,000 exceeded (24h total: ₦${totalWithdrawn24h.toLocaleString()}). Please contact corporate support for Tier-3 enterprise limits.`
-        );
-      }
-    }
-
     // 2. Atomic Transaction with Pessimistic Row-Level Lock (FOR UPDATE)
     const ref = `WTH-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
     const payout = await prisma.$transaction(async (tx) => {
@@ -277,6 +251,32 @@ export class WalletService {
       `;
       const wallet = lockedWallets && lockedWallets[0];
       if (!wallet) throw ApiError.notFound('Wallet not found');
+
+      // 1. Tiered KYC Daily Withdrawal Limits (Rolling 24 Hours) computed under pessimistic wallet lock
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const past24hPayouts = await tx.payoutRequest.findMany({
+        where: {
+          userId,
+          status: { in: ['PENDING', 'PROCESSING', 'COMPLETED'] },
+          createdAt: { gte: twentyFourHoursAgo },
+        },
+        select: { amount: true },
+      });
+
+      const totalWithdrawn24h = past24hPayouts.reduce((acc, p) => acc + Number(p.amount), 0);
+      const maxDailyLimit = user.isKycVerified ? 1_000_000 : 50_000;
+
+      if (totalWithdrawn24h + requestedAmountNum > maxDailyLimit) {
+        if (!user.isKycVerified) {
+          throw ApiError.badRequest(
+            `Daily withdrawal limit of ₦50,000 exceeded (24h total: ₦${totalWithdrawn24h.toLocaleString()}). Please complete KYC verification in your profile to unlock ₦1,000,000 daily limits.`
+          );
+        } else {
+          throw ApiError.badRequest(
+            `Daily withdrawal limit of ₦1,000,000 exceeded (24h total: ₦${totalWithdrawn24h.toLocaleString()}). Please contact corporate support for Tier-3 enterprise limits.`
+          );
+        }
+      }
 
       const currentAvailable = Number(wallet.available_balance);
       if (currentAvailable < requestedAmountNum) {

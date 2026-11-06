@@ -14,6 +14,7 @@ import { colors, radius, spacing, typography, shadows } from '../../theme';
 import { formatCurrency, formatDistance } from '../../lib/formatters';
 import { JobService } from '../../services/job.service';
 import { JobRecord } from '../../types/api-contracts';
+import { useToggleSaveJob } from '../../hooks';
 
 interface SavedJobsScreenProps {
   onBack?: () => void;
@@ -49,25 +50,25 @@ export const SavedJobsScreen: React.FC<SavedJobsScreenProps> = ({
     fetchSavedJobs();
   };
 
+  const toggleSaveMutation = useToggleSaveJob();
+
   const handleRemove = (id: string) => {
-    Alert.alert('Remove Bookmark', 'Remove this job from your saved leads?', [
-      { text: 'Cancel', style: 'cancel' },
+    const targetJob = jobs.find((j) => j.id === id);
+    if (!targetJob) return;
+
+    // Instant optimistic removal from list
+    const previous = [...jobs];
+    setJobs((prev) => prev.filter((j) => j.id !== id));
+
+    toggleSaveMutation.mutate(
+      { job: targetJob, isSaved: false },
       {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          const previous = [...jobs];
-          setJobs((prev) => prev.filter((j) => j.id !== id));
-          try {
-            await JobService.unsaveJob(id);
-          } catch (err) {
-            console.error('[SavedJobsScreen] Unsave failed:', err);
-            setJobs(previous);
-            Alert.alert('Error', 'Failed to remove job from saved leads.');
-          }
+        onError: () => {
+          setJobs(previous);
+          Alert.alert('Error', 'Failed to remove job from saved leads.');
         },
-      },
-    ]);
+      }
+    );
   };
 
   return (

@@ -37,6 +37,18 @@ export const initSocketServer = (httpServer) => {
     try {
       const pubClient = redis.duplicate();
       const subClient = redis.duplicate();
+
+      pubClient.on('error', (err) => {
+        if (env.NODE_ENV === 'development') {
+          console.warn('[Socket Redis pubClient]', err.message);
+        }
+      });
+      subClient.on('error', (err) => {
+        if (env.NODE_ENV === 'development') {
+          console.warn('[Socket Redis subClient]', err.message);
+        }
+      });
+
       io.adapter(createAdapter(pubClient, subClient));
       console.log('📡 Socket.IO Redis Adapter attached for multi-core cluster scaling');
     } catch (err) {
@@ -47,10 +59,15 @@ export const initSocketServer = (httpServer) => {
   // Socket Authentication Middleware
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
-      if (!token) {
+      let rawToken = socket.handshake.auth?.token || socket.handshake.headers?.authorization;
+      if (!rawToken) {
         return next(new Error('Authentication error: Token missing'));
       }
+
+      const token =
+        typeof rawToken === 'string' && rawToken.startsWith('Bearer ')
+          ? rawToken.slice(7).trim()
+          : String(rawToken).trim();
 
       const decoded = verifyAccessToken(token);
       const user = await prisma.user.findUnique({
@@ -75,7 +92,10 @@ export const initSocketServer = (httpServer) => {
     socket.join(userRoom);
 
     // Join specific conversation room with participant authorization
-    socket.on('join_conversation', async (conversationId) => {
+    socket.on('join_conversation', async (data) => {
+      const conversationId = typeof data === 'string' ? data : data?.conversationId;
+      if (!conversationId) return;
+
       try {
         const participant = await prisma.conversationParticipant.findUnique({
           where: {
@@ -98,13 +118,16 @@ export const initSocketServer = (httpServer) => {
     });
 
     // Leave conversation room
-    socket.on('leave_conversation', (conversationId) => {
-      socket.leave(`conversation:${conversationId}`);
+    socket.on('leave_conversation', (data) => {
+      const conversationId = typeof data === 'string' ? data : data?.conversationId;
+      if (conversationId) {
+        socket.leave(`conversation:${conversationId}`);
+      }
     });
 
     // Handle real-time chat message broadcast with participant authorization
     socket.on('send_message', async (data) => {
-      const { conversationId, body, messageType = 'TEXT', attachmentUrl } = data;
+      const { conversationId, body, messageType = 'TEXT', attachmentUrl, metadata } = data;
 
       try {
         const participant = await prisma.conversationParticipant.findUnique({
@@ -129,6 +152,7 @@ export const initSocketServer = (httpServer) => {
               messageType,
               body,
               attachmentUrl,
+              metadata: metadata || null,
             },
             include: {
               sender: { select: { id: true, email: true, avatarUrl: true } },
@@ -151,18 +175,147 @@ export const initSocketServer = (httpServer) => {
     });
 
     // Typing indicators
-    socket.on('typing_start', ({ conversationId }) => {
+    socket.on('typing_start', (data) => {
+      const conversationId = typeof data === 'string' ? data : data?.conversationId;
+      if (!conversationId) return;
       socket.to(`conversation:${conversationId}`).emit('user_typing', {
         userId: socket.user.id,
         conversationId,
       });
     });
 
-    socket.on('typing_stop', ({ conversationId }) => {
+    socket.on('typing_stop', (data) => {
+      const conversationId = typeof data === 'string' ? data : data?.conversationId;
+      if (!conversationId) return;
       socket.to(`conversation:${conversationId}`).emit('user_stop_typing', {
         userId: socket.user.id,
         conversationId,
       });
+    });
+
+    // Mark as read real-time sync
+    socket.on('mark_as_read', async (data) => {
+      const conversationId = typeof data === 'string' ? data : data?.conversationId;
+      if (!conversationId) return;
+
+      try {
+        await prisma.conversationParticipant.updateMany({
+          where: { conversationId, userId: socket.user.id },
+          data: { lastReadAt: new Date() },
+        });
+
+        await prisma.message.updateMany({
+          where: { conversationId, senderId: { not: socket.user.id }, isRead: false },
+          data: { isRead: true },
+        });
+
+        socket.to(`conversation:${conversationId}`).emit('messages_read', {
+          conversationId,
+          readerId: socket.user.id,
+          readAt: new Date(),
+        });
+      } catch (err) {
+        // Silent fail for socket read-sync
+      }
+    });
+
+    // =========================================================================
+    // Real-Time Emergency SOS & Artisan En-Route GPS Dispatch Tracking
+    // =========================================================================
+
+    // Join dispatch room (Client or Assigned Artisan)
+    socket.on('dispatch:join', async (data) => {
+      const sessionId = typeof data === 'string' ? data : data?.sessionId;
+      if (!sessionId) return;
+
+      try {
+        const session = await prisma.aiDiagnosticSession.findUnique({
+          where: { id: sessionId },
+          select: { userId: true, sosClaimedByArtisanId: true, isSosDispatched: true },
+        });
+
+        if (!session) {
+          socket.emit('error', { message: 'Diagnostic session not found' });
+          return;
+        }
+
+        const isOwner = session.userId === socket.user.id;
+        const isAssignedArtisan = session.sosClaimedByArtisanId === socket.user.id;
+        const isAdmin = socket.user.role === 'ADMIN' || socket.user.role === 'SUPPORT';
+
+        if (!isOwner && !isAssignedArtisan && !isAdmin) {
+          socket.emit('error', { message: 'Unauthorized: You are not assigned to this dispatch' });
+          return;
+        }
+
+        socket.join(`dispatch:${sessionId}`);
+        socket.emit('dispatch:joined', { sessionId, isSosDispatched: session.isSosDispatched });
+
+        // If Redis has a cached recent coordinate, emit immediately
+        if (redis) {
+          try {
+            const cachedLoc = await redis.get(`artisan:dispatch:loc:${sessionId}`);
+            if (cachedLoc) {
+              socket.emit('dispatch:location_broadcast', JSON.parse(cachedLoc));
+            }
+          } catch (e) {
+            // Non-critical
+          }
+        }
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
+    });
+
+    // Leave dispatch room
+    socket.on('dispatch:leave', (data) => {
+      const sessionId = typeof data === 'string' ? data : data?.sessionId;
+      if (sessionId) {
+        socket.leave(`dispatch:${sessionId}`);
+      }
+    });
+
+    // Artisan streams live location updates
+    socket.on('dispatch:location_update', async (data) => {
+      const { sessionId, latitude, longitude, heading = 0, speed = 0, accuracy = 0 } = data;
+      if (!sessionId || latitude === undefined || longitude === undefined) return;
+
+      try {
+        const session = await prisma.aiDiagnosticSession.findUnique({
+          where: { id: sessionId },
+          select: { sosClaimedByArtisanId: true },
+        });
+
+        if (!session || session.sosClaimedByArtisanId !== socket.user.id) {
+          socket.emit('error', { message: 'Unauthorized: You are not the assigned artisan for this emergency dispatch' });
+          return;
+        }
+
+        const payload = {
+          sessionId,
+          artisanId: socket.user.id,
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+          heading: Number(heading),
+          speed: Number(speed),
+          accuracy: Number(accuracy),
+          timestamp: new Date().toISOString(),
+        };
+
+        // Cache in Redis for instant reconnection recovery (TTL: 60s)
+        if (redis) {
+          try {
+            await redis.set(`artisan:dispatch:loc:${sessionId}`, JSON.stringify(payload), 'EX', 60);
+          } catch (e) {
+            // Non-critical
+          }
+        }
+
+        // Broadcast to everyone in the dispatch room (client and listening admins)
+        io.to(`dispatch:${sessionId}`).emit('dispatch:location_broadcast', payload);
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
     });
 
     socket.on('disconnect', () => {

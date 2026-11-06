@@ -5,6 +5,8 @@ export interface User {
   email: string;
   role: UserRole;
   phone?: string;
+  phoneNumber?: string;
+  avatarUrl?: string;
   isKycVerified: boolean;
   clientProfile?: ClientProfile;
   artisanProfile?: ArtisanProfile;
@@ -62,7 +64,7 @@ export interface Job {
   budget: number;
   budgetType: 'FIXED' | 'NEGOTIABLE';
   status: JobStatus;
-  urgency: 'NORMAL' | 'HIGH' | 'EMERGENCY';
+  urgency: 'NORMAL' | 'URGENT' | 'HIGH' | 'EMERGENCY';
   createdAt: string;
   proposalsCount?: number;
   photos?: string[];

@@ -83,7 +83,7 @@ async function main() {
     contractId: 'a12a4d33-bc0a-4a2a-89a1-77884a1e9df1',
     reason: 'Incomplete piping work',
     explanation: 'The plumber did not seal the connector valve properly and it is still leaking water.',
-    evidences: [{ title: 'Leak Photo', fileUrl: 'https://example.com/leak.jpg' }],
+    evidences: [{ title: 'Leak Photo', fileUrl: 'https://storage.artifixhq.xyz/evidence/leak.jpg' }],
   };
   const invalidDispute = {
     contractId: 'a12a4d33-bc0a-4a2a-89a1-77884a1e9df1',

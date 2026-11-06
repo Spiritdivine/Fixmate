@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,38 @@ import {
   SafeAreaView,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
+  Image,
+  Modal,
 } from 'react-native';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { Camera, ChevronRight, Wrench, X, Eye, Maximize2, AlertCircle, ClipboardList } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { useQuery } from '@tanstack/react-query';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { JobService } from '../../services/job.service';
+import { SkeletonJobCard } from '../shared';
+
+// High-fidelity fallback defect/work photos by trade category so cards always look authentic
+const TRADE_FALLBACK_IMAGES: Record<string, string> = {
+  plumbing: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?auto=format&fit=crop&w=400&q=80',
+  electrical: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=400&q=80',
+  carpentry: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=400&q=80',
+  painting: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&w=400&q=80',
+  welding: 'https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&w=400&q=80',
+  mechanic: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=400&q=80',
+  masonry: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=400&q=80',
+  roofing: 'https://images.unsplash.com/photo-1632759145351-1d592919f522?auto=format&fit=crop&w=400&q=80',
+};
+
+const getTradeFallbackImage = (trade?: string): string => {
+  if (!trade) return 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=400&q=80';
+  const lower = trade.toLowerCase();
+  for (const [key, url] of Object.entries(TRADE_FALLBACK_IMAGES)) {
+    if (lower.includes(key)) return url;
+  }
+  return 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=400&q=80';
+};
 
 interface ClientJobItem {
   id: string;
@@ -23,24 +51,26 @@ interface ClientJobItem {
   assignedArtisan?: string;
   budget: number;
   postedDate: string;
+  attachments?: any[];
 }
 
 interface MyJobsScreenProps {
   onBack?: () => void;
   onSelectJob?: (jobId: string) => void;
   onPostNewJob?: () => void;
+  onRepostJob?: (jobData: { title?: string; trade?: string; budget?: number; description?: string }) => void;
 }
 
 export const MyJobsScreen: React.FC<MyJobsScreenProps> = ({
   onBack,
   onSelectJob,
   onPostNewJob,
+  onRepostJob,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
   const [tab, setTab] = useState<'OPEN_BIDS' | 'IN_PROGRESS' | 'COMPLETED'>('OPEN_BIDS');
-  const [jobs, setJobs] = useState<ClientJobItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
 
   const formatRelativeTime = (dateStr?: string): string => {
     if (!dateStr) return 'Recently';
@@ -59,87 +89,89 @@ export const MyJobsScreen: React.FC<MyJobsScreenProps> = ({
     }
   };
 
-  const loadJobs = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    setError(null);
-
-    try {
+  const {
+    data: jobs = [],
+    isLoading: loading,
+    isRefetching: refreshing,
+    refetch,
+    error: queryError,
+  } = useQuery<ClientJobItem[]>({
+    queryKey: ['client-my-jobs'],
+    queryFn: async () => {
       const data = await JobService.getMyJobs();
-      if (Array.isArray(data)) {
-        const transformed: ClientJobItem[] = data.map((j: any) => {
-          let mappedStatus: 'OPEN_BIDS' | 'IN_PROGRESS' | 'COMPLETED' = 'OPEN_BIDS';
-          const rawStatus = (j.status || '').toUpperCase();
-          if (rawStatus === 'IN_PROGRESS' || rawStatus === 'ASSIGNED') {
-            mappedStatus = 'IN_PROGRESS';
-          } else if (rawStatus === 'COMPLETED' || rawStatus === 'CLOSED') {
-            mappedStatus = 'COMPLETED';
-          } else {
-            mappedStatus = 'OPEN_BIDS';
+      if (!Array.isArray(data)) return [];
+      return data
+        .filter((j: any) => (j.status || '').toUpperCase() !== 'CANCELLED')
+        .map((j: any): ClientJobItem => {
+        let mappedStatus: 'OPEN_BIDS' | 'IN_PROGRESS' | 'COMPLETED' = 'OPEN_BIDS';
+        const rawStatus = (j.status || '').toUpperCase();
+        if (rawStatus === 'IN_PROGRESS' || rawStatus === 'ASSIGNED') {
+          mappedStatus = 'IN_PROGRESS';
+        } else if (rawStatus === 'COMPLETED' || rawStatus === 'CLOSED') {
+          mappedStatus = 'COMPLETED';
+        } else {
+          mappedStatus = 'OPEN_BIDS';
+        }
+
+        const activeContract = j.contracts?.[0];
+        let assignedArtisan: string | undefined;
+        let activeMilestone: string | undefined;
+
+        if (activeContract) {
+          assignedArtisan =
+            activeContract.artisan?.artisanProfile?.businessName ||
+            activeContract.artisan?.clientProfile?.firstName ||
+            'Assigned Artisan';
+          const pendingMilestone = activeContract.milestones?.find(
+            (m: any) => m.status === 'SUBMITTED' || m.status === 'IN_PROGRESS'
+          );
+          if (pendingMilestone) {
+            activeMilestone = `${pendingMilestone.title} (${pendingMilestone.status})`;
           }
+        }
 
-          const activeContract = j.contracts?.[0];
-          let assignedArtisan: string | undefined;
-          let activeMilestone: string | undefined;
+        return {
+          id: j.id,
+          title: j.title || 'Untitled Job',
+          trade: j.category?.name || j.trade || 'General Trade',
+          proposalsCount: j.proposals?.length ?? j.proposalsCount ?? 0,
+          status: mappedStatus,
+          activeMilestone,
+          assignedArtisan,
+          budget: Number(j.budget || j.budgetMax || j.budgetMin || 0),
+          postedDate: formatRelativeTime(j.createdAt),
+          attachments: j.attachments || [],
+        };
+      });
+    },
+    staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
+  });
 
-          if (activeContract) {
-            assignedArtisan = activeContract.artisan?.artisanProfile?.businessName ||
-              activeContract.artisan?.clientProfile?.firstName ||
-              'Assigned Artisan';
-            const pendingMilestone = activeContract.milestones?.find((m: any) => m.status === 'SUBMITTED' || m.status === 'IN_PROGRESS');
-            if (pendingMilestone) {
-              activeMilestone = `${pendingMilestone.title} (${pendingMilestone.status})`;
-            }
-          }
-
-          return {
-            id: j.id,
-            title: j.title || 'Untitled Job',
-            trade: j.category?.name || j.trade || 'General Trade',
-            proposalsCount: j.proposals?.length ?? j.proposalsCount ?? 0,
-            status: mappedStatus,
-            activeMilestone,
-            assignedArtisan,
-            budget: Number(j.budget || j.budgetMax || j.budgetMin || 0),
-            postedDate: formatRelativeTime(j.createdAt),
-          };
-        });
-        setJobs(transformed);
-      } else {
-        setJobs([]);
-      }
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Failed to load jobs');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadJobs();
-  }, [loadJobs]);
+  const error = queryError ? (queryError as any)?.response?.data?.message || queryError.message || 'Failed to load jobs' : null;
 
   const openBidsCount = jobs.filter((j) => j.status === 'OPEN_BIDS').length;
   const inProgressCount = jobs.filter((j) => j.status === 'IN_PROGRESS').length;
   const completedCount = jobs.filter((j) => j.status === 'COMPLETED').length;
 
-  const filteredJobs = jobs.filter((j) => j.status === tab);
+  const filteredJobs = jobs
+    .filter((j) => j.status === tab)
+    .filter((j) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return j.title.toLowerCase().includes(q) || j.trade.toLowerCase().includes(q);
+    });
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
         <View style={styles.headerLeft}>
           {onBack && (
             <TouchableOpacity onPress={onBack} activeOpacity={0.7} style={styles.backButton}>
-              <Text style={styles.backChevron}>←</Text>
+              <Text style={[styles.backChevron, { color: themeColors.text }]}>←</Text>
             </TouchableOpacity>
           )}
-          <Text style={styles.headerTitle}>My Jobs & Repairs</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>My Jobs & Repairs</Text>
         </View>
 
         <TouchableOpacity onPress={onPostNewJob} style={styles.postBtnHeader}>
@@ -148,13 +180,13 @@ export const MyJobsScreen: React.FC<MyJobsScreenProps> = ({
       </View>
 
       {/* 3-Tab Segment */}
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { backgroundColor: themeColors.surfaceSubtle }]}>
         <TouchableOpacity
           onPress={() => setTab('OPEN_BIDS')}
-          style={[styles.tabItem, tab === 'OPEN_BIDS' && styles.tabItemActive]}
+          style={[styles.tabItem, tab === 'OPEN_BIDS' && [styles.tabItemActive, { backgroundColor: isDark ? themeColors.surface : '#FFFFFF' }]]}
         >
           <View style={styles.tabPillRow}>
-            <Text style={[styles.tabLabel, tab === 'OPEN_BIDS' && styles.tabLabelActive]}>
+            <Text style={[styles.tabLabel, { color: themeColors.textMuted }, tab === 'OPEN_BIDS' && [styles.tabLabelActive, { color: isDark ? themeColors.primary : colors.brand.forest }]]}>
               Open Bids ({openBidsCount})
             </Text>
             {openBidsCount > 0 && <View style={styles.badgeDot} />}
@@ -163,35 +195,54 @@ export const MyJobsScreen: React.FC<MyJobsScreenProps> = ({
 
         <TouchableOpacity
           onPress={() => setTab('IN_PROGRESS')}
-          style={[styles.tabItem, tab === 'IN_PROGRESS' && styles.tabItemActive]}
+          style={[styles.tabItem, tab === 'IN_PROGRESS' && [styles.tabItemActive, { backgroundColor: isDark ? themeColors.surface : '#FFFFFF' }]]}
         >
-          <Text style={[styles.tabLabel, tab === 'IN_PROGRESS' && styles.tabLabelActive]}>
+          <Text style={[styles.tabLabel, { color: themeColors.textMuted }, tab === 'IN_PROGRESS' && [styles.tabLabelActive, { color: isDark ? themeColors.primary : colors.brand.forest }]]}>
             In Progress ({inProgressCount})
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => setTab('COMPLETED')}
-          style={[styles.tabItem, tab === 'COMPLETED' && styles.tabItemActive]}
+          style={[styles.tabItem, tab === 'COMPLETED' && [styles.tabItemActive, { backgroundColor: isDark ? themeColors.surface : '#FFFFFF' }]]}
         >
-          <Text style={[styles.tabLabel, tab === 'COMPLETED' && styles.tabLabelActive]}>
+          <Text style={[styles.tabLabel, { color: themeColors.textMuted }, tab === 'COMPLETED' && [styles.tabLabelActive, { color: isDark ? themeColors.primary : colors.brand.forest }]]}>
             History ({completedCount})
           </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Search Filter Bar */}
+      <View style={styles.searchWrap}>
+        <TextInput
+          style={[
+            styles.searchInput,
+            {
+              backgroundColor: themeColors.inputBg,
+              borderColor: themeColors.inputBorder,
+              color: themeColors.text,
+            },
+          ]}
+          placeholder="Filter my jobs by title or trade..."
+          placeholderTextColor={themeColors.textMuted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
       {/* Loading state */}
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.brand.forest} />
-          <Text style={styles.loadingText}>Fetching your jobs...</Text>
+        <View style={styles.listContent}>
+          <SkeletonJobCard />
+          <SkeletonJobCard />
+          <SkeletonJobCard />
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Could not load your jobs</Text>
-          <Text style={styles.errorSubtitle}>{error}</Text>
-          <TouchableOpacity onPress={() => loadJobs()} style={styles.retryButton}>
+          <AlertCircle size={36} color="#EF4444" style={{ marginBottom: 8 }} />
+          <Text style={[styles.errorTitle, { color: themeColors.text }]}>Could not load your jobs</Text>
+          <Text style={[styles.errorSubtitle, { color: themeColors.textMuted }]}>{error}</Text>
+          <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -205,22 +256,22 @@ export const MyJobsScreen: React.FC<MyJobsScreenProps> = ({
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => loadJobs(true)}
-              tintColor={colors.brand.forest}
-              colors={[colors.brand.forest]}
+              onRefresh={() => { refetch(); }}
+              tintColor={isDark ? themeColors.primary : colors.brand.forest}
+              colors={[isDark ? themeColors.primary : colors.brand.forest]}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📋</Text>
-              <Text style={styles.emptyTitle}>
+              <ClipboardList size={36} color={themeColors.textMuted} style={{ marginBottom: 8 }} />
+              <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
                 {tab === 'OPEN_BIDS'
                   ? 'No Open Repair Requests'
                   : tab === 'IN_PROGRESS'
                   ? 'No Work Currently In Progress'
                   : 'No Completed Jobs Yet'}
               </Text>
-              <Text style={styles.emptySubtitle}>
+              <Text style={[styles.emptySubtitle, { color: themeColors.textMuted }]}>
                 {tab === 'OPEN_BIDS'
                   ? 'Post a new repair to receive competitive bids from verified artisans near you.'
                   : tab === 'IN_PROGRESS'
@@ -234,58 +285,160 @@ export const MyJobsScreen: React.FC<MyJobsScreenProps> = ({
               )}
             </View>
           }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={() => onSelectJob?.(item.id)}
-              style={styles.card}
-            >
-              <View style={styles.topRow}>
-                <View style={styles.tradeBadge}>
-                  <Text style={styles.tradeText}>{item.trade}</Text>
-                </View>
-                <Text style={styles.dateText}>{item.postedDate}</Text>
-              </View>
+          renderItem={({ item }) => {
+            const rawPhoto = item.attachments?.[0]?.fileUrl || item.attachments?.[0]?.url || null;
+            const photoUrl = rawPhoto || getTradeFallbackImage(item.trade);
+            const hasUploadedPhoto = !!rawPhoto;
 
-              <Text style={styles.jobTitle}>{item.title}</Text>
+            return (
+              <TouchableOpacity
+                activeOpacity={0.92}
+                onPress={() => onSelectJob?.(item.id)}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: themeColors.surface,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+              >
+                <View style={styles.cardRow}>
+                  {/* Left: Uploaded Defect/Job Image (Tap to inspect full resolution) */}
+                  <TouchableOpacity
+                    style={[styles.thumbnailContainer, { backgroundColor: themeColors.surfaceSubtle }]}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => {});
+                      setPreviewImage({
+                        url: photoUrl,
+                        title: item.title,
+                      });
+                    }}
+                  >
+                    <Image
+                      source={{ uri: photoUrl }}
+                      style={styles.thumbnailImage}
+                      resizeMode="cover"
+                    />
+                    {hasUploadedPhoto && (
+                      <View style={styles.zoomHintBadge}>
+                        <Maximize2 size={9} color="#FFFFFF" strokeWidth={2.4} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
 
-              {item.status === 'IN_PROGRESS' && (
-                <View style={styles.inProgressBox}>
-                  {item.assignedArtisan && (
-                    <Text style={styles.artisanName}>Assigned: {item.assignedArtisan}</Text>
-                  )}
-                  {item.activeMilestone && (
-                    <Text style={styles.milestoneNotice}>{item.activeMilestone}</Text>
-                  )}
-                </View>
-              )}
+                  {/* Right: Job Information */}
+                  <View style={styles.contentCol}>
+                    {/* Top Row: Trade Pill & Posted Date */}
+                    <View style={styles.cardTopRow}>
+                      <View
+                        style={[
+                          styles.tradeBadge,
+                          { backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : '#E6F4EA' },
+                        ]}
+                      >
+                        <Text style={[styles.tradeText, { color: isDark ? '#34D399' : '#15803D' }]}>
+                          {item.trade}
+                        </Text>
+                      </View>
+                      <Text style={[styles.dateText, { color: themeColors.textMuted }]}>{item.postedDate}</Text>
+                    </View>
 
-              <View style={styles.footerRow}>
-                <View>
-                  <Text style={styles.budgetLabel}>Target Budget</Text>
-                  <Text style={styles.budgetValue}>{formatCurrency(item.budget)}</Text>
-                </View>
-
-                {item.status === 'OPEN_BIDS' ? (
-                  <View style={styles.proposalsBadge}>
-                    <Text style={styles.proposalsText}>
-                      Review {item.proposalsCount} {item.proposalsCount === 1 ? 'Bid' : 'Bids'} ›
+                    {/* Job Title */}
+                    <Text style={[styles.jobTitle, { color: themeColors.text }]} numberOfLines={1}>
+                      {item.title}
                     </Text>
+
+                    {/* Bottom Row: Target Budget & Action Pill */}
+                    <View style={styles.cardBottomRow}>
+                      <View>
+                        <Text style={[styles.budgetLabel, { color: themeColors.textMuted }]}>Target Budget</Text>
+                        <Text style={[styles.budgetValue, { color: isDark ? '#34D399' : '#064E3B' }]}>
+                          {formatCurrency(item.budget)}
+                        </Text>
+                      </View>
+
+                      {item.status === 'OPEN_BIDS' ? (
+                        <View
+                          style={[
+                            styles.bidsPill,
+                            { backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : '#E8F5E9' },
+                          ]}
+                        >
+                          <Text style={[styles.bidsText, { color: isDark ? '#34D399' : '#065F46' }]}>
+                            {item.proposalsCount} {item.proposalsCount === 1 ? 'Bid' : 'Bids'}
+                          </Text>
+                          <ChevronRight
+                            size={13}
+                            color={isDark ? '#34D399' : '#065F46'}
+                            strokeWidth={2.4}
+                            style={{ marginLeft: 3 }}
+                          />
+                        </View>
+                      ) : item.status === 'IN_PROGRESS' ? (
+                        <View style={styles.trackPill}>
+                          <Text style={styles.trackText}>Track Workspace</Text>
+                          <ChevronRight size={13} color="#FFFFFF" strokeWidth={2.4} style={{ marginLeft: 3 }} />
+                        </View>
+                      ) : (
+                        <View
+                          style={[
+                            styles.bidsPill,
+                            { backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : '#E8F5E9' },
+                          ]}
+                        >
+                          <Text style={[styles.bidsText, { color: isDark ? '#34D399' : '#065F46' }]}>
+                            View Details
+                          </Text>
+                          <ChevronRight
+                            size={13}
+                            color={isDark ? '#34D399' : '#065F46'}
+                            strokeWidth={2.4}
+                            style={{ marginLeft: 3 }}
+                          />
+                        </View>
+                      )}
+                    </View>
                   </View>
-                ) : item.status === 'IN_PROGRESS' ? (
-                  <View style={styles.trackBadge}>
-                    <Text style={styles.trackText}>Track Workspace ›</Text>
-                  </View>
-                ) : (
-                  <View style={styles.completedBadge}>
-                    <Text style={styles.completedText}>✓ View Receipt</Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          )}
+                </View>
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
+
+      {/* Fullscreen Photo Inspection Modal */}
+      <Modal visible={!!previewImage} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <SafeAreaView style={styles.modalSafeWrap}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={styles.modalHeaderTitle} numberOfLines={1}>
+                  {previewImage?.title || 'Defect Photo'}
+                </Text>
+                <Text style={styles.modalHeaderSubtitle}>Site Inspection Image</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setPreviewImage(null)}
+                activeOpacity={0.8}
+              >
+                <X size={16} color="#FFFFFF" strokeWidth={2.4} style={{ marginRight: 4 }} />
+                <Text style={styles.modalCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalImageContainer}>
+              {previewImage ? (
+                <Image
+                  source={{ uri: previewImage.url }}
+                  style={styles.modalImage}
+                  resizeMode="contain"
+                />
+              ) : null}
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -456,107 +609,192 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: radius.xl,
-    padding: spacing.base,
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    marginBottom: 10,
     ...shadows.sm,
   },
-  topRow: {
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  thumbnailContainer: {
+    width: 66,
+    height: 66,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbnailFallback: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#E6F4EA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contentCol: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: 'space-between',
+    height: 66,
+  },
+  cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
   tradeBadge: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#E6F4EA',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.full,
+    paddingVertical: 2,
+    borderRadius: 12,
   },
   tradeText: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '700',
-    color: colors.brand.emeraldDark,
+    color: '#15803D',
   },
   dateText: {
-    fontSize: 10,
-    color: colors.neutral[400],
+    fontSize: 10.5,
+    color: '#9CA3AF',
   },
   jobTitle: {
-    fontSize: typography.size.base,
-    fontWeight: '800',
-    color: colors.neutral[900],
-  },
-  inProgressBox: {
-    backgroundColor: '#F0FDF4',
-    padding: 10,
-    borderRadius: radius.md,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-  },
-  artisanName: {
-    fontSize: 11,
+    fontSize: 13.5,
     fontWeight: '700',
-    color: colors.brand.forest,
+    color: '#111827',
+    marginVertical: 1,
   },
-  milestoneNotice: {
-    fontSize: 10,
-    color: colors.neutral[600],
-    marginTop: 2,
-  },
-  footerRow: {
+  cardBottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderColor: '#F3F4F6',
   },
   budgetLabel: {
-    fontSize: 10,
-    color: colors.neutral[500],
+    fontSize: 9.5,
+    color: '#9CA3AF',
   },
   budgetValue: {
-    fontSize: typography.size.base,
-    fontWeight: '900',
-    color: colors.brand.forest,
-    marginTop: 2,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#064E3B',
   },
-  proposalsBadge: {
-    backgroundColor: colors.brand.forest,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: radius.full,
+  bidsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: 14,
   },
-  proposalsText: {
-    color: '#FFFFFF',
-    fontSize: 11,
+  bidsText: {
+    color: '#065F46',
+    fontSize: 11.5,
     fontWeight: '800',
   },
-  trackBadge: {
-    backgroundColor: colors.brand.emerald,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: radius.full,
+  trackPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0D472D',
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: 14,
   },
   trackText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
   },
-  completedBadge: {
+  searchWrap: {
+    paddingHorizontal: spacing.base,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  searchInput: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: radius.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: colors.neutral[900],
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#E5E7EB',
+  },
+  repostBtn: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderWidth: 1,
+    borderColor: colors.brand.emerald,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+  },
+  repostBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.brand.forest,
+  },
+  zoomHintBadge: {
+    position: 'absolute',
+    bottom: 3,
+    right: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.94)',
+  },
+  modalSafeWrap: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+  },
+  modalHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modalHeaderSubtitle: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 1,
+  },
+  modalCloseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: radius.full,
   },
-  completedText: {
-    fontSize: 11,
-    color: colors.neutral[700],
-    fontWeight: '600',
+  modalCloseText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  modalImageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.base,
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
   },
 });

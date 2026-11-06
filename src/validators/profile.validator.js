@@ -28,6 +28,9 @@ export const updateClientProfileSchema = z.object({
     state: z.string().optional(),
     city: z.string().optional(),
     address: z.string().optional(),
+    phone: z.string().optional(),
+    phoneNumber: z.string().optional(),
+    avatarUrl: z.string().optional(),
   }),
 });
 
@@ -209,5 +212,17 @@ export const nearbyArtisansQuerySchema = z.object({
         }
       }
     }),
+});
+
+export const addArtisanSkillSchema = z.object({
+  body: z.object({
+    skillId: z.number().int().positive('Valid skill ID required'),
+  }),
+});
+
+export const artisanSkillParamSchema = z.object({
+  params: z.object({
+    skillId: z.coerce.number().int().positive('Valid skill ID required'),
+  }),
 });
 

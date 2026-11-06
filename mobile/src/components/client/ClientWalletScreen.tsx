@@ -30,10 +30,16 @@ import {
   Search,
   Zap,
   Coins,
+  Eye,
+  EyeOff,
+  Lock,
+  Landmark,
+  Check,
 } from 'lucide-react-native';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { WalletService } from '../../services/wallet.service';
+import { useToast } from '../shared/ToastContext';
 
 interface TransactionItem {
   id: string;
@@ -49,10 +55,14 @@ interface TransactionItem {
 
 interface ClientWalletScreenProps {
   onBack?: () => void;
+  onNavigateToTransactions?: () => void;
 }
 
-export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }) => {
+export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack, onNavigateToTransactions }) => {
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const { colors: themeColors, isDark } = useTheme();
+  const [showBalance, setShowBalance] = useState(true);
   const [filter, setFilter] = useState<'ALL' | 'ESCROW' | 'RELEASES' | 'TOPUPS'>('ALL');
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState('20000');
@@ -134,7 +144,7 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
-      Alert.alert('Address Copied', `${walletAddress}\n\nCopied to clipboard.`);
+      showSuccess(`Address copied: ${walletAddress.slice(0, 10)}...`);
     } catch {
       // ignore
     }
@@ -151,9 +161,9 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
       await WalletService.simulateDeposit(148500); // 100 USDC @ 1,485 NGN
       await queryClient.invalidateQueries({ queryKey: ['wallet'] });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Test USDC Minted! ⚡', '100 Test USDC (~₦148,500) has been credited to your Monad escrow vault for testing.');
+      showSuccess('100 Test USDC (~₦148,500) credited to Monad vault!');
     } catch (err: any) {
-      Alert.alert('Faucet Error', err?.message || 'Could not mint test tokens.');
+      showError(err?.message || 'Could not mint test tokens');
     } finally {
       setIsMintingFaucet(false);
     }
@@ -180,7 +190,7 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
       } else {
         await queryClient.invalidateQueries({ queryKey: ['wallet'] });
         Alert.alert(
-          'Kotani On-Ramp Successful 🎉',
+          'Kotani On-Ramp Successful',
           `₦${num.toLocaleString()} converted to ~${((num / exchangeRate).toFixed(2))} USDC deposited into your Monad vault.`
         );
       }
@@ -206,7 +216,7 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
         await queryClient.invalidateQueries({ queryKey: ['wallet'] });
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowTopUpModal(false);
-        Alert.alert('Test Deposit Successful! 💳', `${formatCurrency(num)} credited to your available balance.`);
+        Alert.alert('Test Deposit Successful', `${formatCurrency(num)} credited to your available balance.`);
         return;
       }
 
@@ -437,15 +447,31 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
   });
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.backBtnText}>←</Text>
+      <View style={[styles.header, { backgroundColor: themeColors.surface, borderBottomColor: themeColors.border }]}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onBack?.();
+          }}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={[styles.backBtnText, { color: themeColors.text }]}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Escrow & Wallet</Text>
-        <View style={styles.rateBadge}>
-          <Text style={styles.rateText}>1 USDC ≈ ₦{Math.round(exchangeRate).toLocaleString()}</Text>
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>Escrow & Wallet</Text>
+        <View style={[
+          styles.rateBadge,
+          isDark && {
+            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+            borderColor: 'rgba(16, 185, 129, 0.3)',
+          },
+        ]}>
+          <Text style={[styles.rateText, isDark && { color: '#34D399' }]}>
+            1 USDC ≈ ₦{Math.round(exchangeRate).toLocaleString()}
+          </Text>
         </View>
       </View>
 
@@ -453,27 +479,56 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
         {/* Multi-Asset Balance Hero Card */}
         <View style={styles.walletCard}>
           <View style={styles.heroTopRow}>
-            <Text style={styles.walletLabel}>TOTAL VAULT VALUATION</Text>
-            <View style={styles.monadPill}>
-              <ShieldCheck size={11} color="#A7F3D0" />
-              <Text style={styles.monadPillText}>Monad Protected</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.walletLabel}>TOTAL VAULT VALUATION</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setShowBalance(!showBalance);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                {showBalance ? (
+                  <Eye size={14} color="#A7F3D0" />
+                ) : (
+                  <EyeOff size={14} color="#A7F3D0" />
+                )}
+              </TouchableOpacity>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <ShieldCheck size={12} color="#A7F3D0" />
+              <Text style={styles.monadPillText}>Vault Protected</Text>
             </View>
           </View>
 
-          <Text style={styles.totalAmount}>{formatCurrency(totalBalance)}</Text>
+          <Text style={styles.totalAmount}>
+            {showBalance ? formatCurrency(totalBalance) : '••••••••'}
+          </Text>
           <Text style={styles.cryptoEquiv}>
-            ≈ ${cryptoEquivalentUsd} USDC · Monad Testnet (Zero-Gas 🛡️)
+            {showBalance
+              ? `≈ $${cryptoEquivalentUsd} USDC · Monad Testnet (Zero-Gas Protected)`
+              : '••••••••'}
           </Text>
 
           <View style={styles.splitRow}>
             <View style={styles.splitBox}>
-              <Text style={styles.splitLabel}>🔒 Locked in Escrow</Text>
-              <Text style={styles.splitValueLocked}>{formatCurrency(lockedInEscrow)}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                <Lock size={11} color="rgba(255,255,255,0.8)" />
+                <Text style={styles.splitLabel}>Locked in Escrow</Text>
+              </View>
+              <Text style={styles.splitValueLocked}>
+                {showBalance ? formatCurrency(lockedInEscrow) : '••••••••'}
+              </Text>
             </View>
             <View style={styles.splitDivider} />
             <View style={styles.splitBox}>
-              <Text style={styles.splitLabel}>💳 Available to Spend</Text>
-              <Text style={styles.splitValueAvail}>{formatCurrency(availableBalance)}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                <CreditCard size={11} color="rgba(255,255,255,0.8)" />
+                <Text style={styles.splitLabel}>Available to Spend</Text>
+              </View>
+              <Text style={styles.splitValueAvail}>
+                {showBalance ? formatCurrency(availableBalance) : '••••••••'}
+              </Text>
             </View>
           </View>
 
@@ -481,14 +536,20 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
           <View style={styles.heroActions}>
             <TouchableOpacity
               style={styles.topUpBtn}
-              onPress={() => setShowTopUpModal(true)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowTopUpModal(true);
+              }}
               activeOpacity={0.8}
             >
               <Text style={styles.topUpBtnText}>+ Fund Wallet</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.refundBtn}
-              onPress={() => setShowWithdrawModal(true)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowWithdrawModal(true);
+              }}
               activeOpacity={0.8}
             >
               <Text style={styles.refundBtnText}>Withdraw</Text>
@@ -496,70 +557,65 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
           </View>
         </View>
 
-        {/* Digital Dollar (USDC) Vault Card (Web Mirroring) */}
-        <View style={styles.cryptoVaultCard}>
+        {/* Digital Dollar (USDC) Vault Card */}
+        <View style={[styles.cryptoVaultCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
           <View style={styles.cryptoVaultHeader}>
             <View style={styles.cryptoTitleRow}>
               <View style={styles.cryptoIconBox}>
-                <Text style={styles.cryptoEmoji}>⚡</Text>
+                <Zap size={16} color={themeColors.primary} strokeWidth={2} />
               </View>
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.cryptoVaultTitle}>Digital Dollar (USDC) Vault</Text>
-                  <View style={styles.cryptoBadge}>
-                    <Text style={styles.cryptoBadgeText}>Privy Embedded</Text>
-                  </View>
-                </View>
-                <Text style={styles.cryptoVaultSub}>Automated Smart Escrow Network</Text>
+                <Text style={[styles.cryptoVaultTitle, { color: themeColors.text }]}>Digital Dollar (USDC) Vault</Text>
+                <Text style={[styles.cryptoVaultSub, { color: themeColors.textMuted }]}>Automated Smart Escrow Network</Text>
               </View>
-            </View>
-            <View style={styles.protectedBadge}>
-              <Text style={styles.protectedBadgeText}>Protected</Text>
             </View>
           </View>
 
           {/* Multi-Token Asset Grid */}
           <View style={styles.cryptoAssetGrid}>
-            <View style={styles.cryptoAssetBox}>
+            <View style={[styles.cryptoAssetBox, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}>
               <View style={styles.assetHeaderRow}>
                 <View style={styles.greenDot} />
-                <Text style={styles.assetLabel}>Digital USD (USDC)</Text>
+                <Text style={[styles.assetLabel, { color: themeColors.textMuted }]}>Digital USD (USDC)</Text>
               </View>
-              <Text style={styles.assetMainVal}>${cryptoEquivalentUsd}</Text>
-              <Text style={styles.assetSubVal}>≈ {formatCurrency(totalBalance)}</Text>
+              <Text style={[styles.assetMainVal, { color: themeColors.text }]}>${cryptoEquivalentUsd}</Text>
+              <Text style={[styles.assetSubVal, { color: themeColors.textMuted }]}>≈ {formatCurrency(totalBalance)}</Text>
             </View>
 
-            <View style={styles.cryptoAssetBox}>
+            <View style={[styles.cryptoAssetBox, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}>
               <View style={styles.assetHeaderRow}>
                 <View style={styles.indigoDot} />
-                <Text style={styles.assetLabel}>Monad Gas Credits</Text>
+                <Text style={[styles.assetLabel, { color: themeColors.textMuted }]}>Monad Gas Credits</Text>
               </View>
-              <Text style={styles.assetMainVal}>Sponsored ⚡</Text>
-              <Text style={styles.assetSubVal}>Zero-Gas Relay Active</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[styles.assetMainVal, { color: themeColors.text }]}>Sponsored</Text>
+                <Zap size={12} color="#10B981" />
+              </View>
+              <Text style={[styles.assetSubVal, { color: themeColors.textMuted }]}>Zero-Gas Relay Active</Text>
             </View>
           </View>
 
           {/* Permanent Account Address Bar */}
           <View style={styles.addressBarContainer}>
-            <Text style={styles.addressBarLabel}>Digital Escrow Account ID</Text>
-            <View style={styles.addressBar}>
-              <Text style={styles.addressText} numberOfLines={1} ellipsizeMode="middle">
+            <Text style={[styles.addressBarLabel, { color: themeColors.textMuted }]}>Digital Escrow Account ID</Text>
+            <View style={[styles.addressBar, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}>
+              <Text style={[styles.addressText, { color: themeColors.text }]} numberOfLines={1} ellipsizeMode="middle">
                 {walletAddress}
               </Text>
               <View style={styles.addressBtnRow}>
                 <TouchableOpacity
                   onPress={handleCopyAddress}
-                  style={styles.addressIconBtn}
+                  style={[styles.addressIconBtn, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
                   activeOpacity={0.7}
                 >
-                  <Copy size={13} color={isCopied ? '#059669' : '#4B5563'} />
+                  <Copy size={13} color={isCopied ? '#10B981' : (isDark ? themeColors.textMuted : '#4B5563')} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleOpenExplorer}
-                  style={styles.addressIconBtn}
+                  style={[styles.addressIconBtn, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
                   activeOpacity={0.7}
                 >
-                  <ExternalLink size={13} color="#4B5563" />
+                  <ExternalLink size={13} color={isDark ? themeColors.textMuted : '#4B5563'} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -568,7 +624,7 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
           {/* Crypto Actions: Kotani Pay On-Ramp + Faucet */}
           <View style={styles.cryptoActionRow}>
             <TouchableOpacity
-              style={styles.kotaniBtn}
+              style={[styles.kotaniBtn, isDark && { backgroundColor: '#059669' }]}
               onPress={() => setShowKotaniModal(true)}
               activeOpacity={0.8}
             >
@@ -577,17 +633,23 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.faucetBtn}
+              style={[
+                styles.faucetBtn,
+                isDark && {
+                  backgroundColor: 'rgba(217, 119, 6, 0.15)',
+                  borderColor: 'rgba(217, 119, 6, 0.35)',
+                },
+              ]}
               onPress={handleFaucetMint}
               disabled={isMintingFaucet}
               activeOpacity={0.8}
             >
               {isMintingFaucet ? (
-                <ActivityIndicator size="small" color="#D97706" />
+                <ActivityIndicator size="small" color={isDark ? '#FCD34D' : '#D97706'} />
               ) : (
                 <>
-                  <Zap size={14} color="#D97706" />
-                  <Text style={styles.faucetBtnText}>Test Faucet (+100)</Text>
+                  <Zap size={14} color={isDark ? '#FCD34D' : '#D97706'} />
+                  <Text style={[styles.faucetBtnText, isDark && { color: '#FCD34D' }]}>Test Faucet (+100)</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -595,11 +657,11 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
         </View>
 
         {/* Security Shield Banner */}
-        <View style={styles.shieldBanner}>
-          <Text style={styles.shieldIcon}>🛡️</Text>
+        <View style={[styles.shieldBanner, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+          <ShieldCheck size={22} color={isDark ? '#34D399' : colors.brand.forest} style={{ marginRight: spacing.sm }} />
           <View style={styles.shieldMeta}>
-            <Text style={styles.shieldTitle}>Protected Escrow Custody</Text>
-            <Text style={styles.shieldDesc}>
+            <Text style={[styles.shieldTitle, { color: themeColors.text }]}>Protected Escrow Custody</Text>
+            <Text style={[styles.shieldDesc, { color: themeColors.textMuted }]}>
               Escrow funds are held in NDIC-insured trust accounts and regulated smart contracts.
             </Text>
           </View>
@@ -607,30 +669,30 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
 
         {/* Saved Cards Section */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Saved Payment Cards</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Saved Payment Cards</Text>
           <TouchableOpacity onPress={() => setShowTopUpModal(true)}>
-            <Text style={styles.sectionAction}>+ Add Card</Text>
+            <Text style={[styles.sectionAction, { color: isDark ? '#34D399' : '#184530' }]}>+ Add Card</Text>
           </TouchableOpacity>
         </View>
 
         {savedCards.length === 0 ? (
-          <View style={styles.emptyCardBox}>
-            <CreditCard size={18} color="#9CA3AF" />
-            <Text style={styles.emptyCardText}>
+          <View style={[styles.emptyCardBox, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <CreditCard size={18} color={isDark ? themeColors.textMuted : '#9CA3AF'} />
+            <Text style={[styles.emptyCardText, { color: themeColors.textMuted }]}>
               No saved cards yet. Cards used for deposits are securely saved here for 1-tap escrow funding.
             </Text>
           </View>
         ) : (
           <View style={styles.cardsList}>
             {savedCards.map((card: any) => (
-              <View key={card.id} style={styles.cardItem}>
+              <View key={card.id} style={[styles.cardItem, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
                 <View style={styles.cardInfo}>
-                  <CreditCard size={18} color="#184530" />
+                  <CreditCard size={18} color={isDark ? '#34D399' : '#184530'} />
                   <View style={{ marginLeft: 8 }}>
-                    <Text style={styles.cardTitle}>
+                    <Text style={[styles.cardTitle, { color: themeColors.text }]}>
                       {card.brand || 'Debit Card'} •••• {card.last4}
                     </Text>
-                    <Text style={styles.cardExpiry}>
+                    <Text style={[styles.cardExpiry, { color: themeColors.textMuted }]}>
                       Expires {card.expMonth}/{card.expYear}
                     </Text>
                   </View>
@@ -638,15 +700,15 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
 
                 <View style={styles.cardActions}>
                   {card.isDefault ? (
-                    <View style={styles.defaultChip}>
-                      <Text style={styles.defaultChipText}>Default</Text>
+                    <View style={[styles.defaultChip, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+                      <Text style={[styles.defaultChipText, isDark && { color: '#34D399' }]}>Default</Text>
                     </View>
                   ) : (
                     <TouchableOpacity
                       onPress={() => handleSetDefaultCard(card.id)}
                       style={styles.makeDefaultBtn}
                     >
-                      <Text style={styles.makeDefaultText}>Set Default</Text>
+                      <Text style={[styles.makeDefaultText, { color: isDark ? '#34D399' : '#184530' }]}>Set Default</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
@@ -663,27 +725,28 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
 
         {/* Bank Accounts Section */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Linked Bank Accounts</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Linked Bank Accounts</Text>
           <TouchableOpacity onPress={() => setShowAddBankModal(true)}>
-            <Text style={styles.sectionAction}>+ Add Bank</Text>
+            <Text style={[styles.sectionAction, { color: isDark ? '#34D399' : '#184530' }]}>+ Add Bank</Text>
           </TouchableOpacity>
         </View>
 
         {savedBanks.length === 0 ? (
-          <View style={styles.emptyCardBox}>
-            <Text style={styles.emptyCardText}>
+          <View style={[styles.emptyCardBox, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <Landmark size={22} color={themeColors.textMuted} style={{ marginBottom: 4 }} />
+            <Text style={[styles.emptyCardText, { color: themeColors.textMuted }]}>
               No bank account linked. Link your Nigerian bank account to receive refunds or payouts.
             </Text>
           </View>
         ) : (
           <View style={styles.cardsList}>
             {savedBanks.map((bank: any) => (
-              <View key={bank.id} style={styles.cardItem}>
+              <View key={bank.id} style={[styles.cardItem, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
                 <View style={styles.cardInfo}>
-                  <Text style={styles.bankEmoji}>🏦</Text>
+                  <Landmark size={18} color={isDark ? '#34D399' : '#184530'} />
                   <View style={{ marginLeft: 8 }}>
-                    <Text style={styles.cardTitle}>{bank.bankName}</Text>
-                    <Text style={styles.cardExpiry}>
+                    <Text style={[styles.cardTitle, { color: themeColors.text }]}>{bank.bankName}</Text>
+                    <Text style={[styles.cardExpiry, { color: themeColors.textMuted }]}>
                       {bank.accountNumber} · {bank.accountName}
                     </Text>
                   </View>
@@ -691,15 +754,15 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
 
                 <View style={styles.cardActions}>
                   {bank.isDefault ? (
-                    <View style={styles.defaultChip}>
-                      <Text style={styles.defaultChipText}>Default</Text>
+                    <View style={[styles.defaultChip, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+                      <Text style={[styles.defaultChipText, isDark && { color: '#34D399' }]}>Default</Text>
                     </View>
                   ) : (
                     <TouchableOpacity
                       onPress={() => handleSetDefaultBank(bank.id)}
                       style={styles.makeDefaultBtn}
                     >
-                      <Text style={styles.makeDefaultText}>Set Default</Text>
+                      <Text style={[styles.makeDefaultText, { color: isDark ? '#34D399' : '#184530' }]}>Set Default</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
@@ -714,89 +777,56 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
           </View>
         )}
 
-        {/* Transactions Section */}
+        {/* Transactions Section - Streamlined Recent Activity Preview */}
         <View style={styles.txHeaderRow}>
-          <Text style={styles.txSectionTitle}>Transaction Activity</Text>
-          <Text style={styles.txTapNotice}>Tap transaction for receipt</Text>
-        </View>
-
-        {/* Real-time Reference Search Bar (Mirroring Web) */}
-        <View style={styles.searchBarBox}>
-          <Search size={14} color="#9CA3AF" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search transactions by reference or description..."
-            value={searchRef}
-            onChangeText={setSearchRef}
-            placeholderTextColor="#9CA3AF"
-          />
-          {searchRef.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchRef('')} style={{ padding: 4 }}>
-              <Text style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 'bold' }}>✕</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Filter Chips */}
-        <View style={styles.filterScroll}>
-          {(['ALL', 'ESCROW', 'RELEASES', 'TOPUPS'] as const).map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.filterChip, filter === f && styles.filterChipActive]}
-              onPress={() => setFilter(f)}
-            >
-              <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
-                {f === 'ALL'
-                  ? 'All Transactions'
-                  : f === 'ESCROW'
-                  ? 'Locked in Escrow'
-                  : f === 'RELEASES'
-                  ? 'Released'
-                  : 'Top-ups'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <Text style={[styles.txSectionTitle, { color: themeColors.text }]}>Recent Activity</Text>
+          <TouchableOpacity
+            onPress={onNavigateToTransactions}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={{ fontSize: 13, color: isDark ? '#34D399' : '#10B981', fontWeight: '700' }}>View All Activity →</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Transaction Items */}
         <View style={styles.txList}>
-          {filteredTxs.length === 0 ? (
-            <View style={styles.emptyTxBox}>
-              <Text style={styles.emptyTxIcon}>💳</Text>
-              <Text style={styles.emptyTxTitle}>No Transactions Found</Text>
-              <Text style={styles.emptyTxSub}>
+          {liveTransactions.length === 0 ? (
+            <View style={[styles.emptyTxBox, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <CreditCard size={32} color={themeColors.textMuted} style={{ marginBottom: 8 }} />
+              <Text style={[styles.emptyTxTitle, { color: themeColors.text }]}>No Transactions Yet</Text>
+              <Text style={[styles.emptyTxSub, { color: themeColors.textMuted }]}>
                 Deposits, escrow locks, and milestone releases will be reflected here in your real-time ledger.
               </Text>
             </View>
           ) : (
-            filteredTxs.map((item) => (
+            liveTransactions.slice(0, 3).map((item) => (
               <TouchableOpacity
                 key={item.id}
-                style={styles.txCard}
-                onPress={() => setSelectedReceipt(item)}
+                style={[styles.txCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+                onPress={onNavigateToTransactions}
                 activeOpacity={0.7}
               >
-                <View style={styles.txIconWrap}>
-                  <Text style={styles.txIcon}>
-                    {item.type === 'ESCROW_LOCK'
-                      ? '🔒'
-                      : item.type === 'RELEASE'
-                      ? '💸'
-                      : item.type === 'TOP_UP'
-                      ? '💳'
-                      : '↩️'}
-                  </Text>
+                <View style={[styles.txIconWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6' }]}>
+                  {item.type === 'ESCROW_LOCK' ? (
+                    <Lock size={15} color="#059669" />
+                  ) : item.type === 'RELEASE' ? (
+                    <ArrowUpRight size={15} color="#10B981" />
+                  ) : item.type === 'TOP_UP' ? (
+                    <CreditCard size={15} color="#3B82F6" />
+                  ) : (
+                    <ArrowDownLeft size={15} color="#F59E0B" />
+                  )}
                 </View>
                 <View style={styles.txMeta}>
-                  <Text style={styles.txTitle}>{item.title}</Text>
-                  <Text style={styles.txSub}>{item.subtitle}</Text>
-                  <Text style={styles.txDate}>{item.date}</Text>
+                  <Text style={[styles.txTitle, { color: themeColors.text }]} numberOfLines={1}>{item.title}</Text>
+                  <Text style={[styles.txSub, { color: themeColors.textMuted }]}>{item.subtitle}</Text>
+                  <Text style={[styles.txDate, { color: themeColors.textMuted }]}>{item.date}</Text>
                 </View>
                 <View style={styles.txAmountCol}>
                   <Text
                     style={[
                       styles.txAmount,
-                      item.amount > 0 ? styles.txAmountPositive : styles.txAmountNegative,
+                      item.amount > 0 ? styles.txAmountPositive : { color: themeColors.text },
                     ]}
                   >
                     {item.amount > 0 ? `+${formatCurrency(item.amount)}` : formatCurrency(item.amount)}
@@ -805,20 +835,20 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
                     style={[
                       styles.statusTag,
                       item.status === 'PENDING'
-                        ? styles.statusTagPending
+                        ? (isDark ? { backgroundColor: 'rgba(217, 119, 6, 0.2)' } : styles.statusTagPending)
                         : item.status === 'REFUNDED'
-                        ? styles.statusTagRefunded
-                        : styles.statusTagSuccess,
+                        ? (isDark ? { backgroundColor: 'rgba(59, 130, 246, 0.2)' } : styles.statusTagRefunded)
+                        : (isDark ? { backgroundColor: 'rgba(16, 185, 129, 0.2)' } : styles.statusTagSuccess),
                     ]}
                   >
                     <Text
                       style={[
                         styles.statusTagText,
                         item.status === 'PENDING'
-                          ? styles.statusTagTextPending
+                          ? (isDark ? { color: '#FCD34D' } : styles.statusTagTextPending)
                           : item.status === 'REFUNDED'
-                          ? styles.statusTagTextRefunded
-                          : styles.statusTagTextSuccess,
+                          ? (isDark ? { color: '#60A5FA' } : styles.statusTagTextRefunded)
+                          : (isDark ? { color: '#34D399' } : styles.statusTagTextSuccess),
                       ]}
                     >
                       {item.status}
@@ -829,99 +859,49 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
             ))
           )}
         </View>
+
+        <TouchableOpacity
+          style={{
+            marginTop: 10,
+            paddingVertical: 14,
+            backgroundColor: isDark ? themeColors.surface : '#FFFFFF',
+            borderRadius: radius.lg,
+            borderWidth: 1,
+            borderColor: isDark ? themeColors.border : '#E5E7EB',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onPress={onNavigateToTransactions}
+          activeOpacity={0.8}
+        >
+          <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? themeColors.brand.emerald : '#1A4731' }}>
+            Open Dedicated Transaction Ledger →
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
-
-      {/* Transaction Receipt Modal */}
-      <Modal visible={!!selectedReceipt} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.receiptCard}>
-            <View style={styles.receiptTopRow}>
-              <Text style={styles.receiptHeader}>Transaction Receipt</Text>
-              <TouchableOpacity onPress={() => setSelectedReceipt(null)}>
-                <X size={20} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            {selectedReceipt && (
-              <>
-                <View style={styles.receiptAmountRow}>
-                  <Text style={styles.receiptAmount}>
-                    {selectedReceipt.amount > 0
-                      ? `+${formatCurrency(selectedReceipt.amount)}`
-                      : formatCurrency(selectedReceipt.amount)}
-                  </Text>
-                  <View style={styles.receiptStatusBadge}>
-                    <CheckCircle size={12} color="#059669" />
-                    <Text style={styles.receiptStatusText}>{selectedReceipt.status}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.receiptDivider} />
-
-                <View style={styles.receiptDetailRow}>
-                  <Text style={styles.receiptDetailLabel}>Description</Text>
-                  <Text style={styles.receiptDetailValue}>{selectedReceipt.title}</Text>
-                </View>
-
-                <View style={styles.receiptDetailRow}>
-                  <Text style={styles.receiptDetailLabel}>Date & Time</Text>
-                  <Text style={styles.receiptDetailValue}>{selectedReceipt.fullDate || selectedReceipt.date}</Text>
-                </View>
-
-                <View style={styles.receiptDetailRow}>
-                  <Text style={styles.receiptDetailLabel}>Transaction Type</Text>
-                  <Text style={styles.receiptDetailValue}>{selectedReceipt.type}</Text>
-                </View>
-
-                <View style={styles.receiptDetailRow}>
-                  <Text style={styles.receiptDetailLabel}>Reference</Text>
-                  <TouchableOpacity
-                    style={styles.copyRefWrap}
-                    onPress={async () => {
-                      if (selectedReceipt.reference) {
-                        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        Alert.alert('Reference Saved', `Reference ID: ${selectedReceipt.reference}`);
-                      }
-                    }}
-                  >
-                    <Text style={styles.receiptRefText}>{selectedReceipt.reference}</Text>
-                    <Copy size={13} color="#184530" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.receiptShieldBanner}>
-                  <ShieldCheck size={14} color="#065F46" />
-                  <Text style={styles.receiptShieldText}>
-                    Verified on Monad Smart Contract Escrow Registry
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.closeReceiptBtn}
-                  onPress={() => setSelectedReceipt(null)}
-                >
-                  <Text style={styles.closeReceiptBtnText}>Done</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
 
       {/* Top-up Modal (Dual Method: Paystack Gateway & Sandbox Dev) */}
       <Modal visible={showTopUpModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Deposit Funds</Text>
-              <TouchableOpacity onPress={() => setShowTopUpModal(false)}>
-                <Text style={styles.closeBtn}>✕</Text>
+              <Text style={[styles.modalTitle, { color: themeColors.text }]}>Deposit Funds</Text>
+              <TouchableOpacity onPress={() => setShowTopUpModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <X size={20} color={themeColors.textMuted} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.inputLabel}>Deposit Amount (₦)</Text>
+            <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Deposit Amount (₦)</Text>
             <TextInput
-              style={styles.amountInput}
+              style={[
+                styles.amountInput,
+                {
+                  backgroundColor: themeColors.inputBg,
+                  borderColor: themeColors.inputBorder,
+                  color: themeColors.text,
+                },
+              ]}
+              placeholderTextColor={themeColors.textMuted}
               keyboardType="numeric"
               value={topUpAmount}
               onChangeText={setTopUpAmount}
@@ -932,50 +912,70 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
               {['10000', '25000', '50000', '100000'].map((amt) => (
                 <TouchableOpacity
                   key={amt}
-                  style={styles.amtChip}
+                  style={[styles.amtChip, { backgroundColor: isDark ? themeColors.surfaceSubtle : '#F3F4F6' }]}
                   onPress={() => setTopUpAmount(amt)}
                 >
-                  <Text style={styles.amtChipText}>+{formatCurrency(parseInt(amt))}</Text>
+                  <Text style={[styles.amtChipText, { color: isDark ? themeColors.brand.emerald : '#184530' }]}>+{formatCurrency(parseInt(amt))}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Payment Method Selector (Mirroring Web) */}
-            <Text style={[styles.inputLabel, { marginTop: 14 }]}>Payment Rail</Text>
+            <Text style={[styles.inputLabel, { color: themeColors.textMuted, marginTop: 14 }]}>Payment Rail</Text>
             <View style={styles.gatewayGrid}>
               <TouchableOpacity
                 onPress={() => setDepositMethod('PAYSTACK')}
                 style={[
                   styles.gatewayCard,
-                  depositMethod === 'PAYSTACK' && styles.gatewayCardActive,
+                  { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border },
+                  depositMethod === 'PAYSTACK' && {
+                    borderColor: '#10B981',
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : '#F0FDF4',
+                  },
                 ]}
                 activeOpacity={0.8}
               >
-                <CreditCard size={18} color={depositMethod === 'PAYSTACK' ? '#059669' : '#6B7280'} />
-                <Text style={[styles.gatewayCardTitle, depositMethod === 'PAYSTACK' && styles.gatewayCardTitleActive]}>
+                <CreditCard size={18} color={depositMethod === 'PAYSTACK' ? '#10B981' : themeColors.textMuted} />
+                <Text style={[
+                  styles.gatewayCardTitle,
+                  { color: themeColors.text },
+                  depositMethod === 'PAYSTACK' && { color: isDark ? '#34D399' : colors.brand.forest }
+                ]}>
                   Paystack Checkout
                 </Text>
-                <Text style={styles.gatewayCardSub}>Debit Card, Bank Transfer, USSD</Text>
+                <Text style={[styles.gatewayCardSub, { color: themeColors.textMuted }]}>Debit Card, Bank Transfer, USSD</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => setDepositMethod('SIMULATE')}
                 style={[
                   styles.gatewayCard,
-                  depositMethod === 'SIMULATE' && styles.gatewayCardActive,
+                  { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border },
+                  depositMethod === 'SIMULATE' && {
+                    borderColor: '#10B981',
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : '#F0FDF4',
+                  },
                 ]}
                 activeOpacity={0.8}
               >
-                <Zap size={18} color={depositMethod === 'SIMULATE' ? '#059669' : '#6B7280'} />
-                <Text style={[styles.gatewayCardTitle, depositMethod === 'SIMULATE' && styles.gatewayCardTitleActive]}>
+                <Zap size={18} color={depositMethod === 'SIMULATE' ? '#10B981' : themeColors.textMuted} />
+                <Text style={[
+                  styles.gatewayCardTitle,
+                  { color: themeColors.text },
+                  depositMethod === 'SIMULATE' && { color: isDark ? '#34D399' : colors.brand.forest }
+                ]}>
                   Instant Sandbox Credit
                 </Text>
-                <Text style={styles.gatewayCardSub}>Zero-delay simulated dev funding</Text>
+                <Text style={[styles.gatewayCardSub, { color: themeColors.textMuted }]}>Zero-delay simulated dev funding</Text>
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity
-              style={[styles.paystackBtn, isProcessing && { opacity: 0.6 }]}
+              style={[
+                styles.paystackBtn,
+                isDark && { backgroundColor: themeColors.brand.forest },
+                isProcessing && { opacity: 0.6 }
+              ]}
               onPress={handleDepositSubmit}
               disabled={isProcessing}
             >
@@ -994,24 +994,41 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
       {/* Kotani Pay On-Ramp Modal (Mirroring Web) */}
       <Modal visible={showKotaniModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Buy USDC with Naira (Kotani Pay)</Text>
-              <TouchableOpacity onPress={() => setShowKotaniModal(false)}>
-                <Text style={styles.closeBtn}>✕</Text>
+              <Text style={[styles.modalTitle, { color: themeColors.text }]}>Buy USDC with Naira (Kotani Pay)</Text>
+              <TouchableOpacity onPress={() => setShowKotaniModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <X size={20} color={themeColors.textMuted} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.kotaniIntroBox}>
-              <Text style={styles.kotaniIntroTitle}>⚡ Direct Naira to Digital USD On-Ramp</Text>
-              <Text style={styles.kotaniIntroDesc}>
+            <View style={[
+              styles.kotaniIntroBox,
+              isDark && {
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderColor: 'rgba(16, 185, 129, 0.25)',
+              },
+            ]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Zap size={14} color="#10B981" />
+                <Text style={[styles.kotaniIntroTitle, isDark && { color: '#34D399' }]}>Direct Naira to Digital USD On-Ramp</Text>
+              </View>
+              <Text style={[styles.kotaniIntroDesc, isDark && { color: '#C7D2FE' }]}>
                 Convert Naira directly into cryptographic USDC deposited into your linked Monad escrow vault.
               </Text>
             </View>
 
-            <Text style={styles.inputLabel}>Deposit Amount (₦ NGN)</Text>
+            <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Deposit Amount (₦ NGN)</Text>
             <TextInput
-              style={styles.amountInput}
+              style={[
+                styles.amountInput,
+                {
+                  backgroundColor: themeColors.inputBg,
+                  borderColor: themeColors.inputBorder,
+                  color: themeColors.text,
+                },
+              ]}
+              placeholderTextColor={themeColors.textMuted}
               keyboardType="numeric"
               value={kotaniAmountNgn}
               onChangeText={setKotaniAmountNgn}
@@ -1022,36 +1039,40 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
               {['10000', '25000', '50000', '100000'].map((amt) => (
                 <TouchableOpacity
                   key={amt}
-                  style={styles.amtChip}
+                  style={[styles.amtChip, { backgroundColor: isDark ? themeColors.surfaceSubtle : '#F3F4F6' }]}
                   onPress={() => setKotaniAmountNgn(amt)}
                 >
-                  <Text style={styles.amtChipText}>+{formatCurrency(parseInt(amt))}</Text>
+                  <Text style={[styles.amtChipText, { color: isDark ? themeColors.brand.emerald : '#184530' }]}>+{formatCurrency(parseInt(amt))}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Live Calculation Preview */}
-            <View style={styles.kotaniCalcBox}>
+            <View style={[styles.kotaniCalcBox, { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border }]}>
               <View style={styles.calcRow}>
-                <Text style={styles.calcLabel}>Exchange Rate:</Text>
-                <Text style={styles.calcVal}>1 USDC = {formatCurrency(exchangeRate)}</Text>
+                <Text style={[styles.calcLabel, { color: themeColors.textMuted }]}>Exchange Rate:</Text>
+                <Text style={[styles.calcVal, { color: themeColors.text }]}>1 USDC = {formatCurrency(exchangeRate)}</Text>
               </View>
               <View style={styles.calcRow}>
-                <Text style={styles.calcLabel}>Destination Vault:</Text>
-                <Text style={styles.calcValMono}>
+                <Text style={[styles.calcLabel, { color: themeColors.textMuted }]}>Destination Vault:</Text>
+                <Text style={[styles.calcValMono, { color: themeColors.text }]}>
                   {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Vault Linked'}
                 </Text>
               </View>
-              <View style={[styles.calcRow, styles.calcRowTotal]}>
-                <Text style={styles.calcTotalLabel}>Estimated Output:</Text>
-                <Text style={styles.calcTotalVal}>
+              <View style={[styles.calcRow, styles.calcRowTotal, { borderColor: themeColors.border }]}>
+                <Text style={[styles.calcTotalLabel, { color: themeColors.text }]}>Estimated Output:</Text>
+                <Text style={[styles.calcTotalVal, isDark && { color: '#818CF8' }]}>
                   ~{((parseFloat(kotaniAmountNgn || '0')) / exchangeRate).toFixed(2)} USDC
                 </Text>
               </View>
             </View>
 
             <TouchableOpacity
-              style={[styles.paystackBtn, isKotaniLoading && { opacity: 0.6 }]}
+              style={[
+                styles.paystackBtn,
+                isDark && { backgroundColor: themeColors.brand.forest },
+                isKotaniLoading && { opacity: 0.6 },
+              ]}
               onPress={handleKotaniOnRamp}
               disabled={isKotaniLoading}
             >
@@ -1068,17 +1089,25 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
       {/* Withdraw Modal */}
       <Modal visible={showWithdrawModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Withdraw Funds</Text>
-              <TouchableOpacity onPress={() => setShowWithdrawModal(false)}>
-                <Text style={styles.closeBtn}>✕</Text>
+              <Text style={[styles.modalTitle, { color: themeColors.text }]}>Withdraw Funds</Text>
+              <TouchableOpacity onPress={() => setShowWithdrawModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <X size={20} color={themeColors.textMuted} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.inputLabel}>Available to Withdraw: {formatCurrency(availableBalance)}</Text>
+            <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Available to Withdraw: {formatCurrency(availableBalance)}</Text>
             <TextInput
-              style={styles.amountInput}
+              style={[
+                styles.amountInput,
+                {
+                  backgroundColor: themeColors.inputBg,
+                  borderColor: themeColors.inputBorder,
+                  color: themeColors.text,
+                },
+              ]}
+              placeholderTextColor={themeColors.textMuted}
               keyboardType="numeric"
               value={withdrawAmount}
               onChangeText={setWithdrawAmount}
@@ -1087,22 +1116,28 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
 
             {savedBanks.length > 0 && (
               <View style={styles.bankSelectSection}>
-                <Text style={styles.inputLabel}>Select Bank Account</Text>
-                {savedBanks.map((b) => (
-                  <TouchableOpacity
-                    key={b.id}
-                    style={[
-                      styles.bankOption,
-                      (selectedBankId === b.id || (!selectedBankId && b === savedBanks[0])) &&
-                        styles.bankOptionSelected,
-                    ]}
-                    onPress={() => setSelectedBankId(b.id)}
-                  >
-                    <Text style={styles.bankOptionText}>
-                      {b.bankName} - {b.accountNumber} ({b.accountName})
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Select Bank Account</Text>
+                {savedBanks.map((b) => {
+                  const isSelected = selectedBankId === b.id || (!selectedBankId && b === savedBanks[0]);
+                  return (
+                    <TouchableOpacity
+                      key={b.id}
+                      style={[
+                        styles.bankOption,
+                        { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border },
+                        isSelected && {
+                          borderColor: '#10B981',
+                          backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : '#ECFDF5',
+                        },
+                      ]}
+                      onPress={() => setSelectedBankId(b.id)}
+                    >
+                      <Text style={[styles.bankOptionText, { color: themeColors.text }]}>
+                        {b.bankName} - {b.accountNumber} ({b.accountName})
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
 
@@ -1113,11 +1148,15 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
                 setShowAddBankModal(true);
               }}
             >
-              <Text style={styles.addBankShortcutText}>+ Add another bank account</Text>
+              <Text style={[styles.addBankShortcutText, { color: isDark ? '#34D399' : '#184530' }]}>+ Add another bank account</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.paystackBtn, isWithdrawing && { opacity: 0.6 }]}
+              style={[
+                styles.paystackBtn,
+                isDark && { backgroundColor: themeColors.brand.forest },
+                isWithdrawing && { opacity: 0.6 },
+              ]}
               onPress={handleWithdrawSubmit}
               disabled={isWithdrawing}
             >
@@ -1135,46 +1174,62 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Link Bank Account</Text>
-              <TouchableOpacity onPress={() => setShowAddBankModal(false)}>
-                <Text style={styles.closeBtn}>✕</Text>
+              <Text style={[styles.modalTitle, { color: themeColors.text }]}>Link Bank Account</Text>
+              <TouchableOpacity onPress={() => setShowAddBankModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <X size={20} color={themeColors.textMuted} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.inputLabel}>Select Bank</Text>
+            <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Select Bank</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bankPillsScroll}>
-              {popularBanks.map((b) => (
-                <TouchableOpacity
-                  key={b.code}
-                  style={[
-                    styles.bankPill,
-                    selectedBankCode === b.code && styles.bankPillSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedBankCode(b.code);
-                    setSelectedBankName(b.name);
-                    if (bankAccountNumber.length === 10) {
-                      handleResolveBank(bankAccountNumber, b.code);
-                    }
-                  }}
-                >
-                  <Text
+              {popularBanks.map((b) => {
+                const isSelected = selectedBankCode === b.code;
+                return (
+                  <TouchableOpacity
+                    key={b.code}
                     style={[
-                      styles.bankPillText,
-                      selectedBankCode === b.code && styles.bankPillTextSelected,
+                      styles.bankPill,
+                      { backgroundColor: themeColors.surfaceSubtle, borderColor: themeColors.border },
+                      isSelected && {
+                        backgroundColor: isDark ? '#065F46' : '#184530',
+                        borderColor: '#10B981',
+                      },
                     ]}
+                    onPress={() => {
+                      setSelectedBankCode(b.code);
+                      setSelectedBankName(b.name);
+                      if (bankAccountNumber.length === 10) {
+                        handleResolveBank(bankAccountNumber, b.code);
+                      }
+                    }}
                   >
-                    {b.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.bankPillText,
+                        { color: themeColors.text },
+                        isSelected && { color: '#FFFFFF' },
+                      ]}
+                    >
+                      {b.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
 
-            <Text style={styles.inputLabel}>10-Digit NUBAN Account Number</Text>
+            <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>10-Digit NUBAN Account Number</Text>
             <TextInput
-              style={styles.amountInput}
+              style={[
+                styles.amountInput,
+                {
+                  backgroundColor: themeColors.inputBg,
+                  borderColor: themeColors.inputBorder,
+                  color: themeColors.text,
+                },
+              ]}
+              placeholderTextColor={themeColors.textMuted}
               keyboardType="numeric"
               maxLength={10}
               value={bankAccountNumber}
@@ -1183,19 +1238,29 @@ export const ClientWalletScreen: React.FC<ClientWalletScreenProps> = ({ onBack }
             />
 
             {isResolvingBank ? (
-              <View style={styles.resolvingBox}>
-                <ActivityIndicator size="small" color="#184530" />
-                <Text style={styles.resolvingText}>Verifying account with NIBSS...</Text>
+              <View style={[styles.resolvingBox, { backgroundColor: themeColors.surfaceSubtle }]}>
+                <ActivityIndicator size="small" color={isDark ? '#34D399' : '#184530'} />
+                <Text style={[styles.resolvingText, { color: themeColors.textMuted }]}>Verifying account with NIBSS...</Text>
               </View>
             ) : resolvedAccountName ? (
-              <View style={styles.resolvedBox}>
-                <Text style={styles.resolvedName}>✓ {resolvedAccountName}</Text>
+              <View style={[
+                styles.resolvedBox,
+                isDark && {
+                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                  borderColor: 'rgba(16, 185, 129, 0.3)',
+                },
+              ]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Check size={14} color="#10B981" />
+                  <Text style={[styles.resolvedName, isDark && { color: '#34D399' }]}>{resolvedAccountName}</Text>
+                </View>
               </View>
             ) : null}
 
             <TouchableOpacity
               style={[
                 styles.paystackBtn,
+                isDark && { backgroundColor: themeColors.brand.forest },
                 (!resolvedAccountName || isAddingBank) && { opacity: 0.5 },
               ]}
               onPress={handleAddBankSubmit}
@@ -1228,7 +1293,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   backBtn: {
-    padding: spacing.xs,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backBtnText: {
     fontSize: 22,
@@ -1254,7 +1322,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingBottom: 110,
   },
   walletCard: {
     backgroundColor: '#184530',
@@ -1305,7 +1373,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: radius.md,
+    borderRadius: 6,
     padding: spacing.sm,
     marginBottom: spacing.md,
   },
@@ -1340,9 +1408,11 @@ const styles = StyleSheet.create({
   topUpBtn: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: radius.md,
-    paddingVertical: 10,
+    borderRadius: 8,
+    paddingVertical: 12,
+    minHeight: 46,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   topUpBtnText: {
     fontSize: 13,
@@ -1352,9 +1422,11 @@ const styles = StyleSheet.create({
   refundBtn: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: radius.md,
-    paddingVertical: 10,
+    borderRadius: 8,
+    paddingVertical: 12,
+    minHeight: 46,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   refundBtnText: {
     fontSize: 13,
@@ -1501,12 +1573,15 @@ const styles = StyleSheet.create({
   },
   filterScroll: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
     marginVertical: spacing.xs,
   },
   filterChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minHeight: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: radius.full,
     backgroundColor: '#E5E7EB',
   },
@@ -1516,7 +1591,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 12,
     color: '#4B5563',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   filterChipTextActive: {
     color: '#FFFFFF',
@@ -1552,16 +1627,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    marginBottom: 6,
+    borderRadius: radius.lg,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    minHeight: 64,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   txIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1948,7 +2025,7 @@ const styles = StyleSheet.create({
   cryptoAssetBox: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    borderRadius: radius.lg,
+    borderRadius: 6,
     padding: 10,
     borderWidth: 1,
     borderColor: '#F1F5F9',

@@ -56,6 +56,20 @@ export interface DiagnosticSessionRecord {
   clarificationOptions?: string[];
   diagnosticStatus?: string;
   isResolved?: boolean;
+  estimatedBOM?: DiagnosticBOMItem[];
+  recommendations?: any[];
+  category?: { id?: string; name?: string };
+  turns?: any[];
+  diagnosticTitle?: string;
+  estimatedLaborMin?: number;
+  estimatedLaborMax?: number;
+  costRange?: { min: number; max: number };
+  guestQuota?: {
+    limit: number;
+    used: number;
+    remaining: number;
+    isGuest: boolean;
+  };
 }
 
 export interface DiagnoseRequestPayload {

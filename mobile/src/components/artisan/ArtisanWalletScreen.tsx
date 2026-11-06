@@ -8,14 +8,17 @@ import {
   SafeAreaView,
   Modal,
   TextInput,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { Eye, EyeOff, ShieldCheck, Building2, Receipt } from 'lucide-react-native';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { formatCurrency } from '../../lib/formatters';
 import { WalletService } from '../../services/wallet.service';
+import { TransactionReceiptModal, WalletTransactionItem } from './TransactionReceiptModal';
+import { BankManagementModal, SettlementBankAccount } from './BankManagementModal';
+import { useToast } from '../shared/ToastContext';
 
 const NIGERIAN_BANKS = [
   { code: '044', name: 'Access Bank' },
@@ -36,6 +39,9 @@ interface Transaction {
   amount: number;
   date: string;
   reference: string;
+  bankName?: string;
+  accountNumber?: string;
+  rail?: 'FIAT_PAYSTACK' | 'MONAD_USDC';
 }
 
 interface ArtisanWalletScreenProps {
@@ -45,6 +51,13 @@ interface ArtisanWalletScreenProps {
 
 export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack, onViewProposals }) => {
   const queryClient = useQueryClient();
+  const { showSuccess, showError, showWarning } = useToast();
+  const { colors: themeColors, isDark } = useTheme();
+
+  const [isBalanceMasked, setIsBalanceMasked] = useState(false);
+  const [selectedReceiptTx, setSelectedReceiptTx] = useState<WalletTransactionItem | null>(null);
+  const [isBankManagementOpen, setIsBankManagementOpen] = useState(false);
+
   const [isPayoutModalVisible, setIsPayoutModalVisible] = useState(false);
   const [isAddBankModalVisible, setIsAddBankModalVisible] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState<string>('50000');
@@ -100,7 +113,7 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
 
   const handleResolveBank = async () => {
     if (accountNumberInput.trim().length !== 10) {
-      Alert.alert('Invalid Account', 'Please enter a 10-digit NUBAN account number.');
+      showWarning('Invalid Account', 'Please enter a 10-digit NUBAN account number.');
       return;
     }
 
@@ -109,8 +122,9 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
       const res = await WalletService.resolveBank(accountNumberInput.trim(), selectedBankCode);
       setResolvedAccountName(res.accountName);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showSuccess('Account Verified', `Resolved: ${res.accountName}`);
     } catch (err: any) {
-      Alert.alert('Verification Failed', err?.response?.data?.message || 'Could not resolve account name. Please verify bank and number.');
+      showError('Verification Failed', err?.response?.data?.message || 'Could not resolve account name. Please verify bank and number.');
     } finally {
       setIsResolving(false);
     }
@@ -118,7 +132,7 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
 
   const handleSaveBank = async () => {
     if (!resolvedAccountName) {
-      Alert.alert('Required', 'Please verify your account number first.');
+      showWarning('Verification Required', 'Please verify your account number first.');
       return;
     }
 
@@ -137,9 +151,9 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
       setIsAddBankModalVisible(false);
       setAccountNumberInput('');
       setResolvedAccountName('');
-      Alert.alert('Bank Account Linked', 'Your settlement bank account has been connected.');
+      showSuccess('Bank Account Linked', 'Your settlement bank account has been connected.');
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.message || 'Failed to link bank account.');
+      showError('Error', err?.response?.data?.message || 'Failed to link bank account.');
     } finally {
       setIsSavingBank(false);
     }
@@ -148,15 +162,13 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
   const handleWithdrawal = async () => {
     const num = parseInt(payoutAmount, 10) || 0;
     if (num <= 0 || num > availableBalance) {
-      Alert.alert('Invalid Amount', 'Please enter a valid payout amount within your available balance.');
+      showWarning('Invalid Amount', 'Please enter a valid payout amount within your available balance.');
       return;
     }
 
     if (!bankAccounts || bankAccounts.length === 0) {
-      Alert.alert('No Bank Linked', 'Please link your settlement bank account before initiating a withdrawal.', [
-        { text: 'Link Bank', onPress: () => setIsAddBankModalVisible(true) },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
+      showWarning('No Bank Linked', 'Please link your settlement bank account before initiating a withdrawal.');
+      setIsBankManagementOpen(true);
       return;
     }
 
@@ -172,54 +184,67 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       setIsPayoutModalVisible(false);
 
-      Alert.alert(
+      showSuccess(
         'Payout Initiated',
-        `${formatCurrency(num)} is being transferred to ${bankAccounts[0].bankName} (${bankAccounts[0].accountNumber}). Estimated arrival is 60 seconds.`
+        `${formatCurrency(num)} transferred to ${bankAccounts[0].bankName}. Funds arrive within 60 seconds.`
       );
     } catch (err: any) {
-      Alert.alert('Withdrawal Error', err?.response?.data?.message || err?.message || 'Could not process payout.');
+      showError('Withdrawal Error', err?.response?.data?.message || err?.message || 'Could not process payout.');
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Top Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
         <View style={styles.headerLeft}>
           {onBack && (
             <TouchableOpacity onPress={onBack} activeOpacity={0.7} style={styles.backButton}>
-              <Text style={styles.backChevron}>←</Text>
+              <Text style={[styles.backChevron, { color: themeColors.text }]}>←</Text>
             </TouchableOpacity>
           )}
-          <Text style={styles.headerTitle}>Earnings & Wallet</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>Earnings & Wallet</Text>
         </View>
-        <Text style={styles.badgeText}>NGN Rail Active</Text>
+        <Text style={[styles.badgeText, isDark && { color: '#34D399' }]}>NGN Rail Active</Text>
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* WALLET HERO CARD */}
         <View style={styles.heroCard}>
-          <Text style={styles.heroSub}>Available to Cash Out</Text>
-          <Text style={styles.heroAmount}>{formatCurrency(availableBalance)}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={styles.heroSub}>Available to Cash Out</Text>
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setIsBalanceMasked(!isBalanceMasked);
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              {isBalanceMasked ? <EyeOff size={18} color="#A7F3D0" /> : <Eye size={18} color="#A7F3D0" />}
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.heroAmount}>
+            {isBalanceMasked ? '₦ ••••••••' : formatCurrency(availableBalance)}
+          </Text>
 
           {/* Sub balances */}
           <View style={styles.subBalancesRow}>
             <View style={styles.subPillAmber}>
               <Text style={styles.lockEmoji}>🔒</Text>
               <Text style={styles.subPillTextAmber}>
-                {formatCurrency(lockedInEscrow)} in Escrow
+                {isBalanceMasked ? '₦ ••••' : formatCurrency(lockedInEscrow)} in Escrow
               </Text>
             </View>
 
             <View style={styles.subPillGreen}>
               <Text style={styles.subPillTextGreen}>
-                +{formatCurrency(todayEarnings)} Today
+                +{isBalanceMasked ? '₦ ••••' : formatCurrency(todayEarnings)} Today
               </Text>
             </View>
           </View>
@@ -229,7 +254,7 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
             activeOpacity={0.85}
             onPress={() => {
               if (!bankAccounts || bankAccounts.length === 0) {
-                setIsAddBankModalVisible(true);
+                setIsBankManagementOpen(true);
               } else {
                 setIsPayoutModalVisible(true);
               }
@@ -241,16 +266,34 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
           </TouchableOpacity>
         </View>
 
+        {/* MONAD USDC ON-CHAIN ESCROW BANNER */}
+        <View style={[styles.monadBannerCard, isDark && { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+          <View style={styles.monadIconCircle}>
+            <ShieldCheck size={20} color="#10B981" />
+          </View>
+          <View style={styles.monadTextCol}>
+            <View style={styles.monadHeaderRow}>
+              <Text style={[styles.monadTitle, { color: themeColors.text }]}>Monad USDC Escrow Enabled</Text>
+              <View style={styles.testnetBadge}>
+                <Text style={styles.testnetBadgeText}>Testnet Rail</Text>
+              </View>
+            </View>
+            <Text style={[styles.monadDesc, { color: themeColors.textMuted }]}>
+              Institutional multi-sig escrow with instant programmatic milestone releases.
+            </Text>
+          </View>
+        </View>
+
         {/* LINKED BANK ACCOUNT OR EMPTY CTA */}
         {bankAccounts && bankAccounts.length > 0 ? (
-          <View style={styles.bankCard}>
+          <View style={[styles.bankCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <View style={styles.bankLeft}>
-              <View style={styles.bankIconBox}>
+              <View style={[styles.bankIconBox, { backgroundColor: isDark ? themeColors.surfaceSubtle : '#E5E7EB' }]}>
                 <Text style={styles.bankEmoji}>🏦</Text>
               </View>
               <View>
-                <Text style={styles.bankName}>{bankAccounts[0].bankName}</Text>
-                <Text style={styles.bankAccount}>
+                <Text style={[styles.bankName, { color: themeColors.text }]}>{bankAccounts[0].bankName}</Text>
+                <Text style={[styles.bankAccount, { color: themeColors.textMuted }]}>
                   •••• {bankAccounts[0].accountNumber.slice(-4)} — {bankAccounts[0].accountName}
                 </Text>
               </View>
@@ -258,24 +301,24 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
 
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => setIsAddBankModalVisible(true)}
-              style={styles.changeBankBtn}
+              onPress={() => setIsBankManagementOpen(true)}
+              style={[styles.changeBankBtn, isDark && { borderColor: themeColors.border }]}
             >
-              <Text style={styles.changeBankText}>Add / Edit</Text>
+              <Text style={[styles.changeBankText, { color: isDark ? '#34D399' : colors.neutral[700] }]}>Manage Banks</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.noBankCard}>
+          <View style={[styles.noBankCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <View style={styles.noBankLeft}>
               <Text style={styles.noBankEmoji}>🏦</Text>
               <View style={styles.noBankTextCol}>
-                <Text style={styles.noBankTitle}>No Settlement Bank Linked</Text>
-                <Text style={styles.noBankSub}>Link your NUBAN account to receive instant payouts.</Text>
+                <Text style={[styles.noBankTitle, { color: themeColors.text }]}>No Settlement Bank Linked</Text>
+                <Text style={[styles.noBankSub, { color: themeColors.textMuted }]}>Link your NUBAN account to receive instant payouts.</Text>
               </View>
             </View>
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => setIsAddBankModalVisible(true)}
+              onPress={() => setIsBankManagementOpen(true)}
               style={styles.linkBankBtn}
             >
               <Text style={styles.linkBankText}>+ Link Bank</Text>
@@ -284,13 +327,16 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
         )}
 
         {/* RECENT TRANSACTION LEDGER */}
-        <Text style={styles.ledgerHeader}>Recent Transaction History</Text>
-        <View style={styles.transactionsList}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.xs }}>
+          <Text style={[styles.ledgerHeader, { color: themeColors.text }]}>Recent Transaction History</Text>
+          <Text style={{ fontSize: 11, color: themeColors.textMuted }}>Tap for digital receipt</Text>
+        </View>
+        <View style={[styles.transactionsList, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
           {liveTransactions.length === 0 ? (
-            <View style={styles.emptyTxBox}>
+            <View style={[styles.emptyTxBox, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
               <Text style={styles.emptyTxEmoji}>💳</Text>
-              <Text style={styles.emptyTxTitle}>No Transaction History</Text>
-              <Text style={styles.emptyTxSub}>
+              <Text style={[styles.emptyTxTitle, { color: themeColors.text }]}>No Transaction History</Text>
+              <Text style={[styles.emptyTxSub, { color: themeColors.textMuted }]}>
                 Your earnings from released milestones and payouts will be recorded here in your immutable ledger.
               </Text>
             </View>
@@ -298,20 +344,40 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
             liveTransactions.map((tx) => {
               const isPositive = tx.amount > 0;
               return (
-                <View key={tx.id} style={styles.txRow}>
-                  <View style={[styles.txIconBox, isPositive ? styles.txBoxGreen : styles.txBoxGrey]}>
+                <TouchableOpacity
+                  key={tx.id}
+                  activeOpacity={0.75}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedReceiptTx({
+                      id: tx.id,
+                      type: tx.type === 'DEBIT_PAYOUT' ? 'PAYOUT' : 'ESCROW_RELEASE',
+                      title: tx.title,
+                      amount: Math.abs(tx.amount),
+                      date: tx.date,
+                      status: 'COMPLETED',
+                      reference: tx.reference,
+                      rail: 'FIAT_PAYSTACK',
+                      fee: tx.type === 'DEBIT_PAYOUT' ? 50 : 0,
+                      bankName: bankAccounts?.[0]?.bankName,
+                      accountNumber: bankAccounts?.[0]?.accountNumber,
+                    });
+                  }}
+                  style={[styles.txRow, { borderColor: themeColors.border }]}
+                >
+                  <View style={[styles.txIconBox, isPositive ? (isDark ? { backgroundColor: 'rgba(16, 185, 129, 0.2)' } : styles.txBoxGreen) : (isDark ? { backgroundColor: 'rgba(255, 255, 255, 0.08)' } : styles.txBoxGrey)]}>
                     <Text style={styles.txEmoji}>{isPositive ? '⬇️' : '⬆️'}</Text>
                   </View>
 
                   <View style={styles.txMiddle}>
-                    <Text style={styles.txTitle}>{tx.title}</Text>
-                    <Text style={styles.txDate}>{tx.date} • {tx.reference}</Text>
+                    <Text style={[styles.txTitle, { color: themeColors.text }]}>{tx.title}</Text>
+                    <Text style={[styles.txDate, { color: themeColors.textMuted }]}>{tx.date} • {tx.reference}</Text>
                   </View>
 
-                  <Text style={[styles.txAmount, isPositive ? styles.amountPositive : styles.amountNegative]}>
+                  <Text style={[styles.txAmount, isPositive ? { color: '#10B981' } : (isDark ? { color: '#F87171' } : styles.amountNegative)]}>
                     {isPositive ? `+${formatCurrency(tx.amount)}` : formatCurrency(tx.amount)}
                   </Text>
-                </View>
+                </TouchableOpacity>
               );
             })
           )}
@@ -321,20 +387,21 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
       {/* PAYOUT MODAL */}
       <Modal visible={isPayoutModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Withdraw to Bank</Text>
-            <Text style={styles.modalSub}>
+          <View style={[styles.modalCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <Text style={[styles.modalTitle, { color: themeColors.text }]}>Withdraw to Bank</Text>
+            <Text style={[styles.modalSub, { color: themeColors.textMuted }]}>
               Available balance: {formatCurrency(availableBalance)}
             </Text>
 
             {/* Input */}
-            <View style={styles.inputWrapper}>
-              <Text style={styles.nairaPrefix}>₦</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: themeColors.inputBg, borderColor: themeColors.inputBorder }]}>
+              <Text style={[styles.nairaPrefix, { color: themeColors.text }]}>₦</Text>
               <TextInput
-                style={styles.modalInput}
+                style={[styles.modalInput, { color: themeColors.text }]}
                 keyboardType="numeric"
                 value={payoutAmount}
                 onChangeText={setPayoutAmount}
+                placeholderTextColor={themeColors.textMuted}
               />
             </View>
 
@@ -342,27 +409,27 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
             <View style={styles.shortcutsRow}>
               <TouchableOpacity
                 onPress={() => setPayoutAmount(String(Math.floor(availableBalance * 0.25)))}
-                style={styles.shortcutPill}
+                style={[styles.shortcutPill, { backgroundColor: isDark ? themeColors.surfaceSubtle : '#F3F4F6' }]}
               >
-                <Text style={styles.shortcutText}>25%</Text>
+                <Text style={[styles.shortcutText, isDark && { color: '#34D399' }]}>25%</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setPayoutAmount(String(Math.floor(availableBalance * 0.5)))}
-                style={styles.shortcutPill}
+                style={[styles.shortcutPill, { backgroundColor: isDark ? themeColors.surfaceSubtle : '#F3F4F6' }]}
               >
-                <Text style={styles.shortcutText}>50%</Text>
+                <Text style={[styles.shortcutText, isDark && { color: '#34D399' }]}>50%</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setPayoutAmount(String(availableBalance))}
-                style={styles.shortcutPill}
+                style={[styles.shortcutPill, { backgroundColor: isDark ? themeColors.surfaceSubtle : '#F3F4F6' }]}
               >
-                <Text style={styles.shortcutText}>100% (All)</Text>
+                <Text style={[styles.shortcutText, isDark && { color: '#34D399' }]}>100% (All)</Text>
               </TouchableOpacity>
             </View>
 
             {/* Fee Note */}
-            <View style={styles.feeNoteBox}>
-              <Text style={styles.feeNoteText}>
+            <View style={[styles.feeNoteBox, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' }]}>
+              <Text style={[styles.feeNoteText, isDark && { color: '#34D399' }]}>
                 Paystack NGN payout fee: ₦50. Funds arrive within 60 seconds.
               </Text>
             </View>
@@ -371,15 +438,15 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
             <View style={styles.modalActions}>
               <TouchableOpacity
                 onPress={() => setIsPayoutModalVisible(false)}
-                style={styles.cancelBtn}
+                style={[styles.cancelBtn, { backgroundColor: isDark ? themeColors.surfaceSubtle : '#F3F4F6' }]}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={[styles.cancelText, { color: themeColors.textMuted }]}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 disabled={isProcessing}
                 onPress={handleWithdrawal}
-                style={styles.confirmPayoutBtn}
+                style={[styles.confirmPayoutBtn, isDark && { backgroundColor: '#059669' }]}
               >
                 <Text style={styles.confirmPayoutText}>
                   {isProcessing ? 'Processing...' : 'Confirm Payout'}
@@ -390,117 +457,45 @@ export const ArtisanWalletScreen: React.FC<ArtisanWalletScreenProps> = ({ onBack
         </View>
       </Modal>
 
-      {/* LINK BANK ACCOUNT MODAL */}
-      <Modal visible={isAddBankModalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Link Settlement Bank</Text>
-            <Text style={styles.modalSub}>
-              Enter your 10-digit NUBAN account number. Instant payouts are settled directly to this account.
-            </Text>
+      {/* TRANSACTION DIGITAL RECEIPT MODAL */}
+      <TransactionReceiptModal
+        visible={!!selectedReceiptTx}
+        onClose={() => setSelectedReceiptTx(null)}
+        transaction={selectedReceiptTx}
+      />
 
-            {/* Select Bank */}
-            <Text style={styles.inputLabel}>Select Bank</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.bankSelectScroll}
-              contentContainerStyle={{ gap: 8, paddingBottom: 6 }}
-            >
-              {NIGERIAN_BANKS.map((b) => (
-                <TouchableOpacity
-                  key={b.code}
-                  onPress={() => {
-                    setSelectedBankCode(b.code);
-                    setResolvedAccountName('');
-                  }}
-                  style={[
-                    styles.bankChip,
-                    selectedBankCode === b.code && styles.bankChipActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.bankChipText,
-                      selectedBankCode === b.code && styles.bankChipTextActive,
-                    ]}
-                  >
-                    {b.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {/* Account Number */}
-            <Text style={styles.inputLabel}>10-Digit Account Number</Text>
-            <View style={styles.accountNumberRow}>
-              <TextInput
-                style={styles.accountInput}
-                keyboardType="numeric"
-                maxLength={10}
-                placeholder="0123456789"
-                placeholderTextColor={colors.neutral[400]}
-                value={accountNumberInput}
-                onChangeText={(t) => {
-                  setAccountNumberInput(t);
-                  setResolvedAccountName('');
-                }}
-              />
-              <TouchableOpacity
-                disabled={isResolving || accountNumberInput.length !== 10}
-                onPress={handleResolveBank}
-                style={[
-                  styles.verifyBtn,
-                  accountNumberInput.length !== 10 && { opacity: 0.5 },
-                ]}
-              >
-                {isResolving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.verifyBtnText}>Verify</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Resolved Name Box */}
-            {resolvedAccountName ? (
-              <View style={styles.verifiedNameBox}>
-                <Text style={styles.verifiedNameLabel}>Account Name (Verified)</Text>
-                <Text style={styles.verifiedNameText}>✓ {resolvedAccountName}</Text>
-              </View>
-            ) : null}
-
-            {/* Modal Actions */}
-            <View style={[styles.modalActions, { marginTop: 16 }]}>
-              <TouchableOpacity
-                onPress={() => {
-                  setIsAddBankModalVisible(false);
-                  setResolvedAccountName('');
-                  setAccountNumberInput('');
-                }}
-                style={styles.cancelBtn}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                disabled={isSavingBank || !resolvedAccountName}
-                onPress={handleSaveBank}
-                style={[
-                  styles.confirmPayoutBtn,
-                  !resolvedAccountName && { opacity: 0.5 },
-                ]}
-              >
-                {isSavingBank ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.confirmPayoutText}>Connect Account</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* SETTLEMENT BANK MANAGEMENT MODAL */}
+      <BankManagementModal
+        visible={isBankManagementOpen}
+        onClose={() => setIsBankManagementOpen(false)}
+        accounts={
+          bankAccounts && bankAccounts.length > 0
+            ? bankAccounts.map((b: any, idx: number) => ({
+                id: b.id,
+                bankName: b.bankName,
+                accountNumber: b.accountNumber,
+                accountName: b.accountName,
+                isPrimary: idx === 0,
+              }))
+            : []
+        }
+        onSetPrimary={async (accId) => {
+          await queryClient.invalidateQueries({ queryKey: ['wallet', 'banks'] });
+        }}
+        onDeleteAccount={async (accId) => {
+          await queryClient.invalidateQueries({ queryKey: ['wallet', 'banks'] });
+        }}
+        onAddAccount={async (newAcc) => {
+          const bankObj = NIGERIAN_BANKS.find((b) => b.name === newAcc.bankName) || NIGERIAN_BANKS[0];
+          await WalletService.addBank({
+            accountNumber: newAcc.accountNumber,
+            accountName: newAcc.accountName,
+            bankCode: bankObj.code,
+            bankName: newAcc.bankName,
+          });
+          await queryClient.invalidateQueries({ queryKey: ['wallet', 'banks'] });
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -621,6 +616,59 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: typography.size.sm,
     fontWeight: '800',
+  },
+  monadBannerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#071A11',
+    borderRadius: radius.xl,
+    padding: spacing.base,
+    marginTop: spacing.base,
+    borderWidth: 1,
+    borderColor: '#1B4731',
+  },
+  monadIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: '#10B98120',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#10B98150',
+  },
+  monadTextCol: {
+    flex: 1,
+  },
+  monadHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  monadTitle: {
+    fontSize: typography.size.xs + 1,
+    fontWeight: '700',
+    color: colors.neutral[100],
+  },
+  testnetBadge: {
+    backgroundColor: '#10B98125',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: '#10B98160',
+  },
+  testnetBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#10B981',
+  },
+  monadDesc: {
+    fontSize: 11,
+    color: colors.neutral[400],
+    lineHeight: 15,
   },
   bankCard: {
     flexDirection: 'row',

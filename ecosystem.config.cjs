@@ -67,5 +67,41 @@ module.exports = {
         NODE_ENV: 'production',
       },
     },
+
+    // 4. Media Processing Worker (Sharp image optimization & WebP encoding)
+    {
+      name: 'artisan-media-worker',
+      script: 'src/workers/media.worker.js',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '500M',
+      kill_timeout: 5000,
+      env: {
+        NODE_ENV: 'development',
+      },
+      env_production: {
+        NODE_ENV: 'production',
+      },
+    },
+
+    // 5. Blockchain Transaction Worker (Retry queue & gas escalation)
+    {
+      name: 'artisan-blockchain-tx-worker',
+      script: 'src/workers/blockchain.worker.js',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '500M',
+      kill_timeout: 5000,
+      env: {
+        NODE_ENV: 'development',
+      },
+      env_production: {
+        NODE_ENV: 'production',
+      },
+    },
   ],
 };

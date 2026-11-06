@@ -21,6 +21,18 @@ export class TreasuryService {
       include: { wallet: true },
     });
 
+    if (treasuryUser && treasuryUser.email !== SYSTEM_TREASURY_EMAIL) {
+      try {
+        treasuryUser = await tx.user.update({
+          where: { id: treasuryUser.id },
+          data: { email: SYSTEM_TREASURY_EMAIL },
+          include: { wallet: true },
+        });
+      } catch (_) {
+        // Silent catch if already migrated
+      }
+    }
+
     if (!treasuryUser) {
       treasuryUser = await tx.user.create({
         data: {

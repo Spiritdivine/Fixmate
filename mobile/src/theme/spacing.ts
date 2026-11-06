@@ -22,6 +22,24 @@ export const radius = {
   full: 9999,
 } as const;
 
+/**
+ * Mathematical Concentric Radii Rule: R_inner = max(R_outer - padding, min)
+ * Ensures inner nested elements do not visually bulge out against their parent container.
+ */
+export const innerRadius = (outerRadius: number, padding: number, min = 6): number => {
+  return Math.max(outerRadius - padding, min);
+};
+
+// Fitts's Law & Ergonomics Standards (Touch Target Minimums)
+export const touchTargets = {
+  min: 48,          // Strict Fitts's Law minimum bounding box (48x48dp)
+  minInteractive: 48,
+  comfortable: 54,  // Primary floating & sticky bottom mobile buttons
+  iconButton: 44,   // Header icons with hitSlop padding
+  hitSlop: { top: 10, bottom: 10, left: 10, right: 10 },
+} as const;
+
+
 export const shadows = {
   sm: {
     shadowColor: '#000',

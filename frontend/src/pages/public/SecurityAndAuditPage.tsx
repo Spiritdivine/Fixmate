@@ -302,8 +302,8 @@ export const SecurityAndAuditPage: React.FC = () => {
 
               <div className="pt-2 text-xs">
                 <span>Submit findings with reproduction steps to: </span>
-                <a href="mailto:security@artifix.ng" className="font-bold text-[#123E2A] underline">
-                  security@artifix.ng
+                <a href="mailto:security@artifixhq.xyz" className="font-bold text-[#123E2A] underline">
+                  security@artifixhq.xyz
                 </a>
               </div>
             </div>

@@ -249,7 +249,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@artisanplatform.com\",\n  \"password\": \"Admin@123456\"\n}"
+              "raw": "{\n  \"email\": \"admin@artifixhq.xyz\",\n  \"password\": \"Admin@123456\"\n}"
             },
             "url": "{{baseUrl}}/auth/login"
           }
@@ -892,7 +892,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"documentType\": \"DRIVERS_LICENSE\",\n  \"documentNumber\": \"DL-98234710\",\n  \"documentFrontUrl\": \"https://storage.artisan.ng/kyc/doc_front.jpg\",\n  \"documentBackUrl\": \"https://storage.artisan.ng/kyc/doc_back.jpg\",\n  \"selfieUrl\": \"https://storage.artisan.ng/kyc/selfie.jpg\"\n}"
+              "raw": "{\n  \"documentType\": \"DRIVERS_LICENSE\",\n  \"documentNumber\": \"DL-98234710\",\n  \"documentFrontUrl\": \"https://storage.artifixhq.xyz/kyc/doc_front.jpg\",\n  \"documentBackUrl\": \"https://storage.artifixhq.xyz/kyc/doc_back.jpg\",\n  \"selfieUrl\": \"https://storage.artifixhq.xyz/selfie.jpg\"\n}"
             },
             "url": "{{baseUrl}}/profiles/kyc"
           }
@@ -1763,7 +1763,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Calibration Spec Sheet\",\n  \"fileUrl\": \"https://storage.artisan.ng/evidence/spec_sheet.pdf\",\n  \"mimeType\": \"application/pdf\"\n}"
+              "raw": "{\n  \"title\": \"Calibration Spec Sheet\",\n  \"fileUrl\": \"https://storage.artifixhq.xyz/evidence/spec_sheet.pdf\",\n  \"mimeType\": \"application/pdf\"\n}"
             },
             "url": "{{baseUrl}}/disputes/{{disputeId}}/evidence"
           }

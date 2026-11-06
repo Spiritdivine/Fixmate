@@ -17,15 +17,19 @@ const baseOptions = {
   enableReadyCheck: true,
   connectTimeout: 5000,
   lazyConnect: false,
+  keepAlive: 30000, // Sends TCP keep-alive packets to prevent cloud timeouts
   retryStrategy(times) {
     if (times > 3) {
-      return null; // Stop retrying automatically if unreachable
+      return null; // Stop retrying if Redis is unreachable; fall back to memory
     }
-    const delay = Math.min(times * 100, 1000);
-    return delay;
+    return Math.min(times * 200, 1000);
   },
   reconnectOnError(err) {
-    return err.message.includes('READONLY');
+    return (
+      err.message.includes('READONLY') ||
+      err.message.includes('ECONNRESET') ||
+      err.message.includes('Connection is closed')
+    );
   },
 };
 
@@ -61,6 +65,10 @@ if (shouldConnectRedis) {
       if (env.NODE_ENV === 'development') {
         console.warn(`[Redis Notice] Connection notice: ${err.message}`);
       }
+    });
+
+    redisSubInstance.on('error', () => {
+      // Prevent unhandled error events when Redis is offline
     });
 
     redisInstance.on('close', () => {
@@ -143,6 +151,26 @@ export const cacheStore = {
     return memoryFallbackStore.delete(key);
   },
 
+  async delByPattern(pattern) {
+    if (isConnected && redisInstance) {
+      try {
+        const keys = await redisInstance.keys(pattern);
+        if (keys && keys.length > 0) {
+          await redisInstance.del(...keys);
+        }
+        return;
+      } catch (err) {
+        // ignore
+      }
+    }
+    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+    for (const k of memoryFallbackStore.keys()) {
+      if (regex.test(k)) {
+        memoryFallbackStore.delete(k);
+      }
+    }
+  },
+
   isRedisActive() {
     return isConnected;
   },
@@ -150,4 +178,6 @@ export const cacheStore = {
 
 export const redis = redisInstance;
 export const redisSub = redisSubInstance;
+export const redisCache = cacheStore;
 export default redis;
+

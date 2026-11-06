@@ -9,7 +9,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
-import { colors, radius, spacing } from '../../theme';
+import { colors, radius, spacing, useTheme } from '../../theme';
 
 export interface AuthInputProps extends TextInputProps {
   label?: string;
@@ -31,6 +31,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
   style,
   ...props
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -42,7 +43,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
       {/* Label and optional top-right action */}
       {(label || labelAction) && (
         <View style={styles.labelRow}>
-          {label ? <Text style={styles.label}>{label}</Text> : <View />}
+          {label ? <Text style={[styles.label, { color: themeColors.text }]}>{label}</Text> : <View />}
           {labelAction && <View>{labelAction}</View>}
         </View>
       )}
@@ -51,7 +52,8 @@ export const AuthInput: React.FC<AuthInputProps> = ({
       <View
         style={[
           styles.inputContainer,
-          isFocused && styles.inputFocused,
+          { backgroundColor: themeColors.inputBg, borderColor: themeColors.inputBorder },
+          isFocused && [styles.inputFocused, { borderColor: themeColors.primary, backgroundColor: themeColors.inputBg }],
           Boolean(error) && styles.inputError,
         ]}
       >
@@ -60,12 +62,13 @@ export const AuthInput: React.FC<AuthInputProps> = ({
         <TextInput
           style={[
             styles.input,
+            { color: themeColors.text },
             leftIcon ? { paddingLeft: 0 } : null,
             isPassword ? { paddingRight: 40 } : null,
             style,
           ]}
           secureTextEntry={computedSecure}
-          placeholderTextColor="#A8A29E"
+          placeholderTextColor={themeColors.textMuted}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           {...props}
@@ -80,9 +83,9 @@ export const AuthInput: React.FC<AuthInputProps> = ({
             activeOpacity={0.7}
           >
             {showPassword ? (
-              <EyeOff size={18} color="#78716C" />
+              <EyeOff size={18} color={themeColors.textMuted} />
             ) : (
-              <Eye size={18} color="#78716C" />
+              <Eye size={18} color={themeColors.textMuted} />
             )}
           </TouchableOpacity>
         )}
@@ -92,7 +95,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
       {error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : helperText ? (
-        <Text style={styles.helperText}>{helperText}</Text>
+        <Text style={[styles.helperText, { color: themeColors.textMuted }]}>{helperText}</Text>
       ) : null}
     </View>
   );

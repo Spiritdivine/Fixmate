@@ -30,7 +30,15 @@ export class ContractService {
     return response.data.data;
   }
 
+  static async acceptProposal(proposalId: string): Promise<ContractRecord> {
+    const response = await apiClient.post<ApiResponse<ContractRecord>>(`/contracts/accept-proposal/${proposalId}`);
+    return response.data.data;
+  }
+
   static async create(payload: CreateContractPayload): Promise<ContractRecord> {
+    if (payload.proposalId) {
+      return this.acceptProposal(payload.proposalId);
+    }
     const response = await apiClient.post<ApiResponse<ContractRecord>>('/contracts', payload);
     return response.data.data;
   }
@@ -39,4 +47,13 @@ export class ContractService {
     const response = await apiClient.patch<ApiResponse<ContractRecord>>(`/contracts/${id}/cancel`, { reason });
     return response.data.data;
   }
+
+  static async requestChangeOrder(
+    contractId: string,
+    data: { additionalAmount: number; additionalDays: number; reason: string; evidencePhotos: string[] }
+  ): Promise<any> {
+    const response = await apiClient.post<ApiResponse<any>>(`/contracts/${contractId}/change-orders`, data);
+    return response.data.data;
+  }
 }
+

@@ -8,16 +8,33 @@ import {
   Image,
   TextInput,
   SafeAreaView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import {
+  ArrowLeft,
+  Camera,
+  ShieldCheck,
+  Eye,
+  Star,
+  Briefcase,
+  Settings,
+  ChevronRight,
+  Plus,
+  X,
+  Save,
+} from 'lucide-react-native';
 import { colors, radius, spacing, typography, shadows } from '../../theme';
 import { ProfileService } from '../../services/profile.service';
 import { UploadService } from '../../services/upload.service';
 import { ImageProcessor } from '../../lib/image-processor';
 import { useAuthStore } from '../../stores/authStore';
+import { useToast } from '../shared/ToastContext';
+import {
+  ArtisanPublicProfilePreviewModal,
+  ArtisanProfilePreviewData,
+} from './ArtisanPublicProfilePreviewModal';
 
 interface ArtisanProfileScreenProps {
   onBack?: () => void;
@@ -35,6 +52,7 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
   onOpenSettings,
 }) => {
   const { user, updateUser } = useAuthStore();
+  const { showSuccess, showError } = useToast();
   const artisanProfile = user?.artisanProfile;
 
   const [title, setTitle] = useState(artisanProfile?.title || '');
@@ -50,11 +68,15 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
       ? artisanProfile.skills
       : ['Electrical Installations', 'Maintenance & Diagnostics']
   );
+  const [newSkillText, setNewSkillText] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string>(
-    user?.avatarUrl || artisanProfile?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200'
+    user?.avatarUrl ||
+      artisanProfile?.avatarUrl ||
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200'
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (artisanProfile) {
@@ -90,13 +112,31 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
         setAvatarUrl(uploaded);
         await ProfileService.updateArtisan({ avatarUrl: uploaded });
         updateUser({ avatarUrl: uploaded });
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        showSuccess('Profile photo updated successfully');
       }
     } catch (err: any) {
-      Alert.alert('Upload Error', err?.response?.data?.message || 'Failed to update avatar photo.');
+      showError(err?.response?.data?.message || 'Failed to update avatar photo.');
     } finally {
       setIsUploadingAvatar(false);
     }
+  };
+
+  const handleAddSkill = () => {
+    const trimmed = newSkillText.trim();
+    if (!trimmed) return;
+    if (skills.includes(trimmed)) {
+      showError('Skill already added');
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSkills((prev) => [...prev, trimmed]);
+    setNewSkillText('');
+  };
+
+  const handleRemoveSkill = (skillToRemove: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSkills((prev) => prev.filter((s) => s !== skillToRemove));
   };
 
   const handleSave = async () => {
@@ -120,13 +160,29 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
         });
       }
 
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Profile Saved', 'Your professional profile has been updated.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showSuccess('Your professional profile has been saved.');
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.message || 'Failed to update profile. Please try again.');
+      showError(err?.response?.data?.message || 'Failed to update profile.');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const previewData: ArtisanProfilePreviewData = {
+    fullName: displayName,
+    avatarUrl,
+    trade: title || 'Certified Specialist',
+    rating: (artisanProfile as any)?.rating || 4.9,
+    reviewCount: (artisanProfile as any)?.reviewCount || 24,
+    completedJobsCount: (artisanProfile as any)?.completedJobsCount || 38,
+    locationCity: (artisanProfile as any)?.city || 'Lagos, Nigeria',
+    bio,
+    hourlyRate: parseInt(hourlyRate, 10) || 5000,
+    yearsExperience: parseInt(experienceYears, 10) || 5,
+    isKycVerified: user?.isKycVerified ?? true,
+    skills,
+    portfolio: (artisanProfile as any)?.portfolio || [],
   };
 
   return (
@@ -136,18 +192,34 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
         <View style={styles.headerLeft}>
           {onBack && (
             <TouchableOpacity onPress={onBack} activeOpacity={0.7} style={styles.backButton}>
-              <Text style={styles.backChevron}>←</Text>
+              <ArrowLeft size={20} color="#FFFFFF" />
             </TouchableOpacity>
           )}
           <Text style={styles.headerTitle}>My Profile & Identity</Text>
         </View>
-        <TouchableOpacity onPress={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <ActivityIndicator size="small" color={colors.brand.forest} />
-          ) : (
-            <Text style={styles.saveHeaderBtn}>Save</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setIsPreviewOpen(true);
+            }}
+            style={styles.previewBtn}
+          >
+            <Eye size={16} color={colors.brand.emerald} />
+            <Text style={styles.previewBtnText}>Preview</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={isSaving}
+            style={styles.saveBtn}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Save size={16} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -158,10 +230,7 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
         {/* Avatar Photo Section */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: avatarUrl }}
-              style={styles.avatarImage}
-            />
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
             <TouchableOpacity
               style={styles.cameraBadge}
               onPress={handlePickAvatar}
@@ -170,14 +239,17 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
               {isUploadingAvatar ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.cameraBadgeIcon}>📷</Text>
+                <Camera size={14} color="#FFFFFF" />
               )}
             </TouchableOpacity>
           </View>
           <Text style={styles.nameHeading}>{displayName}</Text>
-          <Text style={styles.ratingSub}>
-            {user?.isKycVerified ? '🛡️ Verified Pro Artisan' : 'Active Specialist'}
-          </Text>
+          <View style={styles.verifiedRow}>
+            <ShieldCheck size={14} color={colors.brand.emerald} />
+            <Text style={styles.ratingSub}>
+              {user?.isKycVerified ? 'Verified Pro Artisan' : 'Active Specialist'}
+            </Text>
+          </View>
         </View>
 
         {/* KYC Verification Banner */}
@@ -187,17 +259,23 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
           style={styles.kycBanner}
         >
           <View style={styles.kycLeft}>
-            <Text style={styles.shieldEmoji}>🛡️</Text>
-            <View>
+            <View style={styles.kycIconWrap}>
+              <ShieldCheck size={20} color={colors.brand.emerald} />
+            </View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.kycTitle}>
-                {user?.isKycVerified ? 'Government ID Verified (Level 2)' : 'Complete NIN Verification'}
+                {user?.isKycVerified
+                  ? 'Government ID Verified (Level 2)'
+                  : 'Complete NIN Verification'}
               </Text>
               <Text style={styles.kycSub}>
-                {user?.isKycVerified ? 'National Identity Number (NIN) Linked' : 'Get Verified Badge & 4x more lead dispatches'}
+                {user?.isKycVerified
+                  ? 'National Identity Number (NIN) Linked'
+                  : 'Get Verified Badge & 4x more lead dispatches'}
               </Text>
             </View>
           </View>
-          <Text style={styles.chevronGreen}>›</Text>
+          <ChevronRight size={18} color={colors.brand.emerald} />
         </TouchableOpacity>
 
         {/* Sub-Navigation Quick Cards */}
@@ -208,12 +286,12 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
               style={styles.quickNavCard}
               activeOpacity={0.85}
             >
-              <Text style={styles.quickNavEmoji}>🖼️</Text>
+              <Briefcase size={20} color={colors.brand.emerald} />
               <View style={styles.quickNavTextCol}>
                 <Text style={styles.quickNavTitle}>Portfolio Showcase</Text>
-                <Text style={styles.quickNavSub}>Manage work photos</Text>
+                <Text style={styles.quickNavSub}>Manage verified work photos</Text>
               </View>
-              <Text style={styles.quickNavChevron}>›</Text>
+              <ChevronRight size={18} color={colors.neutral[500]} />
             </TouchableOpacity>
           )}
 
@@ -223,12 +301,12 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
               style={styles.quickNavCard}
               activeOpacity={0.85}
             >
-              <Text style={styles.quickNavEmoji}>⭐</Text>
+              <Star size={20} color="#F59E0B" />
               <View style={styles.quickNavTextCol}>
-                <Text style={styles.quickNavTitle}>Client Reviews & Ratings</Text>
-                <Text style={styles.quickNavSub}>Feedback & reputation</Text>
+                <Text style={styles.quickNavTitle}>Reviews & Ratings</Text>
+                <Text style={styles.quickNavSub}>Client feedback & public replies</Text>
               </View>
-              <Text style={styles.quickNavChevron}>›</Text>
+              <ChevronRight size={18} color={colors.neutral[500]} />
             </TouchableOpacity>
           )}
 
@@ -238,12 +316,12 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
               style={styles.quickNavCard}
               activeOpacity={0.85}
             >
-              <Text style={styles.quickNavEmoji}>⚙️</Text>
+              <Settings size={20} color={colors.neutral[400]} />
               <View style={styles.quickNavTextCol}>
-                <Text style={styles.quickNavTitle}>Radar & App Settings</Text>
-                <Text style={styles.quickNavSub}>Operating radius & alerts</Text>
+                <Text style={styles.quickNavTitle}>Artisan Settings</Text>
+                <Text style={styles.quickNavSub}>Security PIN & notification matrix</Text>
               </View>
-              <Text style={styles.quickNavChevron}>›</Text>
+              <ChevronRight size={18} color={colors.neutral[500]} />
             </TouchableOpacity>
           )}
         </View>
@@ -255,7 +333,7 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
             style={styles.input}
             value={title}
             placeholder="e.g. Master Electrician & Solar Specialist"
-            placeholderTextColor={colors.neutral[400]}
+            placeholderTextColor={colors.neutral[500]}
             onChangeText={setTitle}
           />
         </View>
@@ -268,6 +346,7 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
               style={styles.input}
               keyboardType="numeric"
               value={hourlyRate}
+              placeholderTextColor={colors.neutral[500]}
               onChangeText={setHourlyRate}
             />
           </View>
@@ -278,6 +357,7 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
               style={styles.input}
               keyboardType="numeric"
               value={experienceYears}
+              placeholderTextColor={colors.neutral[500]}
               onChangeText={setExperienceYears}
             />
           </View>
@@ -292,7 +372,7 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
             numberOfLines={4}
             value={bio}
             placeholder="Introduce your specializations, tools, and background..."
-            placeholderTextColor={colors.neutral[400]}
+            placeholderTextColor={colors.neutral[500]}
             onChangeText={setBio}
           />
         </View>
@@ -300,15 +380,46 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
         {/* Skills Tag Cloud */}
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>Skills & Specializations</Text>
+          <View style={styles.addSkillRow}>
+            <TextInput
+              style={[styles.input, styles.addSkillInput]}
+              value={newSkillText}
+              onChangeText={setNewSkillText}
+              placeholder="Add skill tag (e.g. Inverter Wiring)"
+              placeholderTextColor={colors.neutral[500]}
+            />
+            <TouchableOpacity
+              onPress={handleAddSkill}
+              style={styles.addSkillBtn}
+              activeOpacity={0.8}
+            >
+              <Plus size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.skillsCloud}>
             {skills.map((skill, index) => (
               <View key={index} style={styles.skillPill}>
                 <Text style={styles.skillText}>{skill}</Text>
+                <TouchableOpacity
+                  onPress={() => handleRemoveSkill(skill)}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <X size={12} color={colors.neutral[400]} />
+                </TouchableOpacity>
               </View>
             ))}
           </View>
         </View>
       </ScrollView>
+
+      {/* Public Profile Preview Modal */}
+      <ArtisanPublicProfilePreviewModal
+        visible={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        data={previewData}
+        onEditProfile={() => setIsPreviewOpen(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -316,7 +427,7 @@ export const ArtisanProfileScreen: React.FC<ArtisanProfileScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#071A11',
   },
   header: {
     flexDirection: 'row',
@@ -325,33 +436,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#133E2B',
   },
   headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   backButton: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#0E291D',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backChevron: {
-    fontSize: 20,
-    color: colors.neutral[900],
-    fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: typography.size.base + 2,
     fontWeight: '800',
-    color: colors.neutral[900],
+    color: '#FFFFFF',
   },
-  saveHeaderBtn: {
-    fontSize: typography.size.sm + 1,
-    fontWeight: '800',
-    color: colors.brand.forest,
+  previewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#0E291D',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: '#1A4D36',
+  },
+  previewBtnText: {
+    fontSize: typography.size.xs,
+    fontWeight: '700',
+    color: colors.brand.emerald,
+  },
+  saveBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.brand.emerald,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
@@ -367,76 +499,108 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: 'relative',
-    width: 84,
-    height: 84,
+    width: 88,
+    height: 88,
   },
   avatarImage: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     borderWidth: 2,
-    borderColor: colors.brand.forest,
+    borderColor: colors.brand.emerald,
   },
   cameraBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: colors.brand.forest,
+    backgroundColor: colors.brand.emerald,
     width: 28,
     height: 28,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  cameraBadgeIcon: {
-    fontSize: 12,
+    borderColor: '#071A11',
   },
   nameHeading: {
     fontSize: typography.size.lg,
     fontWeight: '900',
-    color: colors.neutral[900],
+    color: '#FFFFFF',
     marginTop: 8,
+  },
+  verifiedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 3,
   },
   ratingSub: {
     fontSize: typography.size.xs + 1,
-    color: colors.neutral[500],
-    marginTop: 2,
+    color: colors.neutral[300],
+    fontWeight: '600',
   },
   kycBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#0E291D',
     padding: spacing.md,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#1A4D36',
     marginBottom: spacing.base,
   },
   kycLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+    flex: 1,
   },
-  shieldEmoji: {
-    fontSize: 20,
+  kycIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   kycTitle: {
     fontSize: typography.size.xs + 1,
     fontWeight: '800',
-    color: colors.brand.forest,
+    color: '#FFFFFF',
   },
   kycSub: {
     fontSize: 11,
-    color: colors.neutral[600],
-    marginTop: 1,
+    color: colors.neutral[400],
+    marginTop: 2,
   },
-  chevronGreen: {
-    fontSize: 20,
-    color: colors.brand.emeraldDark,
-    fontWeight: 'bold',
+  quickNavGrid: {
+    gap: 8,
+    marginBottom: spacing.lg,
+  },
+  quickNavCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0E291D',
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.base,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#1A4D36',
+    gap: 12,
+  },
+  quickNavTextCol: {
+    flex: 1,
+  },
+  quickNavTitle: {
+    fontSize: typography.size.sm,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  quickNavSub: {
+    fontSize: 11,
+    color: colors.neutral[400],
+    marginTop: 2,
   },
   fieldGroup: {
     marginBottom: spacing.base,
@@ -444,18 +608,22 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.size.xs + 1,
     fontWeight: '700',
-    color: colors.neutral[700],
+    color: colors.neutral[300],
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#0E291D',
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#1A4D36',
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: typography.size.sm,
-    color: colors.neutral[900],
+    color: '#FFFFFF',
+  },
+  textArea: {
+    height: 90,
+    textAlignVertical: 'top',
   },
   rowTwo: {
     flexDirection: 'row',
@@ -465,10 +633,21 @@ const styles = StyleSheet.create({
   col: {
     flex: 1,
   },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-    lineHeight: 20,
+  addSkillRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  addSkillInput: {
+    flex: 1,
+  },
+  addSkillBtn: {
+    backgroundColor: colors.brand.emerald,
+    borderRadius: radius.md,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   skillsCloud: {
     flexDirection: 'row',
@@ -476,52 +655,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   skillPill: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
   skillText: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.neutral[800],
-  },
-  quickNavGrid: {
-    gap: 10,
-    marginBottom: spacing.base,
-  },
-  quickNavCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: radius.xl,
-    padding: spacing.md,
-    gap: 12,
-    ...shadows.sm,
-  },
-  quickNavEmoji: {
-    fontSize: 24,
-  },
-  quickNavTextCol: {
-    flex: 1,
-  },
-  quickNavTitle: {
-    fontSize: typography.size.sm,
-    fontWeight: '700',
-    color: colors.neutral[900],
-  },
-  quickNavSub: {
-    fontSize: typography.size.xs,
-    color: colors.neutral[500],
-    marginTop: 2,
-  },
-  quickNavChevron: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.neutral[400],
+    color: colors.brand.emerald,
   },
 });

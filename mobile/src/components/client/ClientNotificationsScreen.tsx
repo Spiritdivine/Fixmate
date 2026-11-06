@@ -9,9 +9,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { colors, radius, spacing, typography, shadows } from '../../theme';
+import { ChevronLeft, Bell, Zap, Camera, ShieldCheck, Info } from 'lucide-react-native';
+import { colors, radius, spacing, typography, shadows, useTheme } from '../../theme';
 import { NotificationService } from '../../services/notification.service';
 import { queryClient } from '../../lib/query-client';
+import { SkeletonNotificationItem } from '../shared';
+import { useClientNotifications } from '../../hooks';
 
 interface NotificationItem {
   id: string;
@@ -33,6 +36,7 @@ export const ClientNotificationsScreen: React.FC<ClientNotificationsScreenProps>
   onBack,
   onSelectNotification,
 }) => {
+  const { colors: themeColors, isDark } = useTheme();
   const [filter, setFilter] = useState<'ALL' | 'BIDS' | 'MILESTONES' | 'PAYMENTS'>('ALL');
 
   const { data: remoteNotifications, isLoading } = useQuery({
@@ -58,13 +62,10 @@ export const ClientNotificationsScreen: React.FC<ClientNotificationsScreenProps>
     };
   });
 
-  const handleMarkAllRead = async () => {
-    try {
-      await NotificationService.markAllAsRead();
-      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    } catch {
-      // Graceful fallback
-    }
+  const { markAsRead, markAllAsRead } = useClientNotifications();
+
+  const handleMarkAllRead = () => {
+    markAllAsRead();
   };
 
   const filtered = notifications.filter((n) => {
@@ -75,30 +76,38 @@ export const ClientNotificationsScreen: React.FC<ClientNotificationsScreenProps>
   });
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: themeColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColors.headerBg, borderBottomColor: themeColors.headerBorder }]}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.backBtnText}>←</Text>
+          <ChevronLeft size={22} color={themeColors.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Notifications</Text>
-          <Text style={styles.headerSubtitle}>Alerts, milestones & escrow updates</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>Notifications</Text>
+          <Text style={[styles.headerSubtitle, { color: themeColors.textMuted }]}>Alerts, milestones & escrow updates</Text>
         </View>
         <TouchableOpacity onPress={handleMarkAllRead} activeOpacity={0.7}>
-          <Text style={styles.markReadText}>Mark all</Text>
+          <Text style={[styles.markReadText, isDark && { color: '#34D399' }]}>Mark all</Text>
         </TouchableOpacity>
       </View>
 
       {/* Filter Chips */}
-      <View style={styles.filterRow}>
+      <View style={[styles.filterRow, { backgroundColor: themeColors.surfaceSubtle, borderBottomColor: themeColors.border }]}>
         {(['ALL', 'BIDS', 'MILESTONES', 'PAYMENTS'] as const).map((f) => (
           <TouchableOpacity
             key={f}
-            style={[styles.filterChip, filter === f && styles.filterChipActive]}
+            style={[
+              styles.filterChip,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border, borderWidth: 1 },
+              filter === f && [styles.filterChipActive, { backgroundColor: themeColors.primary, borderColor: themeColors.primary }],
+            ]}
             onPress={() => setFilter(f)}
           >
-            <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
+            <Text style={[
+              styles.filterChipText,
+              { color: themeColors.textMuted },
+              filter === f && styles.filterChipTextActive,
+            ]}>
               {f === 'ALL'
                 ? 'All'
                 : f === 'BIDS'
@@ -118,51 +127,64 @@ export const ClientNotificationsScreen: React.FC<ClientNotificationsScreenProps>
         contentContainerStyle={[styles.listContent, filtered.length === 0 && { flex: 1, justifyContent: 'center' }]}
         ListEmptyComponent={
           isLoading ? (
-            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={{ marginTop: 8, color: colors.textMuted }}>Checking notification feed...</Text>
+            <View style={{ width: '100%' }}>
+              <SkeletonNotificationItem />
+              <SkeletonNotificationItem />
+              <SkeletonNotificationItem />
+              <SkeletonNotificationItem />
             </View>
           ) : (
             <View style={{ alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
-              <Text style={{ fontSize: 36, marginBottom: 8 }}>🔔</Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+              <Bell size={36} color={themeColors.textMuted} style={{ marginBottom: 8 }} />
+              <Text style={{ fontSize: 16, fontWeight: '700', color: themeColors.text, marginBottom: 4 }}>
                 No Notifications
               </Text>
-              <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
+              <Text style={{ fontSize: 13, color: themeColors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
                 You're all caught up! Updates regarding incoming artisan proposals, milestone proofs, and escrow releases will appear here.
               </Text>
             </View>
           )
         }
         renderItem={({ item }) => {
-          const icon =
-            item.type === 'BID'
-              ? '⚡'
-              : item.type === 'MILESTONE'
-              ? '📸'
-              : item.type === 'PAYMENT'
-              ? '🛡️'
-              : '🤖';
+          const renderTypeIcon = () => {
+            switch (item.type) {
+              case 'BID':
+                return <Zap size={18} color="#D97706" />;
+              case 'MILESTONE':
+                return <Camera size={18} color="#0284C7" />;
+              case 'PAYMENT':
+                return <ShieldCheck size={18} color="#10B981" />;
+              default:
+                return <Info size={18} color={themeColors.textMuted} />;
+            }
+          };
 
           return (
             <TouchableOpacity
-              style={[styles.card, !item.isRead && styles.cardUnread]}
-              onPress={() => onSelectNotification?.(item)}
+              style={[
+                styles.card,
+                { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+                !item.isRead && [styles.cardUnread, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.25)' }],
+              ]}
+              onPress={() => {
+                if (!item.isRead) markAsRead(item.id);
+                onSelectNotification?.(item);
+              }}
               activeOpacity={0.7}
             >
-              <View style={styles.iconWrap}>
-                <Text style={styles.iconText}>{icon}</Text>
+              <View style={[styles.iconWrap, { backgroundColor: themeColors.surfaceSubtle }]}>
+                {renderTypeIcon()}
               </View>
               <View style={styles.metaCol}>
                 <View style={styles.titleRow}>
-                  <Text style={styles.title}>{item.title}</Text>
-                  {!item.isRead && <View style={styles.unreadDot} />}
-                  <Text style={styles.timeText}>{item.time}</Text>
+                  <Text style={[styles.title, { color: themeColors.text }]}>{item.title}</Text>
+                  {!item.isRead && <View style={[styles.unreadDot, isDark && { backgroundColor: '#34D399' }]} />}
+                  <Text style={[styles.timeText, { color: themeColors.textMuted }]}>{item.time}</Text>
                 </View>
-                <Text style={styles.message}>{item.message}</Text>
+                <Text style={[styles.message, { color: themeColors.text }]}>{item.message}</Text>
                 {item.actionText && (
                   <View style={styles.actionBtn}>
-                    <Text style={styles.actionBtnText}>{item.actionText} →</Text>
+                    <Text style={[styles.actionBtnText, isDark && { color: '#34D399' }]}>{item.actionText} →</Text>
                   </View>
                 )}
               </View>

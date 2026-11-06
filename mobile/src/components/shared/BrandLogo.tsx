@@ -6,7 +6,7 @@ export interface BrandLogoProps {
   /**
    * 'full': The complete brand lockup image from logo1.png / logo1-dark.png
    * 'mark': Standalone architectural monogram icon (artifix-icon-transparent.png / artifix-icon-dark.png)
-   * 'lockup': Architectural mark image + styled "Fixmate" text
+   * 'lockup': Architectural mark image + styled "Artifix" text
    */
   variant?: 'full' | 'mark' | 'lockup';
   /**
@@ -52,12 +52,12 @@ const FULL_ASPECT_RATIO = 902 / 621;
 const MARK_ASPECT_RATIO = 385 / 375;
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({
-  variant = 'lockup',
+  variant = 'mark',
   theme = 'light',
   size = 'md',
   style,
   imageStyle,
-  showWordmark = true,
+  showWordmark = false,
 }) => {
   const isDark = theme === 'dark';
   const targetHeight = typeof size === 'number' ? size : HEIGHT_PRESETS[size];
@@ -102,7 +102,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     );
   }
 
-  // 'lockup' variant: Standalone Icon Mark + stylized "Fixmate" wordmark
+  // 'lockup' variant: Standalone Icon Mark + stylized "Artifix" wordmark
   const markWidth = targetHeight * MARK_ASPECT_RATIO;
   const fontSize = targetHeight * 0.62;
 
@@ -128,7 +128,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             isDark ? styles.wordmarkDark : styles.wordmarkLight,
           ]}
         >
-          Fixmate
+          Artifix
         </Text>
       )}
     </View>

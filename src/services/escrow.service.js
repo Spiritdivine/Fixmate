@@ -3,6 +3,8 @@ import { ApiError } from '../utils/api-error.js';
 import { MonadEscrowService } from './monad-escrow.service.js';
 import { NotificationService } from './notification.service.js';
 import { TreasuryService } from './treasury.service.js';
+import { enqueueLoyaltyEvent } from '../queues/queue.manager.js';
+import { PointLedgerService } from './point-ledger.service.js';
 import crypto from 'crypto';
 
 /**
@@ -26,7 +28,7 @@ export class EscrowService {
     }
 
     const milestoneAmount = Number(milestone.amount);
-    const { fundingTxHash, cryptoAmount, cryptoCurrency = 'USDC' } = fundingData;
+    const { fundingTxHash, cryptoAmount, cryptoCurrency = 'USDC', discountReservationRef } = fundingData;
 
     // -------------------------------------------------------------
     // Path A: Monad On-Chain Escrow Funding (Web3 Verification)
@@ -104,12 +106,18 @@ export class EscrowService {
           },
         };
       });
+
+      if (discountReservationRef) {
+        await PointLedgerService.commitReservation(discountReservationRef).catch(() => {});
+      }
+
+      return pathAResult;
     }
 
     // -------------------------------------------------------------
     // Path B: In-App Wallet Atomic Lock (Web2 / Simulated Mode)
     // -------------------------------------------------------------
-    return prisma.$transaction(async (tx) => {
+    const pathBResult = await prisma.$transaction(async (tx) => {
       // Pessimistic row-level lock: serialize concurrent wallet deductions
       const lockedWallets = await tx.$queryRaw`
         SELECT id, available_balance, escrow_locked_balance 
@@ -185,7 +193,14 @@ export class EscrowService {
 
       return updatedMilestone;
     });
+
+    if (discountReservationRef) {
+      await PointLedgerService.commitReservation(discountReservationRef).catch(() => {});
+    }
+
+    return pathBResult;
   }
+
 
   /**
    * Artisan submits completed deliverable with Before & After evidence
@@ -297,9 +312,24 @@ export class EscrowService {
     );
 
     return prisma.$transaction(async (tx) => {
+      // 0. Pessimistic row-level lock on milestone to serialize concurrent release calls
+      const lockedMilestones = await tx.$queryRaw`
+        SELECT id, status, amount, contract_id FROM milestones WHERE id = ${milestoneId}::uuid FOR UPDATE
+      `;
+      const lockedMilestone = lockedMilestones && lockedMilestones[0];
+      if (!lockedMilestone) {
+        throw ApiError.notFound('Milestone not found');
+      }
+      if (lockedMilestone.status !== 'SUBMITTED' && lockedMilestone.status !== 'FUNDED') {
+        throw ApiError.badRequest('Milestone has already been released or is not in a releasable state');
+      }
+
       // 1. Client Wallet: Deduct from Escrow Locked Balance if locked in-app
-      const clientWallet = await tx.wallet.findUnique({ where: { userId: clientId } });
-      if (clientWallet && Number(clientWallet.escrowLockedBalance) >= grossAmount) {
+      const lockedClientWallets = await tx.$queryRaw`
+        SELECT id, available_balance, escrow_locked_balance FROM wallets WHERE user_id = ${clientId}::uuid FOR UPDATE
+      `;
+      const clientWallet = lockedClientWallets && lockedClientWallets[0];
+      if (clientWallet && Number(clientWallet.escrow_locked_balance) >= grossAmount) {
         await tx.wallet.update({
           where: { id: clientWallet.id },
           data: {
@@ -434,6 +464,15 @@ export class EscrowService {
         },
       };
     });
+
+    if (result.contractStatus === 'COMPLETED') {
+      enqueueLoyaltyEvent({
+        action: 'EVALUATE_CONTRACT_COMPLETION',
+        payload: { contractId: milestone.contractId },
+      }).catch((err) => console.warn('[EscrowService] Loyalty evaluation enqueue failed:', err.message));
+    }
+
+    return result;
   }
 
   /**

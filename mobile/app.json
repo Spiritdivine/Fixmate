@@ -1,13 +1,34 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Artifix",
+    "slug": "artifix-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Artifix needs permission to save your verified profile card to your photos.",
+          "savePhotosPermission": "Artifix needs permission to save your profile card to your photos.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Artifix needs permission to access your microphone to record voice notes."
+        }
+      ]
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Artifix needs permission to save your profile card to your photo album.",
+        "NSPhotoLibraryAddUsageDescription": "Artifix needs permission to save your profile card to your photo album.",
+        "NSMicrophoneUsageDescription": "Artifix needs access to your microphone to record voice notes."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -16,7 +37,13 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

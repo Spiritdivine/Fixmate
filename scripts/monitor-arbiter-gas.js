@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import dotenv from 'dotenv';
 import { env } from '../src/config/env.js';
 import { MonadEscrowService } from '../src/services/monad-escrow.service.js';
+import { AlertService } from '../src/services/alert.service.js';
 
 dotenv.config();
 
@@ -51,13 +52,24 @@ async function monitorArbiterGas() {
   const WARNING_THRESHOLD = 5.0;  // Less than 5 MON
 
   if (balanceMon < CRITICAL_THRESHOLD) {
-    console.error(`\n🚨 CRITICAL GAS ALERT: Arbiter balance (${balanceMon.toFixed(4)} MON) is below critical threshold (${CRITICAL_THRESHOLD} MON)!`);
-    console.error(`⚠️ On-chain dispute resolution and emergency refunds may fail due to out-of-gas errors.`);
-    console.error(`👉 ACTION REQUIRED: Transfer native MON tokens to ${arbiterAddress} immediately.\n`);
+    const message = `Arbiter wallet balance (${balanceMon.toFixed(4)} MON) has dropped below critical threshold (${CRITICAL_THRESHOLD} MON). On-chain escrow releases and dispute resolutions are at risk of out-of-gas failures!`;
+    console.error(`\n🚨 CRITICAL GAS ALERT: ${message}`);
+    await AlertService.sendAlert({
+      level: 'CRITICAL',
+      title: 'Monad Arbiter Wallet Gas Critical',
+      message,
+      metadata: { arbiterAddress, currentBalanceMon: balanceMon, criticalThreshold: CRITICAL_THRESHOLD },
+    }).catch(() => {});
     return { status: 'CRITICAL', balanceMon, arbiterAddress };
   } else if (balanceMon < WARNING_THRESHOLD) {
-    console.warn(`\n⚠️  WARNING: Arbiter balance (${balanceMon.toFixed(4)} MON) is running low (threshold: ${WARNING_THRESHOLD} MON).`);
-    console.warn(`👉 Consider refilling the Arbiter gas tank soon.\n`);
+    const message = `Arbiter wallet balance (${balanceMon.toFixed(4)} MON) is low (threshold: ${WARNING_THRESHOLD} MON). Please refill native MON tokens soon.`;
+    console.warn(`\n⚠️  WARNING: ${message}`);
+    await AlertService.sendAlert({
+      level: 'WARNING',
+      title: 'Monad Arbiter Wallet Gas Warning',
+      message,
+      metadata: { arbiterAddress, currentBalanceMon: balanceMon, warningThreshold: WARNING_THRESHOLD },
+    }).catch(() => {});
     return { status: 'WARNING', balanceMon, arbiterAddress };
   } else {
     console.log(`\n✅ HEALTHY: Arbiter gas reserves are adequate (>${WARNING_THRESHOLD} MON).\n`);

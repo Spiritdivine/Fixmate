@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { ArtisanSidebar } from './ArtisanSidebar';
 import { ArtisanHeader } from './ArtisanHeader';
+import { ArtisanBottomBar } from './ArtisanBottomBar';
 import { useAuthStore } from '../../stores/authStore';
 import { getSocket } from '../../lib/socket';
 import { Notification } from '../../types';
@@ -89,10 +90,12 @@ export const ArtisanLayout: React.FC = () => {
         <UnverifiedEmailBanner />
         <ArtisanHeader onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
-          <div className="max-w-[1400px] w-full mx-auto">
+          <div className="max-w-[1400px] w-full mx-auto pb-8 lg:pb-0">
             <Outlet />
           </div>
         </main>
+        {/* Docked Bottom Bar for Artisan Mobile Viewports */}
+        <ArtisanBottomBar />
       </div>
     </div>
   );
