@@ -1,28 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle2,
   ArrowRight,
-  ExternalLink,
-  Star,
-  ChevronDown,
   Check,
-  ArrowUpRight,
-  Menu,
-  X,
   User,
   Mail,
   Wrench,
   Loader2,
   Users,
   ShieldCheck,
-  Shield,
   MapPin,
-  
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { apiClient } from '../lib/api-client';
 import { trackEvent } from '../lib/posthog';
-import { LANDING_IMAGES } from '../assets/landing-assets';
 import { WAITLIST_SHEET_URL } from '../config/env';
 import { WAITLIST_HERO_ASSETS } from '../assets/waitlist-curated-assets';
 import { ArtisanDoodles } from '../components/ui/ArtisanDoodles';
@@ -33,11 +25,6 @@ import {
   CertifiedBadgeHugeIcon,
   ClientProfileHugeIcon,
   ArtisanCraftsmanHugeIcon,
-  CreditCardHugeIcon,
-  MonadTokenHugeIcon,
-  VaultLockHugeIcon,
-  JobContractDocketHugeIcon,
-  NairaCoinsHugeIcon,
   SunHugeIcon,
   MoonHugeIcon,
 } from '../components/ui/HugeIcons';
@@ -68,8 +55,6 @@ export const ArtifixLogo: React.FC<{ light?: boolean; className?: string }> = ({
   </div>
 );
 
-export const FixmateLogo = ArtifixLogo;
-
 export const XSocialIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
     <path
@@ -97,10 +82,15 @@ export const InstagramSocialIcon: React.FC<{ className?: string }> = ({ classNam
   </svg>
 );
 
-export const LandingPage: React.FC = () => {
+export const WhatsAppIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.885m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+  </svg>
+);
+
+export const BetaTestingPage: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'client' | 'artisan'>('client');
-  const [selectedPayment, setSelectedPayment] = useState<'paystack' | 'monad'>('paystack');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [craftOrSkill, setCraftOrSkill] = useState('');
@@ -110,17 +100,17 @@ export const LandingPage: React.FC = () => {
     email: string;
     role: 'client' | 'artisan';
     craftOrSkill?: string;
+    ticketId?: string;
+    whatsappUrl?: string;
   } | null>(null);
-  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
-  const [waitlistCount, setWaitlistCount] = useState(12483);
+  const [betaSubmitted, setBetaSubmitted] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  React.useEffect(() => {
-    // Default to the warm editorial light canvas as seen in the referenced design
+  useEffect(() => {
     document.documentElement.classList.remove('dark');
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 16);
     };
@@ -140,109 +130,140 @@ export const LandingPage: React.FC = () => {
     }
   };
 
-  const scrollToWaitlist = (role?: 'client' | 'artisan', sourceLocation: string = 'general') => {
-    trackEvent('waitlist_cta_clicked', {
+  const scrollToBeta = (role?: 'client' | 'artisan', sourceLocation: string = 'general') => {
+    trackEvent('beta_cta_clicked', {
       role_target: role || 'unspecified',
       source_location: sourceLocation,
     });
     if (role) {
       setSelectedRole(role);
     }
-    document.getElementById('waitlist-name-input')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('beta-name-input')?.scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => {
-      document.getElementById('waitlist-name-input')?.focus();
+      document.getElementById('beta-name-input')?.focus();
     }, 300);
   };
 
-  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+  const handleBetaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !email.includes('@')) return;
 
     setIsSubmitting(true);
 
     const lead = {
-      name: fullName.trim() || 'Waitlist Member',
+      fullName: fullName.trim() || 'Beta Applicant',
       email: email.trim().toLowerCase(),
       role: selectedRole,
       craftOrSkill: selectedRole === 'artisan' ? craftOrSkill.trim() : undefined,
+      city: 'Abuja',
     };
 
-    // Forward to Google Sheets Web App if configured
+    let ticketId = 'AFX-BETA-' + Math.floor(100000 + Math.random() * 900000);
+    let whatsappUrl =
+      selectedRole === 'artisan'
+        ? 'https://chat.whatsapp.com/artifix-abuja-artisans'
+        : 'https://chat.whatsapp.com/artifix-abuja-clients';
+
+    // 1. Dispatch to Artifix Backend Beta API (handles welcome email & ticket generation)
+    try {
+      const res = await apiClient.post<{
+        success: boolean;
+        message: string;
+        ticketId: string;
+        role: 'client' | 'artisan';
+        whatsappUrl: string;
+      }>('/beta/signup', lead);
+
+      if (res.data?.ticketId) {
+        ticketId = res.data.ticketId;
+      }
+      if (res.data?.whatsappUrl) {
+        whatsappUrl = res.data.whatsappUrl;
+      }
+    } catch (apiErr) {
+      console.warn('Backend beta signup API sync warning, using client fallback:', apiErr);
+    }
+
+    // 2. Google Sheets sync fallback (non-blocking)
     const sheetUrl = WAITLIST_SHEET_URL;
     if (sheetUrl) {
       try {
         await fetch(sheetUrl, {
           method: 'POST',
-          mode: 'no-cors', // Standard for Google Apps Script redirects
+          mode: 'no-cors',
           headers: {
             'Content-Type': 'text/plain;charset=utf-8',
           },
-          body: JSON.stringify(lead),
+          body: JSON.stringify({
+            ...lead,
+            name: lead.fullName,
+            ticketId,
+            whatsappUrl,
+            source: 'beta_testing_abuja',
+          }),
         });
       } catch (err) {
         console.warn('Google Sheets sync warning:', err);
       }
     }
 
-    // Save lead to local storage for demo/persistence
+    // 3. Local storage persistence fallback
     try {
-      const existingRaw = localStorage.getItem('artifix_waitlist_leads');
+      const existingRaw = localStorage.getItem('artifix_beta_leads');
       const leads = existingRaw ? JSON.parse(existingRaw) : [];
-      leads.push({ ...lead, timestamp: new Date().toISOString() });
-      localStorage.setItem('artifix_waitlist_leads', JSON.stringify(leads));
+      leads.push({ ...lead, name: lead.fullName, ticketId, whatsappUrl, timestamp: new Date().toISOString() });
+      localStorage.setItem('artifix_beta_leads', JSON.stringify(leads));
     } catch {
-      // Ignore local storage write errors
+      // Ignore storage write error
     }
 
-    // Track waitlist submission success in PostHog
-    trackEvent('waitlist_submitted', {
+    trackEvent('beta_submitted', {
       role: selectedRole,
       email: email.trim().toLowerCase(),
+      city: 'Abuja',
+      ticketId,
     });
 
-    // Small delay for authentic feel
-    await new Promise((r) => setTimeout(r, 400));
-
-    // Blast celebratory confetti
     confetti({
-      particleCount: 90,
-      spread: 70,
+      particleCount: 80,
+      spread: 60,
       origin: { y: 0.6 },
-      colors: ['#00A86B', '#0A261B', '#10B981', '#34D399'],
+      colors: ['#00A86B', '#0A261B', '#10B981'],
     });
 
-    setSubmittedLead(lead);
-    setWaitlistCount((prev) => prev + 1);
+    setSubmittedLead({
+      name: lead.fullName,
+      email: lead.email,
+      role: lead.role,
+      craftOrSkill: lead.craftOrSkill,
+      ticketId,
+      whatsappUrl,
+    });
     setIsSubmitting(false);
-    setWaitlistSubmitted(true);
+    setBetaSubmitted(true);
   };
 
   return (
     <div className={`min-h-screen font-sans selection:bg-amber-200 selection:text-stone-900 ${isDarkMode ? 'dark bg-[#0E1310] text-stone-100' : 'bg-[#F5EFEB] text-stone-900'} dark:bg-[#0E1310] dark:text-stone-100 overflow-x-clip transition-colors duration-200`}>
       <SeoHead
-        title="Artifix — The Verified Artisan Trust Network | Smart Escrow Protection"
-        description="Hire ID-verified plumbers, electricians, solar installers, and carpenters in Nigeria. Guaranteed zero-dispute milestone deliverables with automated smart contract escrow."
-        canonical="https://artifixhq.xyz/"
+        title="Artifix Beta — Abuja Pilot | Milestone Escrow Protection"
+        description="Private beta for skilled trades in Abuja. Milestone escrow protection, verified artisans, and zero advance payment risk."
+        canonical="https://artifixhq.xyz/beta"
         ogType="website"
         ogImage="/api/v1/og/default"
-        ogImageAlt="Artifix Verified Artisan Trust Network"
+        ogImageAlt="Artifix Abuja Beta"
         twitterCard="summary_large_image"
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'WebSite',
-          name: 'Artifix',
-          url: 'https://artifixhq.xyz',
-          description: 'The Verified Artisan Trust Network with zero-dispute deliverable settlements.',
-          potentialAction: {
-            '@type': 'SearchAction',
-            target: 'https://artifixhq.xyz/artisans?search={search_term_string}',
-            'query-input': 'required name=search_term_string',
-          },
+          name: 'Artifix Abuja Beta',
+          url: 'https://artifixhq.xyz/beta',
+          description: 'Milestone escrow and verified trades pilot in Abuja, Nigeria.',
         }}
       />
       
       {/* ============================================================ */}
-      {/* 1. TOP NAVIGATION (Streamlined — Focused Conversion)         */}
+      {/* 1. TOP NAVIGATION                                            */}
       {/* ============================================================ */}
       <header
         className={`sticky top-0 z-50 w-full transition-all duration-300 border-b border-stone-300/80 dark:border-stone-800 ${
@@ -253,7 +274,6 @@ export const LandingPage: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
-          {/* Main Brand Logo */}
           <Link to="/" className="flex items-center group shrink-0 focus:outline-none" aria-label="Artifix Home">
             <img
               src="/brand/logo1.png"
@@ -267,18 +287,16 @@ export const LandingPage: React.FC = () => {
             />
           </Link>
 
-          {/* Right Action Items */}
           <div className="flex items-center gap-3 sm:gap-4">
             <button
               type="button"
-              onClick={() => scrollToWaitlist(undefined, 'navbar')}
+              onClick={() => scrollToBeta(undefined, 'navbar')}
               className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-[#BD5324] hover:bg-[#A64319] text-white text-xs sm:text-sm font-bold tracking-tight shadow-sm hover:shadow-md transition-all active:scale-95 shrink-0 cursor-pointer"
             >
-              <span>Join Waitlist</span>
+              <span>Apply for Beta</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
 
-            {/* Light/Dark Toggle */}
             <button
               type="button"
               onClick={toggleTheme}
@@ -292,32 +310,23 @@ export const LandingPage: React.FC = () => {
         </div>
       </header>
 
-
       {/* ============================================================ */}
-      {/* 2. THE HERO SECTION (EXACT REFERENCE REDESIGN)               */}
+      {/* 2. HERO SECTION                                              */}
       {/* ============================================================ */}
       <section className="relative pt-6 sm:pt-10 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         
-        {/* Subtle Decorative Doodles Background */}
         <ArtisanDoodles />
 
         <div className="max-w-7xl mx-auto">
           
-          {/* Main Dual-Column Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center relative z-10">
             
-            {/* ========================================================= */}
-            {/* LEFT COLUMN: HERO HEADLINE, VALUE COPY & FORM            */}
-            {/* ========================================================= */}
+            {/* LEFT COLUMN: HERO HEADLINE & INTAKE FORM */}
             <div className="lg:col-span-6 flex flex-col items-start text-left">
               
-              
-
-              {/* Title Typography: Script "Join the" + Bold "WAITLIST" */}
               <div className="relative mb-5 sm:mb-6">
                 <div className="flex items-center gap-2 font-caveat text-4xl sm:text-5xl md:text-6xl text-[#1C1917] dark:text-stone-100 font-bold -rotate-1 select-none">
-                  <span>Join the</span>
-                  {/* Dynamic Motion Flare Dashes */}
+                  <span>Private</span>
                   <svg className="w-8 h-8 text-[#BD5324] -mt-2 shrink-0" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                     <path d="M4 14L10 8" />
                     <path d="M12 18L18 12" />
@@ -327,9 +336,8 @@ export const LandingPage: React.FC = () => {
 
                 <div className="relative inline-block mt-1">
                   <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-[82px] font-black uppercase tracking-tight text-[#00A86B] dark:text-[#10B981] -rotate-1 drop-shadow-sm font-sans leading-none">
-                    WAITLIST
+                    BETA
                   </h1>
-                  {/* Dynamic Green Brush Underline */}
                   <svg
                     viewBox="0 0 320 24"
                     fill="none"
@@ -345,15 +353,14 @@ export const LandingPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Supporting Value Proposition Heading & Paragraph */}
               <h2 className="text-2xl sm:text-3xl md:text-[34px] font-bold text-stone-900 dark:text-white tracking-tight leading-[1.18] mb-3.5 font-sans">
                 The safer way to hire and get work done.
               </h2>
               <p className="text-sm sm:text-base text-stone-600 dark:text-stone-300 leading-relaxed max-w-lg mb-6">
-                Be among the first to experience a better way to hire skilled professionals. Artifix combines artisan verification, escrow protection, and transparent project tracking in one platform.
+                Artifix eliminates cash-advance risks. Client deposits stay in escrow until completed work is approved, and tradespeople receive guaranteed payouts.
               </p>
 
-              {/* Segmented Dual Role Toggle Switch */}
+              {/* Segmented Dual Role Toggle */}
               <div className="p-1 sm:p-1.5 rounded-full bg-stone-200/90 dark:bg-stone-900/90 border border-stone-300/80 dark:border-stone-800 flex items-center gap-1 mb-5 shadow-inner max-w-full">
                 <button
                   type="button"
@@ -365,7 +372,7 @@ export const LandingPage: React.FC = () => {
                   }`}
                 >
                   <ClientProfileHugeIcon size={14} className={selectedRole === 'client' ? 'text-white' : 'text-[#BD5324]'} />
-                  <span>Hire an Artisan</span>
+                  <span>Property Owner</span>
                 </button>
 
                 <button
@@ -378,25 +385,24 @@ export const LandingPage: React.FC = () => {
                   }`}
                 >
                   <ArtisanCraftsmanHugeIcon size={14} className={selectedRole === 'artisan' ? 'text-white' : 'text-[#BD5324]'} />
-                  <span>Join as an Artisan</span>
+                  <span>Skilled Artisan</span>
                 </button>
               </div>
 
-              {/* Restored Waitlist Form Card */}
-              <div id="waitlist-hero" className="w-full max-w-lg mb-4">
-                {!waitlistSubmitted ? (
+              {/* Form Card */}
+              <div id="beta-hero" className="w-full max-w-lg mb-4">
+                {!betaSubmitted ? (
                   <form
-                    onSubmit={handleWaitlistSubmit}
+                    onSubmit={handleBetaSubmit}
                     className="p-3.5 sm:p-4 bg-white/95 dark:bg-[#131B16]/95 backdrop-blur-md rounded-2xl border border-stone-300/90 dark:border-stone-800 shadow-xl text-left"
                   >
                     <div className="space-y-2.5 mb-3">
-                      {/* Full Name Input */}
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
                           <User className="w-4 h-4" />
                         </div>
                         <input
-                          id="waitlist-name-input"
+                          id="beta-name-input"
                           type="text"
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
@@ -406,13 +412,12 @@ export const LandingPage: React.FC = () => {
                         />
                       </div>
 
-                      {/* Email Input */}
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
                           <Mail className="w-4 h-4" />
                         </div>
                         <input
-                          id="waitlist-email-input"
+                          id="beta-email-input"
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
@@ -422,18 +427,17 @@ export const LandingPage: React.FC = () => {
                         />
                       </div>
 
-                      {/* Craft / Skill Input (Artisan Only) */}
                       {selectedRole === 'artisan' && (
                         <div className="relative animate-in fade-in duration-200">
                           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
                             <Wrench className="w-4 h-4" />
                           </div>
                           <input
-                            id="waitlist-craft-input"
+                            id="beta-craft-input"
                             type="text"
                             value={craftOrSkill}
                             onChange={(e) => setCraftOrSkill(e.target.value)}
-                            placeholder="Trade (e.g. Solar, Plumbing, Electrical)"
+                            placeholder="Primary trade (e.g. Electrical, Plumbing, Solar)"
                             required={selectedRole === 'artisan'}
                             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-50 dark:bg-[#18231C] border border-stone-300/80 dark:border-stone-700 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#BD5324] focus:border-transparent transition-all"
                           />
@@ -441,9 +445,8 @@ export const LandingPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Social media follow callout beneath the last input field */}
                     <div className="flex items-center justify-center gap-1.5 text-xs text-stone-600 dark:text-stone-400 mb-3 text-center">
-                      <span>Follow us on</span>
+                      <span>Follow updates on</span>
                       <a
                         href="https://x.com/Artifix_hq"
                         target="_blank"
@@ -465,7 +468,6 @@ export const LandingPage: React.FC = () => {
                       </a>
                     </div>
 
-                    {/* Submit Button */}
                     <button
                       type="submit"
                       disabled={isSubmitting}
@@ -474,14 +476,14 @@ export const LandingPage: React.FC = () => {
                       {isSubmitting ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Reserving spot...</span>
+                          <span>Submitting...</span>
                         </>
                       ) : (
                         <>
                           <span>
                             {selectedRole === 'client'
-                              ? 'Join Client Waitlist'
-                              : 'Join Artisan Waitlist'}
+                              ? 'Apply as Property Owner'
+                              : 'Apply as Artisan'}
                           </span>
                           <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                         </>
@@ -490,61 +492,77 @@ export const LandingPage: React.FC = () => {
                   </form>
                 ) : (
                   <div className="p-4 sm:p-5 rounded-2xl bg-white/95 dark:bg-[#131B16]/95 border border-emerald-400 dark:border-emerald-800 shadow-xl text-left transition-all">
-                    <div className="flex items-start gap-3.5 mb-2.5">
+                    <div className="flex items-start gap-3.5 mb-3">
                       <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                         <CheckCircle2 className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-base font-black text-stone-900 dark:text-white">
-                          You&apos;re now on the list, {submittedLead?.name || 'Partner'}.
+                          Application received, {submittedLead?.name || 'Applicant'}
                         </h4>
-                        <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mt-1">
-                          We&apos;ve reserved your spot as a{' '}
-                          <span className="font-bold text-[#BD5324]">
-                            {submittedLead?.role === 'artisan' ? 'Verified Artisan' : 'Client'}
-                          </span>
-                          . Kindly follow us on{' '}
-                          <a
-                            href="https://x.com/Artifix_hq"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label="Follow Artifix on X"
-                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-stone-900 dark:bg-stone-800 text-white hover:bg-black hover:scale-115 transition-all align-middle mx-1 shadow-sm"
-                          >
-                            <XSocialIcon className="w-3.5 h-3.5 fill-current" />
-                          </a>{' '}
-                          &amp;{' '}
-                          <a
-                            href="https://www.instagram.com/artifix_hq?stkn=bG1hY3UybDFrZWVk&utm_source=qr"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label="Follow Artifix on Instagram"
-                            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90 hover:scale-115 transition-all align-middle mx-1 shadow-sm"
-                          >
-                            <InstagramSocialIcon className="w-3.5 h-3.5" />
-                          </a>{' '}
-                          to keep up with updates.
+                        <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mt-0.5">
+                          Your application has been recorded for the Abuja pilot. A welcome email with full onboarding details has been sent to{' '}
+                          <span className="font-semibold text-stone-900 dark:text-white">{submittedLead?.email}</span>.
                         </p>
                       </div>
+                    </div>
+
+                    {/* Reference dossier */}
+                    <div className="p-3 rounded-xl bg-stone-50 dark:bg-[#18231C] border border-stone-200 dark:border-stone-800 mb-3.5">
+                      <div className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-0.5">
+                        Application Reference Code
+                      </div>
+                      <div className="text-base font-mono font-black text-[#123E2A] dark:text-emerald-400 tracking-wider">
+                        {submittedLead?.ticketId}
+                      </div>
+                      <div className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+                        Role Track: {submittedLead?.role === 'artisan' ? (submittedLead?.craftOrSkill ? `${submittedLead.craftOrSkill} Craftsman` : 'Skilled Artisan') : 'Property Owner'} &bull; Location: Abuja
+                      </div>
+                    </div>
+
+                    {/* WhatsApp CTA Link */}
+                    <a
+                      href={submittedLead?.whatsappUrl || 'https://chat.whatsapp.com/artifix-abuja-clients'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3 px-5 rounded-xl bg-[#25D366] hover:bg-[#20BA5A] text-white text-xs font-bold tracking-wide shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] group mb-2.5"
+                    >
+                      <WhatsAppIcon className="w-4 h-4 fill-white shrink-0" />
+                      <span>
+                        {submittedLead?.role === 'artisan'
+                          ? 'Join Abuja Artisan Guild on WhatsApp'
+                          : 'Join Abuja Client Community on WhatsApp'}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                    </a>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-stone-200/60 dark:border-stone-800 text-[11px] text-stone-500 dark:text-stone-400">
+                      <span>Please check your spam folder if email takes &gt; 2 mins</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBetaSubmitted(false);
+                          setFullName('');
+                          setEmail('');
+                          setCraftOrSkill('');
+                        }}
+                        className="text-[#BD5324] dark:text-amber-400 hover:underline font-semibold"
+                      >
+                        Submit another
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Trust statement under form with social media handles */}
               <div className="flex items-center flex-wrap gap-2 text-xs text-stone-500 dark:text-stone-400 mb-8">
                 <ShieldCheck className="w-4 h-4 text-[#00A86B] shrink-0" />
-                <span>No spam. Just important updates.</span>
-                
+                <span>No spam. Currently accepting beta applications for Abuja.</span>
               </div>
 
-              {/* 3 Quick Soft-Mint Feature Cards */}
+              {/* 3 Value Pillars */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 w-full max-w-xl">
-                {/* Feature 1: For Artisans */}
-                <a
-                  href="#for-artisans"
-                  className="p-4 sm:p-4.5 rounded-[20px] bg-[#EAF5EF] dark:bg-[#131D17] border border-[#D5EDE0] dark:border-stone-800 hover:border-[#BD5324]/60 dark:hover:border-[#BD5324]/60 hover:shadow-md transition-all group block text-left"
-                >
+                <div className="p-4 sm:p-4.5 rounded-[20px] bg-[#EAF5EF] dark:bg-[#131D17] border border-[#D5EDE0] dark:border-stone-800 text-left">
                   <div className="text-[#0A261B] dark:text-emerald-300 mb-2.5">
                     <svg className="w-7 h-7" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="10" cy="8" r="4" />
@@ -552,20 +570,15 @@ export const LandingPage: React.FC = () => {
                       <path d="M19 16L24 21M22 13L25 16" />
                     </svg>
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-[#0B281B] dark:text-stone-200 group-hover:text-[#BD5324] transition-colors">
-                    <span>For Artisans</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  <div className="text-xs sm:text-sm font-bold text-[#0B281B] dark:text-stone-200">
+                    For Artisans
                   </div>
                   <p className="text-[11px] sm:text-xs text-stone-600 dark:text-stone-400 mt-1 leading-relaxed">
-                    Showcase your skills and get more opportunities.
+                    Client funds secured before you start. Guaranteed payout upon approval.
                   </p>
-                </a>
+                </div>
 
-                {/* Feature 2: For Customers */}
-                <a
-                  href="#for-clients"
-                  className="p-4 sm:p-4.5 rounded-[20px] bg-[#EAF5EF] dark:bg-[#131D17] border border-[#D5EDE0] dark:border-stone-800 hover:border-[#BD5324]/60 dark:hover:border-[#BD5324]/60 hover:shadow-md transition-all group block text-left"
-                >
+                <div className="p-4 sm:p-4.5 rounded-[20px] bg-[#EAF5EF] dark:bg-[#131D17] border border-[#D5EDE0] dark:border-stone-800 text-left">
                   <div className="text-[#0A261B] dark:text-emerald-300 mb-2.5">
                     <svg className="w-7 h-7" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="10" cy="8" r="4" fill="currentColor" />
@@ -574,48 +587,37 @@ export const LandingPage: React.FC = () => {
                       <path d="M21 16L21.6 17.3L23 17.4L21.9 18.4L22.3 19.8L21 19L19.7 19.8L20.1 18.4L19 17.4L20.4 17.3Z" fill="white" />
                     </svg>
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-[#0B281B] dark:text-stone-200 group-hover:text-[#BD5324] transition-colors">
-                    <span>For Customers</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  <div className="text-xs sm:text-sm font-bold text-[#0B281B] dark:text-stone-200">
+                    For Clients
                   </div>
                   <p className="text-[11px] sm:text-xs text-stone-600 dark:text-stone-400 mt-1 leading-relaxed">
-                    Find trusted artisans and get your tasks done with ease.
+                    Zero cash advances. Funds released only after you inspect completed work.
                   </p>
-                </a>
+                </div>
 
-                {/* Feature 3: Secure & Fair */}
-                <a
-                  href="#escrow"
-                  className="p-4 sm:p-4.5 rounded-[20px] bg-[#EAF5EF] dark:bg-[#131D17] border border-[#D5EDE0] dark:border-stone-800 hover:border-[#BD5324]/60 dark:hover:border-[#BD5324]/60 hover:shadow-md transition-all group block text-left"
-                >
+                <div className="p-4 sm:p-4.5 rounded-[20px] bg-[#EAF5EF] dark:bg-[#131D17] border border-[#D5EDE0] dark:border-stone-800 text-left">
                   <div className="text-[#0A261B] dark:text-emerald-300 mb-2.5">
                     <svg className="w-7 h-7" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M14 3L5 7V13C5 19 8.8 24.5 14 26C19.2 24.5 23 19 23 13V7L14 3Z" />
                       <path d="M9.5 13.5L12.5 16.5L18.5 10.5" strokeWidth="2.5" />
                     </svg>
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-[#0B281B] dark:text-stone-200 group-hover:text-[#BD5324] transition-colors">
-                    <span>Secure &amp; Fair</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  <div className="text-xs sm:text-sm font-bold text-[#0B281B] dark:text-stone-200">
+                    Dispute Safety
                   </div>
                   <p className="text-[11px] sm:text-xs text-stone-600 dark:text-stone-400 mt-1 leading-relaxed">
-                    Powered by automated smart escrow.
+                    Verified artisan credentials, clear project milestones, and fair resolution.
                   </p>
-                </a>
+                </div>
               </div>
 
             </div>
 
-
-            {/* ========================================================= */}
-            {/* RIGHT COLUMN: SHAPED CRAFTSPEOPLE IMAGERY & PHONE CARD    */}
-            {/* ========================================================= */}
+            {/* RIGHT COLUMN: COLLAGE & PROTOTYPE VIEW */}
             <div className="lg:col-span-6 relative flex items-center justify-center pt-8 sm:pt-10 lg:pt-0">
               
-              {/* Central Sizing Stage Container */}
               <div className="relative w-full max-w-[340px] xs:max-w-[390px] sm:max-w-[460px] lg:max-w-[500px] h-[420px] xs:h-[460px] sm:h-[510px] lg:h-[560px] flex items-center justify-center">
 
-                {/* Background Organic Mint Backdrop Shape / Blob */}
                 <div
                   className="absolute inset-0 bg-[#D4ECE1]/85 dark:bg-emerald-950/40 pointer-events-none -z-10"
                   style={{
@@ -624,10 +626,7 @@ export const LandingPage: React.FC = () => {
                   }}
                 />
 
-                {/* ------------------------------------------------------ */}
-                {/* IMAGE 1: Top Center-Left (Tailor / Seamstress)          */}
-                {/* Shape: Cathedral Arch / Tombstone                      */}
-                {/* ------------------------------------------------------ */}
+                {/* IMAGE 1: Tailor */}
                 <div className="absolute -top-2 sm:-top-3 left-[25%] sm:left-[26%] -translate-x-1/2 w-32 xs:w-36 sm:w-42 lg:w-46 h-40 xs:h-46 sm:h-52 lg:h-56 z-10">
                   <div className="relative w-full h-full rounded-t-[72px] xs:rounded-t-[84px] sm:rounded-t-[96px] rounded-b-[16px] sm:rounded-b-[20px] overflow-hidden shadow-xl bg-stone-900">
                     <img
@@ -640,7 +639,6 @@ export const LandingPage: React.FC = () => {
                     />
                   </div>
 
-                  {/* Radiating 3 Green Flare Dashes on Top Right */}
                   <div className="absolute -top-2.5 -right-4 sm:-top-3.5 sm:-right-6 text-[#00A86B] pointer-events-none select-none">
                     <svg className="w-6 h-6 sm:w-8 sm:h-8" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                       <path d="M5 22L12 6" />
@@ -650,17 +648,13 @@ export const LandingPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* ------------------------------------------------------ */}
-                {/* IMAGE 2: Top Right (Electrician on Breaker Panel)      */}
-                {/* Shape: Angled Tilted Parallelogram Banner              */}
-                {/* ------------------------------------------------------ */}
+                {/* IMAGE 2: Electrician */}
                 <div className="absolute top-2.5 sm:top-4 right-0 sm:right-1 w-28 xs:w-32 sm:w-38 lg:w-42 h-28 xs:h-32 sm:h-38 lg:h-42 z-10 rotate-[3.5deg]">
-                  {/* Floating Hand-written Script Annotation */}
                   <div className="absolute -top-8 xs:-top-9 sm:-top-11 -left-4 xs:-left-6 sm:-left-8 -rotate-6 font-caveat text-[#0A261B] dark:text-emerald-300 text-xs xs:text-sm sm:text-base lg:text-lg font-bold leading-tight select-none pointer-events-none whitespace-nowrap z-30">
-                    <div>Skilled People.</div>
-                    <div>Real Work.</div>
+                    <div>Vetted skills.</div>
+                    <div>Protected funds.</div>
                     <div className="relative inline-block">
-                      <span>Better Outcomes.</span>
+                      <span>Real accountability.</span>
                       <svg
                         viewBox="0 0 100 8"
                         fill="none"
@@ -685,10 +679,7 @@ export const LandingPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* ------------------------------------------------------ */}
-                {/* IMAGE 3: Middle-Left (Potter Shaping Clay)             */}
-                {/* Shape: Asymmetrical Rounded Pebble / Shield Mask       */}
-                {/* ------------------------------------------------------ */}
+                {/* IMAGE 3: Potter */}
                 <div className="absolute top-[38%] xs:top-[40%] -left-1.5 xs:-left-2 sm:-left-3 w-30 xs:w-34 sm:w-40 lg:w-44 h-30 xs:h-34 sm:h-40 lg:h-44 z-10">
                   <div
                     className="relative w-full h-full overflow-hidden shadow-xl bg-stone-900 rounded-[38px_14px_38px_14px] sm:rounded-[50px_18px_50px_18px]"
@@ -704,10 +695,7 @@ export const LandingPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* ------------------------------------------------------ */}
-                {/* IMAGE 4: Lower-Right (Beadworker / Jewelry Artisan)    */}
-                {/* Shape: Vertical Elongated Capsule Arch                 */}
-                {/* ------------------------------------------------------ */}
+                {/* IMAGE 4: Jewelry Craftsman */}
                 <div className="absolute bottom-3 xs:bottom-4 sm:bottom-5 right-0 sm:right-0 w-26 xs:w-30 sm:w-34 lg:w-38 h-38 xs:h-42 sm:h-48 lg:h-54 z-10">
                   <div className="relative w-full h-full rounded-[26px] xs:rounded-[30px] sm:rounded-[36px] overflow-hidden shadow-xl bg-stone-900">
                     <img
@@ -721,15 +709,11 @@ export const LandingPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* ------------------------------------------------------ */}
-                {/* CENTERPIECE: 3D FLOATING MOBILE PHONE SCREEN CARD      */}
-                {/* ------------------------------------------------------ */}
+                {/* CENTERPIECE: 3D FLOATING DEVICE SCREEN */}
                 <div className="relative z-20 w-full max-w-[215px] xs:max-w-[235px] sm:max-w-[265px] lg:max-w-[290px] transform -rotate-[3.5deg] hover:rotate-0 transition-transform duration-500">
                   <div className="bg-[#071F15] dark:bg-[#07150E] rounded-[26px] xs:rounded-[28px] sm:rounded-[32px] p-3.5 xs:p-4 sm:p-5 border-2 border-white/60 dark:border-stone-700/70 shadow-2xl shadow-emerald-950/40 text-white">
                     
-                    {/* Top Status Bar */}
                     <div className="flex items-center justify-between mb-2.5 sm:mb-3.5">
-                      {/* Brand Logo Mini */}
                       <div className="flex items-center gap-1.5 sm:gap-2">
                         <img
                           src="/brand/artifix-icon-dark.png"
@@ -739,53 +723,51 @@ export const LandingPage: React.FC = () => {
                         <span className="text-xs sm:text-sm font-black tracking-tight text-white">Artifix</span>
                       </div>
 
-                      {/* Waitlist Pill Status Badge */}
                       <div className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 rounded-full bg-[#0D3825] border border-emerald-500/30 text-[9px] sm:text-[10px] font-bold text-emerald-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>Waitlist</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span>Private Beta</span>
                       </div>
                     </div>
 
-                    {/* Notification Heading */}
                     <div className="mb-1.5 sm:mb-2">
                       <div className="text-sm xs:text-base sm:text-lg font-bold tracking-tight text-white leading-tight">
-                        You&apos;re on the
+                        Private Beta
                       </div>
                       <div className="text-base xs:text-lg sm:text-xl font-black text-[#10B981] leading-tight">
-                        waitlist!
+                        Abuja Cohort
                       </div>
                     </div>
 
                     <p className="text-[9px] xs:text-[10px] sm:text-[11px] text-stone-300 leading-relaxed">
-                      We&apos;ll notify you as soon as we&apos;re ready. Thanks for being early!
+                      Testing with property owners and tradespeople in Abuja.
                     </p>
 
-                    {/* Waitlist Stat Count Card */}
+                    {/* Pilot Scope Card */}
                     <div className="bg-[#0D3323] dark:bg-[#0A261B] border border-[#164D35] rounded-lg sm:rounded-xl p-2 xs:p-2.5 sm:p-3 my-2 sm:my-3 flex items-center gap-2 sm:gap-2.5">
                       <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
                         <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
                       <div>
                         <div className="text-sm sm:text-base font-black text-white tracking-tight leading-none">
-                          {waitlistCount.toLocaleString()}
+                          Cohort 01
                         </div>
                         <div className="text-[8px] sm:text-[9px] text-emerald-200/80 font-medium mt-0.5">
-                          people already on the waitlist
+                          Abuja Applications Open
                         </div>
                       </div>
                     </div>
 
-                    {/* "What you'll get" Value Checklist */}
+                    {/* Pilot Terms */}
                     <div className="space-y-1 sm:space-y-1.5">
                       <div className="text-[10px] sm:text-[11px] font-bold text-stone-200 uppercase tracking-wider mb-1 sm:mb-1.5">
-                        What you&apos;ll get
+                        Pilot Terms
                       </div>
                       
                       {[
-                        'Early access to the platform',
-                        'Exclusive launch perks',
-                        'Product updates & sneak peeks',
-                        'Priority support',
+                        '0% platform fees during pilot',
+                        'Milestone escrow protection',
+                        'Verified artisan credentials',
+                        'Direct team support',
                       ].map((item, idx) => (
                         <div key={idx} className="flex items-center gap-1.5 sm:gap-2 text-[10px] xs:text-[11px] sm:text-xs text-stone-200">
                           <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-[#10B981] flex items-center justify-center text-[#071F15] shrink-0">
@@ -796,10 +778,9 @@ export const LandingPage: React.FC = () => {
                       ))}
                     </div>
 
-                    {/* Handwritten Slogan inside Phone Card */}
                     <div className="mt-3 pt-2 sm:mt-4 sm:pt-2.5 border-t border-emerald-900/50 text-center select-none">
                       <div className="font-caveat text-emerald-200 text-sm sm:text-base font-bold leading-tight">
-                        Real People. Real Skills. Real Trust.
+                        Safe hiring. Guaranteed pay.
                       </div>
                       <svg
                         viewBox="0 0 160 10"
@@ -815,17 +796,13 @@ export const LandingPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* ------------------------------------------------------ */}
-                {/* BOTTOM HAND-DRAWN ANNOTATION: ARROW + SCRIPT           */}
-                {/* ------------------------------------------------------ */}
                 <div className="absolute -bottom-7 xs:-bottom-8 sm:-bottom-9 left-2 xs:left-4 sm:left-8 flex items-center gap-1.5 sm:gap-2 font-caveat text-[#00965E] dark:text-emerald-400 text-lg xs:text-xl sm:text-2xl font-bold -rotate-6 select-none pointer-events-none">
-                  {/* Curved Arrow SVG */}
                   <svg className="w-7 h-7 sm:w-9 sm:h-9 text-[#00965E] dark:text-emerald-400 -mt-1 shrink-0" viewBox="0 0 44 44" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M34 32C24 34 14 28 10 16M10 16L16 14M10 16L12 22" />
                   </svg>
                   <div className="leading-[1.1] text-left">
-                    <div>It only</div>
-                    <div>takes a minute!</div>
+                    <div>Takes only</div>
+                    <div>one minute</div>
                   </div>
                 </div>
 
@@ -835,53 +812,47 @@ export const LandingPage: React.FC = () => {
 
           </div>
 
-
           {/* ============================================================ */}
-          {/* 3. FULL-WIDTH DARK FOREST GREEN TRUST STRIP                  */}
+          {/* 3. TRUST STRIP                                               */}
           {/* ============================================================ */}
           <div className="mt-16 sm:mt-24">
             <div className="bg-[#0A2218] dark:bg-[#071710] border border-transparent dark:border-stone-800/80 rounded-2xl sm:rounded-3xl p-6 sm:px-10 sm:py-7 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
               
-              {/* 3 Trust Pillars */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 sm:gap-10 text-white">
                 
-                {/* Pillar 1: Trusted Artisans */}
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full border border-emerald-500/30 bg-emerald-950/40 flex items-center justify-center text-emerald-400 shadow-inner">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div className="text-sm sm:text-base font-bold tracking-tight">
-                    Trusted Artisans
+                    Verified Artisans
                   </div>
                 </div>
 
                 <div className="hidden sm:block w-px h-8 bg-emerald-800/40" />
 
-                {/* Pillar 2: Real Connections */}
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full border border-emerald-500/30 bg-emerald-950/40 flex items-center justify-center text-emerald-400 shadow-inner">
                     <Users className="w-5 h-5" />
                   </div>
                   <div className="text-sm sm:text-base font-bold tracking-tight">
-                    Real Connections
+                    Milestone Escrow
                   </div>
                 </div>
 
                 <div className="hidden sm:block w-px h-8 bg-emerald-800/40" />
 
-                {/* Pillar 3: Local Services */}
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full border border-emerald-500/30 bg-emerald-950/40 flex items-center justify-center text-emerald-400 shadow-inner">
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div className="text-sm sm:text-base font-bold tracking-tight">
-                    Local Services
+                    Abuja Services
                   </div>
                 </div>
 
               </div>
 
-              {/* Artifix Monogram Logo */}
               <div className="flex items-center gap-3 shrink-0">
                 <img
                   src="/brand/artifix-icon-dark.png"
@@ -897,9 +868,8 @@ export const LandingPage: React.FC = () => {
 
       </section>
 
-
-            {/* ============================================================ */}
-      {/* 6. DUAL PATHWAY: FOR CLIENTS VS FOR ARTISANS                 */}
+      {/* ============================================================ */}
+      {/* 4. DUAL PATHWAY: FOR CLIENTS VS FOR ARTISANS                 */}
       {/* ============================================================ */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 border-t border-stone-300/60 dark:border-stone-800">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -911,18 +881,18 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div>
-              <span className="tape-strip mb-4">FOR PROPERTY OWNERS &amp; BUILDERS</span>
+              <span className="tape-strip mb-4">PROPERTY OWNERS &amp; BUILDERS</span>
               <h3 className="font-display text-2xl sm:text-3xl font-black text-stone-900 dark:text-white mb-4">
-                Hire skilled trades without financial risk.
+                Hire trades without advance payment risk.
               </h3>
               <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed mb-6">
-                Never pay in full upfront. Funds stay protected in escrow until you inspect and approve each deliverable.
+                Funds stay locked in escrow until you inspect and approve completed work.
               </p>
 
               <ul className="space-y-2.5 text-xs sm:text-sm text-stone-700 dark:text-stone-300 font-medium mb-8">
                 <li className="flex items-center gap-2.5">
                   <CertifiedBadgeHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Vetted, background-checked craftsmen</span>
+                  <span>Verified, background-checked craftsmen</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <ShieldCheckHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
@@ -930,7 +900,7 @@ export const LandingPage: React.FC = () => {
                 </li>
                 <li className="flex items-center gap-2.5">
                   <ProofOfWorkAuditHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Photo proof before payout approval</span>
+                  <span>Photo evidence before payout approval</span>
                 </li>
               </ul>
             </div>
@@ -938,10 +908,10 @@ export const LandingPage: React.FC = () => {
             <div>
               <button
                 type="button"
-                onClick={() => scrollToWaitlist('client', 'dual_perspective_client')}
+                onClick={() => scrollToBeta('client', 'dual_perspective_client')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 font-bold text-xs uppercase tracking-wider hover:bg-stone-800 dark:hover:bg-stone-100 transition-all shadow-md active:scale-95"
               >
-                <span>Join Client Waitlist</span>
+                <span>Apply as Property Owner</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -954,26 +924,26 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div>
-              <span className="tape-strip mb-4">FOR SKILLED ARTISANS</span>
+              <span className="tape-strip mb-4">SKILLED TRADESPEOPLE</span>
               <h3 className="font-display text-2xl sm:text-3xl font-black text-stone-900 dark:text-white mb-4">
-                Work with guaranteed payment.
+                Work with guaranteed milestone payments.
               </h3>
               <p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed mb-6">
-                Never chase an invoice. Funds are deposited into escrow before you start work.
+                Client funds are secured in escrow before you buy materials or start work.
               </p>
 
               <ul className="space-y-2.5 text-xs sm:text-sm text-stone-700 dark:text-stone-300 font-medium mb-8">
                 <li className="flex items-center gap-2.5">
                   <CertifiedBadgeHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Verifiable Trade Passport and seal</span>
+                  <span>Verified Trade Passport profile</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <ShieldCheckHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Milestone funds locked before work begins</span>
+                  <span>Escrow confirmed before tools go up</span>
                 </li>
                 <li className="flex items-center gap-2.5">
                   <InstantSettlementHugeIcon className="w-4 h-4 text-[#BD5324] shrink-0" />
-                  <span>Direct payout to bank account or wallet</span>
+                  <span>Direct bank payout on job approval</span>
                 </li>
               </ul>
             </div>
@@ -981,10 +951,10 @@ export const LandingPage: React.FC = () => {
             <div>
               <button
                 type="button"
-                onClick={() => scrollToWaitlist('artisan', 'dual_perspective_artisan')}
+                onClick={() => scrollToBeta('artisan', 'dual_perspective_artisan')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#BD5324] hover:bg-[#A64319] text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95"
               >
-                <span>Join Artisan Waitlist</span>
+                <span>Apply as Artisan</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -993,12 +963,8 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-
-
-
-
       {/* ============================================================ */}
-      {/* 8. FOOTER (Streamlined — Navigation Links Removed)           */}
+      {/* 5. FOOTER                                                    */}
       {/* ============================================================ */}
       <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-stone-300/80 dark:border-stone-800 bg-[#F5EFEB] dark:bg-[#0A0E0C] text-stone-600 dark:text-stone-400 text-xs">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
@@ -1017,14 +983,13 @@ export const LandingPage: React.FC = () => {
             </Link>
             <span className="hidden sm:inline-block text-stone-300 dark:text-stone-700">|</span>
             <p className="text-xs text-stone-500 dark:text-stone-400 max-w-md">
-              The verified trades network connecting Nigerian property owners with vetted craftsmen.
+              Milestone escrow and verified trades for projects in Abuja.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-xs text-stone-500 dark:text-stone-400 text-center sm:text-right">
             <span>&copy; {new Date().getFullYear()} Artifix Network. Built for Nigeria&apos;s craft economy.</span>
 
-            {/* Social Media Links */}
             <div className="flex items-center gap-2.5">
               <a
                 href="https://x.com/Artifix_hq"
@@ -1063,4 +1028,5 @@ export const LandingPage: React.FC = () => {
   );
 };
 
-export default LandingPage;
+export const LandingPage = BetaTestingPage;
+export default BetaTestingPage;

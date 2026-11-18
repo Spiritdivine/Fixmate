@@ -7,6 +7,7 @@ import { PrivyProviderWrapper } from './lib/privy-provider';
 // Landing & Auth Pages
 import { LandingPage } from './pages/LandingPage';
 import { LandingPageV2 } from './pages/LandingPageV2';
+import { BetaTestingPage } from './pages/BetaTestingPage';
 import { Login } from './pages/auth/Login';
 import { AdminLogin } from './pages/auth/AdminLogin';
 import { Register } from './pages/auth/Register';
@@ -270,7 +271,9 @@ export function App() {
 
             {/* Root & Fallback */}
             <Route path="/v2" element={<LandingPageV2 />} />
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/beta" element={<BetaTestingPage />} />
+            <Route path="/waitlist" element={<BetaTestingPage />} />
+            <Route path="/" element={<BetaTestingPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <GlobalAiChatModal />

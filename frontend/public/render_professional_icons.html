@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Render Professional Icons for Artifix Email</title>
+</head>
+<body style="background: transparent;">
+<script>
+const ICONS = {
+  // 1. Pillar 1: Shield Check (Solid emerald green shield with white checkmark)
+  'icon-shield.png': {
+    width: 144,
+    height: 144,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 48 48" fill="none">
+      <!-- Solid deep emerald green shield -->
+      <path d="M24 4C32 4 41 8 41 15C41 28 33 39 24 44.5C15 39 7 28 7 15C7 8 16 4 24 4Z" fill="#045334"/>
+      <!-- Crisp bold white checkmark -->
+      <path d="M15.5 24L21.5 30L33 17" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`
+  },
+
+  // 2. Pillar 2: Verified Trade Standards (Deep emerald green precision handshake)
+  'icon-handshake.png': {
+    width: 144,
+    height: 144,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 48 48" fill="none">
+      <!-- Left sleeve/cuff -->
+      <path d="M4 25L13 34L17 30L8 21L4 25Z" fill="#04432A"/>
+      <!-- Right sleeve/cuff -->
+      <path d="M44 23L35 14L31 18L40 27L44 23Z" fill="#04432A"/>
+      <!-- Clasping hands in dark emerald green with clear finger separations -->
+      <path d="M14 25L20 19C21.5 17.5 24 17.5 25.5 19L27 20.5L25 22.5L23 20.5C22.2 19.7 21 19.7 20.2 20.5L16 24.7L14 25Z" fill="#063E27"/>
+      <path d="M34 23L28 29C26.5 30.5 24 30.5 22.5 29L19 25.5L21 23.5L24.5 27C25.3 27.8 26.5 27.8 27.3 27L32 22.3L34 23Z" fill="#063E27"/>
+      <!-- Clasped fingers bridge -->
+      <path d="M20 22L28 30C29.2 31.2 31.2 31.2 32.4 30L35 27.4C36.2 26.2 36.2 24.2 35 23L29 17C27.8 15.8 25.8 15.8 24.6 17L22 19.6" stroke="#04432A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 25L23 31" stroke="#04432A" stroke-width="3" stroke-linecap="round"/>
+      <path d="M25 17L31 23" stroke="#04432A" stroke-width="3" stroke-linecap="round"/>
+    </svg>`
+  },
+
+  // 3. Pillar 3: Proof-of-Work Milestones (Bar chart with rising trend arrow)
+  'icon-chart.png': {
+    width: 144,
+    height: 144,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 48 48" fill="none">
+      <!-- 3 Rounded vertical bars in deep emerald green -->
+      <!-- Bar 1 (Short) -->
+      <rect x="8" y="27" width="8" height="15" rx="3" fill="#04432A"/>
+      <!-- Bar 2 (Medium) -->
+      <rect x="20" y="19" width="8" height="23" rx="3" fill="#04432A"/>
+      <!-- Bar 3 (Tall) -->
+      <rect x="32" y="11" width="8" height="31" rx="3" fill="#04432A"/>
+      <!-- Rising trend line with arrowhead across the tops -->
+      <path d="M6 24L17 14L27 21L40 7" stroke="#16A34A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M32 7H40V15" stroke="#16A34A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`
+  },
+
+  // 4. WhatsApp Community Hub: 3 People Group in glowing mint outline
+  'icon-community.png': {
+    width: 144,
+    height: 144,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 48 48" fill="none">
+      <!-- Center Person (Main, slightly higher) -->
+      <circle cx="24" cy="14" r="5.5" stroke="#4ADE80" stroke-width="2.5"/>
+      <path d="M15 32C15 27 19 23 24 23C29 23 33 27 33 32" stroke="#4ADE80" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Left Person -->
+      <circle cx="11" cy="18" r="4.5" stroke="#4ADE80" stroke-width="2.2"/>
+      <path d="M4 34C4 30.5 7 27.5 11 27.5C12.5 27.5 14 28 15 29" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round"/>
+      <!-- Right Person -->
+      <circle cx="37" cy="18" r="4.5" stroke="#4ADE80" stroke-width="2.2"/>
+      <path d="M33 29C34 28 35.5 27.5 37 27.5C41 27.5 44 30.5 44 34" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>`
+  },
+
+  // 5. Security Tip: Clean Lightbulb outline with filament and screw base
+  'icon-bulb.png': {
+    width: 108,
+    height: 108,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 36 36" fill="none">
+      <!-- Rounded lightbulb bulb outline -->
+      <path d="M22.5 19.5C23.5 18 25 15.8 25 13C25 9.1 21.9 6 18 6C14.1 6 11 9.1 11 13C11 15.8 12.5 18 13.5 19.5C14.5 21 15 22.5 15 24H21C21 22.5 21.5 21 22.5 19.5Z" stroke="#22C55E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Internal filament loop -->
+      <path d="M16 14L18 11L20 14" stroke="#22C55E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Screw base threads -->
+      <path d="M15 27H21" stroke="#22C55E" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M16 30H20" stroke="#22C55E" stroke-width="2" stroke-linecap="round"/>
+    </svg>`
+  },
+
+  // 6. House Icon (Property Owner Role Badge)
+  'icon-house.png': {
+    width: 72,
+    height: 72,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#86EFAC" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9.5L12 3L21 9.5V20C21 20.6 20.6 21 20 21H4C3.4 21 3 20.6 3 20V9.5Z"/>
+      <path d="M9 21V12H15V21"/>
+    </svg>`
+  },
+
+  // 7. Wrench Icon (Artisan Role Badge)
+  'icon-wrench.png': {
+    width: 72,
+    height: 72,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#86EFAC" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14.7 6.3C15.1 4.5 14.5 2.6 13.2 1.3C11.6 -0.3 9.1 -0.4 7.4 0.9L10.3 3.8L8.2 5.9L5.3 3C4 4.7 4.1 7.2 5.7 8.8C7 10.1 8.9 10.7 10.7 10.3L18.4 18C18.8 18.4 19.4 18.4 19.8 18L21.2 16.6C21.6 16.2 21.6 15.6 21.2 15.2L14.7 6.3Z"/>
+    </svg>`
+  },
+
+  // 8. WhatsApp Icon (White handset in speech bubble)
+  'icon-whatsapp.png': {
+    width: 96,
+    height: 96,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="#FFFFFF">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.885m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+    </svg>`
+  },
+
+  // 9. Social Media Strip (5 circular dark badges)
+  'social-strip.png': {
+    width: 450,
+    height: 72,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="450" height="72" viewBox="0 0 150 24" fill="none">
+      <!-- X (Twitter) -->
+      <g transform="translate(4, 0)">
+        <circle cx="12" cy="12" r="11" fill="#18181B"/>
+        <path d="M8 7L11.7 12L8 16.5H8.9L12.1 12.6L14.7 16.5H16.8L12.9 11.2L16.4 7H15.5L12.5 10.6L10.1 7H8Z" fill="#FFFFFF"/>
+      </g>
+      <!-- Instagram -->
+      <g transform="translate(34, 0)">
+        <circle cx="12" cy="12" r="11" fill="#18181B"/>
+        <rect x="7.2" y="7.2" width="9.6" height="9.6" rx="2.8" stroke="#FFFFFF" stroke-width="1.2" fill="none"/>
+        <circle cx="12" cy="12" r="2.3" stroke="#FFFFFF" stroke-width="1.2" fill="none"/>
+        <circle cx="14.6" cy="9.4" r="0.6" fill="#FFFFFF"/>
+      </g>
+      <!-- Facebook -->
+      <g transform="translate(64, 0)">
+        <circle cx="12" cy="12" r="11" fill="#18181B"/>
+        <path d="M13 8.5H11.5C10.7 8.5 10 9.2 10 10V11.5H8.5V13.5H10V17.5H12V13.5H13.8L14.2 11.5H12V10.3C12 9.9 12.4 9.5 12.8 9.5H14V8.5H13Z" fill="#FFFFFF"/>
+      </g>
+      <!-- LinkedIn -->
+      <g transform="translate(94, 0)">
+        <circle cx="12" cy="12" r="11" fill="#18181B"/>
+        <circle cx="8.8" cy="8.8" r="1" fill="#FFFFFF"/>
+        <rect x="7.8" y="10.8" width="2" height="5.5" fill="#FFFFFF"/>
+        <path d="M11.8 10.8H13.6V11.7C14 11.1 14.7 10.8 15.4 10.8C16.8 10.8 17.3 11.8 17.3 13.3V16.3H15.3V13.8C15.3 13.1 15 12.6 14.3 12.6C13.6 12.6 13.3 13.1 13.3 13.8V16.3H11.3V10.8H11.8Z" fill="#FFFFFF"/>
+      </g>
+      <!-- YouTube -->
+      <g transform="translate(124, 0)">
+        <circle cx="12" cy="12" r="11" fill="#18181B"/>
+        <rect x="6.8" y="8" width="10.4" height="8" rx="2.5" fill="#FFFFFF"/>
+        <polygon points="10.5,9.8 10.5,14.2 14.2,12" fill="#18181B"/>
+      </g>
+    </svg>`
+  },
+
+  // 10. Dossier Corner Wave (Organic mint green wavy graphic for dossier card right side)
+  'dossier-corner-wave.png': {
+    width: 260,
+    height: 160,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160" viewBox="0 0 130 80" fill="none">
+      <!-- Soft pastel mint background wave shape -->
+      <path d="M30 80C30 80 50 45 75 35C100 25 115 10 130 0V80H30Z" fill="#D1FAE5" fill-opacity="0.9"/>
+      <!-- Vibrant emerald accent contour curve -->
+      <path d="M55 80C55 80 75 50 95 42C115 34 125 20 130 12V80H55Z" fill="#34D399" fill-opacity="0.85"/>
+      <!-- Topmost dark mint contour edge -->
+      <path d="M85 80C85 80 100 62 112 56C122 50 127 40 130 35V80H85Z" fill="#10B981" fill-opacity="0.9"/>
+    </svg>`
+  },
+
+  // 11. Artifix Sender Profile Avatar (512x512 for Google Account profile photo)
+  'artifix-logo-avatar.png': {
+    width: 512,
+    height: 512,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+      <!-- Crisp White Background Circle -->
+      <circle cx="256" cy="256" r="256" fill="#FFFFFF"/>
+      <circle cx="256" cy="256" r="250" fill="#FAFCFB"/>
+      <!-- Artifix Brand Ribbon Mark Centered -->
+      <g transform="translate(106, 110) scale(3.2)">
+        <!-- Left ribbon (Teal / Forest) -->
+        <path d="M22 10L10 24L22 38L32 38L20 24L32 10L22 10Z" fill="#123E2A"/>
+        <!-- Right folded ribbon (Vibrant Mint) -->
+        <path d="M34 10L24 22L29 27L44 10L34 10Z" fill="#22C55E"/>
+        <path d="M29 27L22 35L27 40L44 20L39 15L29 27Z" fill="#16A34A"/>
+        <path d="M44 20L58 36L68 36L54 20L44 20Z" fill="#10B981"/>
+        <path d="M58 36L46 50L56 50L68 36L58 36Z" fill="#047857"/>
+      </g>
+    </svg>`
+  }
+};
+
+window.renderAll = async function() {
+  const results = {};
+  for (const [filename, info] of Object.entries(ICONS)) {
+    const canvas = document.createElement('canvas');
+    canvas.width = info.width;
+    canvas.height = info.height;
+    const ctx = canvas.getContext('2d');
+    
+    await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, info.width, info.height);
+        ctx.drawImage(img, 0, 0, info.width, info.height);
+        results[filename] = canvas.toDataURL('image/png');
+        resolve();
+      };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(info.svg);
+    });
+  }
+  return results;
+};
+</script>
+</body>
+</html>
