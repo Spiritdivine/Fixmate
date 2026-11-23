@@ -176,7 +176,7 @@ export class EmailService {
       heroBg:     `${CDN}/v1794782062/artifix/email/hero-background-linen.png`,
       heroBanner: `${CDN}/v1794782063/artifix/email/hero-banner-master.png`,
       wave:       `${CDN}/v1794776749/artifix/email/dossier-corner-wave.png`,
-      dossierBg:  `${CDN}/v1794794657/artifix/email/dossier-background-seamless.png`,
+      dossierBg:  `${CDN}/v1795165506/artifix/email/dossier-background-seamless.png`,
       shield:     `${CDN}/v1794778170/artifix/email/icon-shield.jpg`,
       handshake:  `${CDN}/v1794778167/artifix/email/icon-handshake.jpg`,
       chart:      `${CDN}/v1794778164/artifix/email/icon-chart.jpg`,
@@ -403,10 +403,10 @@ export class EmailService {
   <tr><td style="padding:0 0 14px 0;">
     <!--[if gte mso 9]>
     <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:130px;">
-    <v:fill type="tile" src="${A.dossierBg}" color="#F8FAF9" />
+    <v:fill type="tile" src="${A.dossierBg}" color="#F4F7F8" />
     <v:textbox inset="0,0,0,0">
     <![endif]-->
-    <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" class="dossier-table" style="background-color:#F8FAF9;background-image:url('${A.dossierBg}');background-size:cover;background-position:right bottom;background-repeat:no-repeat;border:1px solid #E2E8F0;border-radius:18px;overflow:hidden;">
+    <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" class="dossier-table" bgcolor="#F4F7F8" style="background-color:#F4F7F8;background-image:url('${A.dossierBg}');background-size:cover;background-position:right bottom;background-repeat:no-repeat;border:1px solid #E2E8F0;border-radius:18px;overflow:hidden;">
       <tr>
         <td class="dossier-card-td" style="vertical-align:middle;padding:22px 24px;">
           <div class="dossier-label" style="font-size:9.5px;font-weight:800;color:#0F172A;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:12px;">APPLICATION REFERENCE CODE</div>
